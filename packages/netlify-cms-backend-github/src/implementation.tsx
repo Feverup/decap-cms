@@ -13,6 +13,7 @@ import {
   unpublishedEntries,
   getMediaDisplayURL,
   getMediaAsBlob,
+  filterByIndexFile,
   filterByExtension,
   getPreviewStatus,
   runWithLock,
@@ -39,6 +40,8 @@ import type {
   ImplementationFile,
   UnpublishedEntryMediaFile,
   Entry,
+  ApiRequest,
+  GoogleCredentials
 } from 'netlify-cms-lib-util';
 import type { Semaphore } from 'semaphore';
 
@@ -62,9 +65,11 @@ type GitHubStatusComponent = {
 export default class GitHub implements Implementation {
   lock: AsyncLock;
   api: API | null;
+  updateUserCredentials: (args: Credentials) => Promise<null>;
   options: {
     proxied: boolean;
     API: API | null;
+    updateUserCredentials: (args: Credentials) => Promise<null>;
     useWorkflow?: boolean;
     initialWorkflowStatus: string;
   };
@@ -81,6 +86,11 @@ export default class GitHub implements Implementation {
   squashMerges: boolean;
   cmsLabelPrefix: string;
   useGraphql: boolean;
+  useApps: boolean;
+  appsApiRoot?: string;
+  appsApiLogin?: string;
+  appsAPIToken?: string;
+  googleAuth?: GoogleCredentials | null
   _currentUserPromise?: Promise<GitHubUser>;
   _userIsOriginMaintainerPromises?: {
     [key: string]: Promise<boolean>;
@@ -91,6 +101,7 @@ export default class GitHub implements Implementation {
     this.options = {
       proxied: false,
       API: null,
+      updateUserCredentials: async () => null,
       initialWorkflowStatus: '',
       ...options,
     };
@@ -103,6 +114,8 @@ export default class GitHub implements Implementation {
     }
 
     this.api = this.options.API || null;
+
+    this.updateUserCredentials = this.options.updateUserCredentials;
 
     this.openAuthoringEnabled = config.backend.open_authoring || false;
     if (this.openAuthoringEnabled) {
@@ -125,6 +138,12 @@ export default class GitHub implements Implementation {
     this.mediaFolder = config.media_folder;
     this.previewContext = config.backend.preview_context || '';
     this.lock = asyncLock();
+    this.useApps = Boolean(config.backend.apps_api_root);
+    if (this.useApps) {
+      this.appsApiRoot = config.backend.apps_api_root as string;
+      this.appsApiLogin = `${this.appsApiRoot}/${config.backend.apps_login_path || 'login'}`;
+      this.appsAPIToken = `${this.appsApiRoot}/${config.backend.apps_token_path || 'access_token'}`;
+    }
   }
 
   isGitBackend() {
@@ -172,11 +191,26 @@ export default class GitHub implements Implementation {
     return wrappedAuthenticationPage;
   }
 
+  appsRequestFunction = async (req: ApiRequest) => {
+    const request = await unsentRequest.performRequest(req);
+    if (request.status === 401) {
+      const newToken = await this.getRefreshedAccessToken();
+      const reqWithNewToken = unsentRequest.withHeaders(
+        {
+          Authorization: `Bearer ${newToken}`,
+        },
+        req,
+      ) as ApiRequest;
+      return unsentRequest.performRequest(reqWithNewToken);
+    }
+    return request;
+  };
+
   restoreUser(user: User) {
     return this.openAuthoringEnabled
       ? this.authenticateWithFork({ userData: user, getPermissionToFork: () => true }).then(() =>
-          this.authenticate(user),
-        )
+        this.authenticate(user),
+      )
       : this.authenticate(user);
   }
 
@@ -300,11 +334,14 @@ export default class GitHub implements Implementation {
 
   async authenticate(state: Credentials) {
     this.token = state.token as string;
+    this.googleAuth = state.google_auth;
     const apiCtor = this.useGraphql ? GraphQLAPI : API;
     this.api = new apiCtor({
       token: this.token,
+      googleAuth: this.googleAuth,
       branch: this.branch,
       repo: this.repo,
+      requestFunction: this.useApps ? this.appsRequestFunction : unsentRequest.performRequest,
       originRepo: this.originRepo,
       apiRoot: this.apiRoot,
       squashMerges: this.squashMerges,
@@ -313,7 +350,7 @@ export default class GitHub implements Implementation {
       initialWorkflowStatus: this.options.initialWorkflowStatus,
     });
     const user = await this.api!.user();
-    const isCollab = await this.api!.hasWriteAccess().catch(error => {
+    const isCollab = this.useApps || await this.api!.hasWriteAccess().catch(error => {
       error.message = stripIndent`
         Repo "${this.repo}" not found.
 
@@ -333,11 +370,32 @@ export default class GitHub implements Implementation {
     }
 
     // Authorized user
-    return { ...user, token: state.token as string, useOpenAuthoring: this.useOpenAuthoring };
+    return { ...user, token: state.token as string, google_auth: state.google_auth, useOpenAuthoring: this.useOpenAuthoring };
+  }
+
+  updateToken(token: string) {
+    this.token = token;
+    this.api!.token = token;
+    this.updateUserCredentials({ token });
+    return token
+  }
+
+  async getRefreshedAccessToken() {
+    const tokenInfo = await fetch(this.appsAPIToken, {
+      method: 'POST',
+      body: JSON.stringify({
+        repo: this.repo
+      }),
+      headers: {
+        Authorization: `token ${this.googleAuth!.token}`,
+      }
+    })
+    return this.updateToken((await tokenInfo.json()).token)
   }
 
   logout() {
     this.token = null;
+    this.googleAuth = null;
     if (this.api && this.api.reset && typeof this.api.reset === 'function') {
       return this.api.reset();
     }
@@ -371,7 +429,7 @@ export default class GitHub implements Implementation {
     return { cursor, files: pageFiles };
   };
 
-  async entriesByFolder(folder: string, extension: string, depth: number) {
+  async entriesByFolder(folder: string, extension: string, depth: number, indexFile: string) {
     const repoURL = this.api!.originRepoURL;
 
     let cursor: Cursor;
@@ -381,7 +439,9 @@ export default class GitHub implements Implementation {
         repoURL,
         depth,
       }).then(files => {
-        const filtered = files.filter(file => filterByExtension(file, extension));
+        const filtered = files.filter(
+          file => filterByIndexFile(file, indexFile) && filterByExtension(file, extension),
+        );
         const result = this.getCursorAndFiles(filtered, 1);
         cursor = result.cursor;
         return result.files;
@@ -402,14 +462,18 @@ export default class GitHub implements Implementation {
     return files;
   }
 
-  async allEntriesByFolder(folder: string, extension: string, depth: number) {
+  async allEntriesByFolder(folder: string, extension: string, depth: number, indexFile: string) {
     const repoURL = this.api!.originRepoURL;
 
     const listFiles = () =>
       this.api!.listFiles(folder, {
         repoURL,
         depth,
-      }).then(files => files.filter(file => filterByExtension(file, extension)));
+      }).then(files =>
+        files.filter(
+          file => filterByIndexFile(file, indexFile) && filterByExtension(file, extension),
+        ),
+      );
 
     const readFile = (path: string, id: string | null | undefined) => {
       return this.api!.readFile(path, id, { repoURL }) as Promise<string>;

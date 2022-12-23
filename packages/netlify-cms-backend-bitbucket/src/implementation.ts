@@ -3,6 +3,7 @@ import { trimStart } from 'lodash';
 import { stripIndent } from 'common-tags';
 import {
   CURSOR_COMPATIBILITY_SYMBOL,
+  filterByIndexFile,
   filterByExtension,
   unsentRequest,
   basename,
@@ -298,13 +299,15 @@ export default class BitbucketBackend implements Implementation {
     return response;
   };
 
-  async entriesByFolder(folder: string, extension: string, depth: number) {
+  async entriesByFolder(folder: string, extension: string, depth: number, indexFile: string) {
     let cursor: Cursor;
 
     const listFiles = () =>
       this.api!.listFiles(folder, depth, 20, this.branch).then(({ entries, cursor: c }) => {
         cursor = c.mergeMeta({ extension });
-        return entries.filter(e => filterByExtension(e, extension));
+        return entries.filter(
+          e => filterByIndexFile(e, indexFile) && filterByExtension(e, extension),
+        );
       });
 
     const head = await this.api!.defaultBranchCommitSha();
@@ -325,13 +328,15 @@ export default class BitbucketBackend implements Implementation {
     return files;
   }
 
-  async listAllFiles(folder: string, extension: string, depth: number) {
+  async listAllFiles(folder: string, extension: string, depth: number, indexFile: string) {
     const files = await this.api!.listAllFiles(folder, depth, this.branch);
-    const filtered = files.filter(file => filterByExtension(file, extension));
+    const filtered = files.filter(
+      file => filterByIndexFile(file, indexFile) && filterByExtension(file, extension),
+    );
     return filtered;
   }
 
-  async allEntriesByFolder(folder: string, extension: string, depth: number) {
+  async allEntriesByFolder(folder: string, extension: string, depth: number, indexFile: string) {
     const head = await this.api!.defaultBranchCommitSha();
 
     const readFile = (path: string, id: string | null | undefined) => {
@@ -339,7 +344,7 @@ export default class BitbucketBackend implements Implementation {
     };
 
     const files = await allEntriesByFolder({
-      listAllFiles: () => this.listAllFiles(folder, extension, depth),
+      listAllFiles: () => this.listAllFiles(folder, extension, depth, indexFile),
       readFile,
       readFileMetadata: this.api!.readFileMetadata.bind(this.api),
       apiName: API_NAME,
@@ -348,11 +353,12 @@ export default class BitbucketBackend implements Implementation {
       folder,
       extension,
       depth,
+      indexFile,
       getDefaultBranch: () => Promise.resolve({ name: this.branch, sha: head }),
       isShaExistsInBranch: this.api!.isShaExistsInBranch.bind(this.api!),
       getDifferences: (source, destination) => this.api!.getDifferences(source, destination),
       getFileId: path => Promise.resolve(this.api!.getFileId(head, path)),
-      filterFile: file => filterByExtension(file, extension),
+      filterFile: file => filterByIndexFile(file, indexFile) && filterByExtension(file, extension),
     });
     return files;
   }
@@ -492,8 +498,11 @@ export default class BitbucketBackend implements Implementation {
   traverseCursor(cursor: Cursor, action: string) {
     return this.api!.traverseCursor(cursor, action).then(async ({ entries, cursor: newCursor }) => {
       const extension = cursor.meta?.get('extension');
+      const indexFile = cursor.meta?.get('path')?.get('index_file');
       if (extension) {
-        entries = entries.filter(e => filterByExtension(e, extension));
+        entries = entries.filter(
+          e => filterByIndexFile(e, indexFile) && filterByExtension(e, extension),
+        );
         newCursor = newCursor.mergeMeta({ extension });
       }
       const head = await this.api!.defaultBranchCommitSha();

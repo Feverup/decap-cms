@@ -1,7 +1,13 @@
 import { oneLine } from 'common-tags';
 import nock from 'nock';
 
-import { parseLinkHeader, getAllResponses, getPathDepth, filterByExtension } from '../backendUtil';
+import {
+  parseLinkHeader,
+  getAllResponses,
+  getPathDepth,
+  filterByIndexFile,
+  filterByExtension,
+} from '../backendUtil';
 
 describe('parseLinkHeader', () => {
   it('should return the right rel urls', () => {
@@ -81,6 +87,20 @@ describe('getPathDepth', () => {
 
   it('should return 2 for path of one nested folder', () => {
     expect(getPathDepth('{{year}}/{{slug}}')).toBe(2);
+  });
+});
+
+describe('filterByIndexFile', () => {
+  it('should return true when filename matches index_file', () => {
+    expect(filterByIndexFile({ path: 'foo/index.md' }, 'index')).toBe(true);
+  });
+
+  it('should return true when index_file is not defined', () => {
+    expect(filterByIndexFile({ path: 'foo/index.md' })).toBe(true);
+  });
+
+  it("should return false when filename doesn't match index_file", () => {
+    expect(filterByIndexFile({ path: 'foo/var.md' }, 'index')).toBe(false);
   });
 });
 

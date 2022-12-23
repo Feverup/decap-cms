@@ -307,6 +307,10 @@ function collectionDepth(collection: Collection) {
   return depth;
 }
 
+function collectionIndexFile(collection: Collection) {
+  return collection.get('meta')?.get('path')?.get('index_file') as string;
+}
+
 export class Backend {
   implementation: Implementation;
   backendName: string;
@@ -505,10 +509,12 @@ export class Backend {
     if (collectionType === FOLDER) {
       listMethod = () => {
         const depth = collectionDepth(collection);
+        const indexFile = collectionIndexFile(collection);
         return this.implementation.entriesByFolder(
           collection.get('folder') as string,
           extension,
           depth,
+          indexFile,
         );
       };
     } else if (collectionType === FILES) {
@@ -550,9 +556,10 @@ export class Backend {
   async listAllEntries(collection: Collection) {
     if (collection.get('folder') && this.implementation.allEntriesByFolder) {
       const depth = collectionDepth(collection);
+      const indexFile = collectionIndexFile(collection);
       const extension = selectFolderEntryExtension(collection);
       return this.implementation
-        .allEntriesByFolder(collection.get('folder') as string, extension, depth)
+        .allEntriesByFolder(collection.get('folder') as string, extension, depth, indexFile)
         .then(entries => this.processEntries(entries, collection));
     }
 

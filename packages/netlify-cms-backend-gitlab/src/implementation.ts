@@ -21,6 +21,7 @@ import {
   allEntriesByFolder,
   filterByExtension,
   branchFromContentKey,
+  filterByIndexFile,
 } from 'netlify-cms-lib-util';
 
 import AuthenticationPage from './AuthenticationPage';
@@ -168,19 +169,24 @@ export default class GitLab implements Implementation {
     file: { path: string; name: string },
     extension: string,
     depth: number,
+    indexFile: string,
   ) {
     // gitlab paths include the root folder
     const fileFolder = trim(file.path.split(folder)[1] || '/', '/');
-    return filterByExtension(file, extension) && fileFolder.split('/').length <= depth;
+    return (
+      filterByIndexFile(file, indexFile) &&
+      filterByExtension(file, extension) &&
+      fileFolder.split('/').length <= depth
+    );
   }
 
-  async entriesByFolder(folder: string, extension: string, depth: number) {
+  async entriesByFolder(folder: string, extension: string, depth: number, indexFile: string) {
     let cursor: Cursor;
 
     const listFiles = () =>
       this.api!.listFiles(folder, depth > 1).then(({ files, cursor: c }) => {
         cursor = c.mergeMeta({ folder, extension, depth });
-        return files.filter(file => this.filterFile(folder, file, extension, depth));
+        return files.filter(file => this.filterFile(folder, file, extension, depth, indexFile));
       });
 
     const files = await entriesByFolder(
@@ -195,15 +201,17 @@ export default class GitLab implements Implementation {
     return files;
   }
 
-  async listAllFiles(folder: string, extension: string, depth: number) {
+  async listAllFiles(folder: string, extension: string, depth: number, indexFile: string) {
     const files = await this.api!.listAllFiles(folder, depth > 1);
-    const filtered = files.filter(file => this.filterFile(folder, file, extension, depth));
+    const filtered = files.filter(file =>
+      this.filterFile(folder, file, extension, depth, indexFile),
+    );
     return filtered;
   }
 
-  async allEntriesByFolder(folder: string, extension: string, depth: number) {
+  async allEntriesByFolder(folder: string, extension: string, depth: number, indexFile: string) {
     const files = await allEntriesByFolder({
-      listAllFiles: () => this.listAllFiles(folder, extension, depth),
+      listAllFiles: () => this.listAllFiles(folder, extension, depth, indexFile),
       readFile: this.api!.readFile.bind(this.api!),
       readFileMetadata: this.api!.readFileMetadata.bind(this.api),
       apiName: API_NAME,
@@ -212,12 +220,13 @@ export default class GitLab implements Implementation {
       folder,
       extension,
       depth,
+      indexFile,
       getDefaultBranch: () =>
         this.api!.getDefaultBranch().then(b => ({ name: b.name, sha: b.commit.id })),
       isShaExistsInBranch: this.api!.isShaExistsInBranch.bind(this.api!),
       getDifferences: (to, from) => this.api!.getDifferences(to, from),
       getFileId: path => this.api!.getFileId(path, this.branch),
-      filterFile: file => this.filterFile(folder, file, extension, depth),
+      filterFile: file => this.filterFile(folder, file, extension, depth, indexFile),
       customFetch: this.useGraphQL ? files => this.api!.readFilesGraphQL(files) : undefined,
     });
 
@@ -313,13 +322,14 @@ export default class GitLab implements Implementation {
 
   traverseCursor(cursor: Cursor, action: string) {
     return this.api!.traverseCursor(cursor, action).then(async ({ entries, cursor: newCursor }) => {
-      const [folder, depth, extension] = [
+      const [folder, depth, extension, indexFile] = [
         cursor.meta?.get('folder') as string,
         cursor.meta?.get('depth') as number,
         cursor.meta?.get('extension') as string,
+        cursor.meta?.get('path')?.get('index_file') as string,
       ];
       if (folder && depth && extension) {
-        entries = entries.filter(f => this.filterFile(folder, f, extension, depth));
+        entries = entries.filter(f => this.filterFile(folder, f, extension, depth, indexFile));
         newCursor = newCursor.mergeMeta({ folder, extension, depth });
       }
       const entriesWithData = await entriesByFiles(

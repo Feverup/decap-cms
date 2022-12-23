@@ -7,6 +7,14 @@ import APIError from './APIError';
 
 type Formatter = (res: Response) => Promise<string | Blob | unknown>;
 
+export function filterByIndexFile(file: { path: string }, indexFile: string) {
+  if (!indexFile) return true;
+  const path = file?.path || '';
+  const splittedPath = path.split('/');
+  const fileName = splittedPath[splittedPath.length - 1].split('.')[0];
+  return fileName === indexFile;
+}
+
 export function filterByExtension(file: { path: string }, extension: string) {
   const path = file?.path || '';
   return path.endsWith(extension.startsWith('.') ? extension : `.${extension}`);

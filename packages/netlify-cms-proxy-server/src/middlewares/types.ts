@@ -6,6 +6,7 @@ export type EntriesByFolderParams = {
   folder: string;
   extension: string;
   depth: 1;
+  indexFile: string;
 };
 
 export type EntriesByFilesParams = {

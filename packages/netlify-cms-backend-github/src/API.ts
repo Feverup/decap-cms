@@ -32,6 +32,7 @@ import type {
   PersistOptions,
   FetchError,
   ApiRequest,
+  GoogleCredentials
 } from 'netlify-cms-lib-util';
 import type { Semaphore } from 'semaphore';
 import type { Octokit } from '@octokit/rest';
@@ -50,9 +51,11 @@ export const MOCK_PULL_REQUEST = -1;
 export interface Config {
   apiRoot?: string;
   token?: string;
+  googleAuth?: GoogleCredentials;
   branch?: string;
   useOpenAuthoring?: boolean;
   repo?: string;
+  requestFunction?: (req: ApiRequest) => Promise<Response>;
   originRepo?: string;
   squashMerges: boolean;
   initialWorkflowStatus: string;
@@ -173,6 +176,7 @@ let migrationNotified = false;
 export default class API {
   apiRoot: string;
   token: string;
+  googleAuth?: GoogleCredentials;
   branch: string;
   useOpenAuthoring?: boolean;
   repo: string;
@@ -181,6 +185,7 @@ export default class API {
   repoName: string;
   originRepoOwner: string;
   originRepoName: string;
+  requestFunction: (req: ApiRequest) => Promise<Response>;
   repoURL: string;
   originRepoURL: string;
   mergeMethod: string;
@@ -195,11 +200,13 @@ export default class API {
   constructor(config: Config) {
     this.apiRoot = config.apiRoot || 'https://api.github.com';
     this.token = config.token || '';
+    this.googleAuth = config.googleAuth;
     this.branch = config.branch || 'master';
     this.useOpenAuthoring = config.useOpenAuthoring;
     this.repo = config.repo || '';
     this.originRepo = config.originRepo || this.repo;
     this.repoURL = `/repos/${this.repo}`;
+    this.requestFunction = config.requestFunction || unsentRequest.performRequest
     // when not in 'useOpenAuthoring' mode originRepoURL === repoURL
     this.originRepoURL = `/repos/${this.originRepo}`;
 
@@ -224,8 +231,17 @@ export default class API {
     return this._userPromise;
   }
 
+  getGoogleUser(googleAuth: GoogleCredentials) {
+    return new Promise(resolve => {
+      resolve({
+        name: googleAuth.name,
+        login: googleAuth.email
+      })
+    })
+  }
+
   getUser() {
-    return this.request('/user') as Promise<GitHubUser>;
+    return (this.googleAuth ? this.getGoogleUser(this.googleAuth) :this.request('/user')) as Promise<GitHubUser>;
   }
 
   async hasWriteAccess() {
