@@ -6,7 +6,7 @@ import MediaLibrarySearch from './MediaLibrarySearch';
 import MediaLibraryHeader from './MediaLibraryHeader';
 import {
   UploadButton,
-  DeleteButton,
+  // DeleteButton,
   DownloadButton,
   CopyToClipBoardButton,
   InsertButton,
@@ -48,14 +48,14 @@ function MediaLibraryTop({
 }) {
   const shouldShowButtonLoader = isPersisting || isDeleting;
   const uploadEnabled = !shouldShowButtonLoader;
-  const deleteEnabled = !shouldShowButtonLoader && hasSelection;
+  // const deleteEnabled = !shouldShowButtonLoader && selectedFile.draft;
 
   const uploadButtonLabel = isPersisting
     ? t('mediaLibrary.mediaLibraryModal.uploading')
     : t('mediaLibrary.mediaLibraryModal.upload');
-  const deleteButtonLabel = isDeleting
-    ? t('mediaLibrary.mediaLibraryModal.deleting')
-    : t('mediaLibrary.mediaLibraryModal.deleteSelected');
+  // const deleteButtonLabel = isDeleting
+  //   ? t('mediaLibrary.mediaLibraryModal.deleting')
+  //   : t('mediaLibrary.mediaLibraryModal.deleteSelected');
   const downloadButtonLabel = t('mediaLibrary.mediaLibraryModal.download');
   const insertButtonLabel = t('mediaLibrary.mediaLibraryModal.chooseSelected');
 
@@ -99,9 +99,9 @@ function MediaLibraryTop({
           disabled={searchDisabled}
         />
         <ButtonsContainer>
-          <DeleteButton onClick={onDelete} disabled={!deleteEnabled}>
+          {/* <DeleteButton onClick={onDelete} disabled={!deleteEnabled}>
             {deleteButtonLabel}
-          </DeleteButton>
+          </DeleteButton> */}
           {!canInsert ? null : (
             <InsertButton onClick={onInsert} disabled={!hasSelection}>
               {insertButtonLabel}
