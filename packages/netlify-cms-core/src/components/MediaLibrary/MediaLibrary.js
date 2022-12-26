@@ -184,9 +184,15 @@ class MediaLibrary extends React.Component {
     const files = [...fileList];
     let file = files[0];
 
+    const fileNamePattern = field.get('file_name_pattern');
+    if (fileNamePattern && !(new RegExp(fileNamePattern).test(file.name))) {
+      window.alert(`The name of the file must be with this pattern:\n\n${fileNamePattern.split('\\')[0]}\n\nPlease rename the file with a correct file name in order to continue.`);
+      return;
+    }
+
     const fileName = value && basename(value);
     if (fileName && fileName !== file.name) {
-      if (!window.confirm(`The name of the file must be ${fileName}. Do you want to make the name replacement?`)) {
+      if (!window.confirm(`The name of the file must be ${fileName}.\n\nDo you want to make the name replacement?`)) {
         return;
       }
       file = this.renameFile(file, fileName);
