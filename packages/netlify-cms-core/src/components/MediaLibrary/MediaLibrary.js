@@ -5,10 +5,9 @@ import { connect } from 'react-redux';
 import { orderBy, map } from 'lodash';
 import { translate } from 'react-polyglot';
 import fuzzy from 'fuzzy';
-import { fileExtension } from 'netlify-cms-lib-util';
+import { basename, fileExtension } from 'netlify-cms-lib-util';
 
 import {
-  checkMedia as checkMediaAction,
   loadMedia as loadMediaAction,
   persistMedia as persistMediaAction,
   deleteMedia as deleteMediaAction,
@@ -46,6 +45,7 @@ class MediaLibrary extends React.Component {
     dynamicSearch: PropTypes.bool,
     dynamicSearchActive: PropTypes.bool,
     forImage: PropTypes.bool,
+    value: PropTypes.string,
     isLoading: PropTypes.bool,
     isPersisting: PropTypes.bool,
     isDeleting: PropTypes.bool,
@@ -179,12 +179,12 @@ class MediaLibrary extends React.Component {
     event.persist();
     event.stopPropagation();
     event.preventDefault();
-    const { persistMedia, privateUpload, config, t, field } = this.props;
+    const { persistMedia, privateUpload, config, t, field, value } = this.props;
     const { files: fileList } = event.dataTransfer || event.target;
     const files = [...fileList];
     let file = files[0];
 
-    const fileName = field.get('file_name');
+    const fileName = value && basename(value);
     if (fileName && fileName !== file.name) {
       if (!window.confirm(`The name of the file must be ${fileName}. Do you want to make the name replacement?`)) {
         return;
@@ -218,11 +218,9 @@ class MediaLibrary extends React.Component {
   handleInsert = () => {
     const { selectedFile } = this.state;
     const { path } = selectedFile;
-    const { checkMedia, insertMedia, field } = this.props;
-    if (checkMedia(path, field)) {
-      insertMedia(path, field);
-      this.handleClose();
-    }
+    const { insertMedia, field } = this.props;
+    insertMedia(path, field);
+    this.handleClose();
   };
 
   /**
@@ -327,6 +325,7 @@ class MediaLibrary extends React.Component {
       dynamicSearch,
       dynamicSearchActive,
       forImage,
+      value,
       isLoading,
       isPersisting,
       isDeleting,
@@ -345,6 +344,7 @@ class MediaLibrary extends React.Component {
         dynamicSearch={dynamicSearch}
         dynamicSearchActive={dynamicSearchActive}
         forImage={forImage}
+        value={value}
         isLoading={isLoading}
         isPersisting={isPersisting}
         isDeleting={isDeleting}
@@ -386,6 +386,7 @@ function mapStateToProps(state) {
     dynamicSearchActive: mediaLibrary.get('dynamicSearchActive'),
     dynamicSearchQuery: mediaLibrary.get('dynamicSearchQuery'),
     forImage: mediaLibrary.get('forImage'),
+    value: mediaLibrary.get('value'),
     isLoading: mediaLibrary.get('isLoading'),
     isPersisting: mediaLibrary.get('isPersisting'),
     isDeleting: mediaLibrary.get('isDeleting'),
@@ -400,7 +401,6 @@ function mapStateToProps(state) {
 }
 
 const mapDispatchToProps = {
-  checkMedia: checkMediaAction,
   loadMedia: loadMediaAction,
   persistMedia: persistMediaAction,
   deleteMedia: deleteMediaAction,

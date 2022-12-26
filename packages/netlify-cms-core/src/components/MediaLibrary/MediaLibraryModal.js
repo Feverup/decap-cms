@@ -68,6 +68,7 @@ function MediaLibraryModal({
   dynamicSearch,
   dynamicSearchActive,
   forImage,
+  value,
   isLoading,
   isPersisting,
   isDeleting,
@@ -117,6 +118,7 @@ function MediaLibraryModal({
         onClose={handleClose}
         privateUpload={privateUpload}
         forImage={forImage}
+        value={value}
         onDownload={handleDownload}
         onUpload={handlePersist}
         query={query}
@@ -172,6 +174,7 @@ MediaLibraryModal.propTypes = {
   dynamicSearch: PropTypes.bool,
   dynamicSearchActive: PropTypes.bool,
   forImage: PropTypes.bool,
+  value: PropTypes.string,
   isLoading: PropTypes.bool,
   isPersisting: PropTypes.bool,
   isDeleting: PropTypes.bool,

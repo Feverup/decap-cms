@@ -328,12 +328,12 @@ export class Editor extends React.Component {
       return;
     }
 
-    removeAssets();
-    removeDraftEntryMediaFiles();
-
     await deleteUnpublishedEntry(collection.get('name'), slug);
 
     this.deleteBackup();
+
+    removeAssets();
+    removeDraftEntryMediaFiles();
 
     if (isModification) {
       loadEntry(collection, slug);

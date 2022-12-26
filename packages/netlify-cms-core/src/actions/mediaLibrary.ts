@@ -114,29 +114,6 @@ export function closeMediaLibrary() {
   };
 }
 
-function checkMediaString(mediaPath: string, field: EntryField | undefined) {
-  const mediaBasename = basename(mediaPath);
-  const fileName = field?.get('file_name');
-  if (fileName && mediaBasename !== fileName) {
-    throw new Error(`The name of the file must be ${fileName}!`);
-  }
-}
-
-export function checkMedia(mediaPath: string | string[], field: EntryField | undefined) {
-  return () => {
-    try {
-      if (Array.isArray(mediaPath)) {
-        mediaPath.forEach(path => checkMediaString(path, field));
-      } else {
-        checkMediaString(mediaPath, field);
-      }
-      return true;
-    } catch (e) {
-      window.alert(e);
-    }
-  }
-}
-
 export function insertMedia(mediaPath: string | string[], field: EntryField | undefined) {
   return (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
     const state = getState();
