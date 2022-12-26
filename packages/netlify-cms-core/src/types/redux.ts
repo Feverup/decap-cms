@@ -554,6 +554,7 @@ export type EntryField = StaticallyTypedRecord<{
   widget: string;
   name: string;
   default: string | null | boolean | List<unknown>;
+  file_name?: string;
   media_folder?: string;
   public_folder?: string;
   comment?: string;

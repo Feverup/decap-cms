@@ -23,6 +23,7 @@ import type {
   DisplayURLState,
   MediaLibraryInstance,
   EntryField,
+  EntryMap,
 } from '../types/redux';
 import type { AnyAction } from 'redux';
 import type { ThunkDispatch } from 'redux-thunk';
@@ -111,6 +112,29 @@ export function closeMediaLibrary() {
     }
     dispatch(mediaLibraryClosed());
   };
+}
+
+function checkMediaString(mediaPath: string, field: EntryField | undefined) {
+  const mediaBasename = basename(mediaPath);
+  const fileName = field?.get('file_name');
+  if (fileName && mediaBasename !== fileName) {
+    throw new Error(`The name of the file must be ${fileName}!`);
+  }
+}
+
+export function checkMedia(mediaPath: string | string[], field: EntryField | undefined) {
+  return () => {
+    try {
+      if (Array.isArray(mediaPath)) {
+        mediaPath.forEach(path => checkMediaString(path, field));
+      } else {
+        checkMediaString(mediaPath, field);
+      }
+      return true;
+    } catch (e) {
+      window.alert(e);
+    }
+  }
 }
 
 export function insertMedia(mediaPath: string | string[], field: EntryField | undefined) {
@@ -212,6 +236,29 @@ function createMediaFileFromAsset({
   return mediaFile;
 }
 
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
+function resizeImage(image: HTMLImageElement, { name, type, width, height }: { name: string, type: string, width: number, height: number }): Promise<File> {
+  const canvas = document.createElement("canvas");
+  const context = canvas.getContext("2d");
+
+  canvas.width = width;
+  canvas.height = height;
+
+  if (context) context.drawImage(image as CanvasImageSource, 0, 0, width, height);
+
+  return new Promise(resolve => {
+    canvas.toBlob((blob) => resolve(new File([blob as Blob], name, { type })), type);
+  });
+}
+
 export function persistMedia(file: File, opts: MediaOptions = {}) {
   const { privateUpload, field } = opts;
   return async (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
@@ -223,20 +270,6 @@ export function persistMedia(file: File, opts: MediaOptions = {}) {
     const existingFile = files.find(existingFile => existingFile.name.toLowerCase() === fileName);
 
     const editingDraft = selectEditingDraft(state.entryDraft);
-
-    /**
-     * Check for existing files of the same name before persisting. If no asset
-     * store integration is used, files are being stored in Git, so we can
-     * expect file names to be unique. If an asset store is in use, file names
-     * may not be unique, so we forego this check.
-     */
-    if (!integration && existingFile) {
-      if (!window.confirm(`${existingFile.name} already exists. Do you want to replace it?`)) {
-        return;
-      } else {
-        await dispatch(deleteMedia(existingFile, { privateUpload }));
-      }
-    }
 
     if (integration || !editingDraft) {
       dispatch(mediaPersisting());
@@ -264,18 +297,38 @@ export function persistMedia(file: File, opts: MediaOptions = {}) {
         }
       } else if (privateUpload) {
         throw new Error('The Private Upload option is only available for Asset Store Integration');
-      } else {
-        const entry = state.entryDraft.get('entry');
-        const collection = state.collections.get(entry?.get('collection'));
-        const path = selectMediaFilePath(state.config, collection, entry, fileName, field);
-        assetProxy = createAssetProxy({
-          file,
-          path,
-          field,
-        });
       }
 
-      dispatch(addAsset(assetProxy));
+      const entry = state.entryDraft.get('entry');
+      const collection = state.collections.get(entry?.get('collection'));
+
+      if (existingFile) {
+        const { displayURL } = existingFile;
+        const existingFileDisplayUrl = typeof displayURL === 'string' ? displayURL : displayURL && await backend.getMediaDisplayURL(displayURL);
+
+        const existingImage = await loadImage(existingFileDisplayUrl as string);
+        const fileImage = await loadImage(URL.createObjectURL(file));
+
+        const { height: currentHeight, width: currentWidth } = existingImage;
+        const { height, width } = fileImage;
+        if (currentHeight !== height || currentWidth !== width) {
+          if (!window.confirm(`${existingFile.name} must have a height of ${currentHeight} and a width of ${currentWidth}. Do you want to resize it?`)) {
+            return;
+          }
+          file = await resizeImage(fileImage, { name: file.name, type: file.type, height: currentHeight, width: currentWidth });
+        }
+
+        await dispatch(removeDraftEntryMediaFile({ id: existingFile.id }));
+      }
+
+      const path = selectMediaFilePath(state.config, collection, entry, fileName, field);
+      assetProxy = createAssetProxy({
+        file,
+        path,
+        field,
+      });
+
+      dispatch(addAsset(entry, assetProxy));
 
       let mediaFile: ImplementationMediaFile;
       if (integration) {
@@ -310,7 +363,7 @@ export function persistMedia(file: File, opts: MediaOptions = {}) {
   };
 }
 
-export function deleteMedia(file: MediaFile, opts: MediaOptions = {}) {
+export function deleteMedia(file: MediaFile, opts: MediaOptions = {}, entry?: EntryMap) {
   const { privateUpload } = opts;
   return async (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
     const state = getState();
@@ -338,13 +391,13 @@ export function deleteMedia(file: MediaFile, opts: MediaOptions = {}) {
 
     try {
       if (file.draft) {
-        dispatch(removeAsset(file.path));
+        dispatch(removeAsset(entry?.get('path'), file.path));
         dispatch(removeDraftEntryMediaFile({ id: file.id }));
       } else {
         const editingDraft = selectEditingDraft(state.entryDraft);
 
         dispatch(mediaDeleting());
-        dispatch(removeAsset(file.path));
+        dispatch(removeAsset(entry?.get('path'), file.path));
 
         await backend.deleteMedia(state.config, file.path);
 

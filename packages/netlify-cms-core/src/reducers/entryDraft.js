@@ -18,6 +18,7 @@ import {
   ENTRY_PERSIST_FAILURE,
   ENTRY_DELETE_SUCCESS,
   ADD_DRAFT_ENTRY_MEDIA_FILE,
+  REMOVE_DRAFT_ENTRY_MEDIA_FILES,
   REMOVE_DRAFT_ENTRY_MEDIA_FILE,
 } from '../actions/entries';
 import {
@@ -181,6 +182,18 @@ function entryDraftReducer(state = Map(), action) {
           mediaFiles
             .filterNot(file => file.get('id') === action.payload.id)
             .insert(0, fromJS(action.payload)),
+        );
+        state.set('hasChanged', true);
+      });
+    }
+
+    case REMOVE_DRAFT_ENTRY_MEDIA_FILES: {
+      return state.withMutations(state => {
+        const mediaFiles = state.getIn(['entry', 'mediaFiles']);
+
+        state.setIn(
+          ['entry', 'mediaFiles'],
+          mediaFiles.filterNot(file => file.get('draft')),
         );
         state.set('hasChanged', true);
       });

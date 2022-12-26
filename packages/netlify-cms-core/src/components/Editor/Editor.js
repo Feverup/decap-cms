@@ -22,6 +22,7 @@ import {
   loadLocalBackup,
   retrieveLocalBackup,
   deleteLocalBackup,
+  removeDraftEntryMediaFiles,
 } from '../../actions/entries';
 import {
   updateUnpublishedEntryStatus,
@@ -29,6 +30,7 @@ import {
   unpublishPublishedEntry,
   deleteUnpublishedEntry,
 } from '../../actions/editorialWorkflow';
+import { removeAssets } from '../../actions/media';
 import { loadDeployPreview } from '../../actions/deploys';
 import { selectEntry, selectUnpublishedEntry, selectDeployPreview } from '../../reducers';
 import { selectFields } from '../../reducers/collections';
@@ -189,6 +191,9 @@ export class Editor extends React.Component {
   componentWillUnmount() {
     this.createBackup.flush();
     this.props.discardDraft();
+    if (this.props.hasChanged) {
+      this.props.removeAssets();
+    }
     window.removeEventListener('beforeunload', this.exitBlocker);
   }
 
@@ -312,7 +317,7 @@ export class Editor extends React.Component {
   };
 
   handleDeleteUnpublishedChanges = async () => {
-    const { entryDraft, collection, slug, deleteUnpublishedEntry, loadEntry, isModification, t } =
+    const { entryDraft, collection, slug, removeAssets, removeDraftEntryMediaFiles, deleteUnpublishedEntry, loadEntry, isModification, t } =
       this.props;
     if (
       entryDraft.get('hasChanged') &&
@@ -322,6 +327,10 @@ export class Editor extends React.Component {
     } else if (!window.confirm(t('editor.editor.onDeleteUnpublishedChanges'))) {
       return;
     }
+
+    removeAssets();
+    removeDraftEntryMediaFiles();
+
     await deleteUnpublishedEntry(collection.get('name'), slug);
 
     this.deleteBackup();
@@ -488,6 +497,8 @@ const mapDispatchToProps = {
   publishUnpublishedEntry,
   unpublishPublishedEntry,
   deleteUnpublishedEntry,
+  removeAssets,
+  removeDraftEntryMediaFiles,
   logoutUser,
 };
 

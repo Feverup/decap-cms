@@ -8,6 +8,7 @@ import fuzzy from 'fuzzy';
 import { fileExtension } from 'netlify-cms-lib-util';
 
 import {
+  checkMedia as checkMediaAction,
   loadMedia as loadMediaAction,
   persistMedia as persistMediaAction,
   deleteMedia as deleteMediaAction,
@@ -159,6 +160,13 @@ class MediaLibrary extends React.Component {
     this.setState({ selectedFile });
   };
 
+  renameFile = (originalFile, newName) => {
+    return new File([originalFile], newName, {
+      type: originalFile.type,
+      lastModified: originalFile.lastModified,
+    });
+  }
+
   /**
    * Upload a file.
    */
@@ -174,7 +182,16 @@ class MediaLibrary extends React.Component {
     const { persistMedia, privateUpload, config, t, field } = this.props;
     const { files: fileList } = event.dataTransfer || event.target;
     const files = [...fileList];
-    const file = files[0];
+    let file = files[0];
+
+    const fileName = field.get('file_name');
+    if (fileName && fileName !== file.name) {
+      if (!window.confirm(`The name of the file must be ${fileName}. Do you want to make the name replacement?`)) {
+        return;
+      }
+      file = this.renameFile(file, fileName);
+    }
+
     const maxFileSize = config.get('max_file_size');
 
     if (maxFileSize && file.size > maxFileSize) {
@@ -201,9 +218,11 @@ class MediaLibrary extends React.Component {
   handleInsert = () => {
     const { selectedFile } = this.state;
     const { path } = selectedFile;
-    const { insertMedia, field } = this.props;
-    insertMedia(path, field);
-    this.handleClose();
+    const { checkMedia, insertMedia, field } = this.props;
+    if (checkMedia(path, field)) {
+      insertMedia(path, field);
+      this.handleClose();
+    }
   };
 
   /**
@@ -381,6 +400,7 @@ function mapStateToProps(state) {
 }
 
 const mapDispatchToProps = {
+  checkMedia: checkMediaAction,
   loadMedia: loadMediaAction,
   persistMedia: persistMediaAction,
   deleteMedia: deleteMediaAction,

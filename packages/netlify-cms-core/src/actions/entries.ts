@@ -84,6 +84,7 @@ export const ENTRY_DELETE_SUCCESS = 'ENTRY_DELETE_SUCCESS';
 export const ENTRY_DELETE_FAILURE = 'ENTRY_DELETE_FAILURE';
 
 export const ADD_DRAFT_ENTRY_MEDIA_FILE = 'ADD_DRAFT_ENTRY_MEDIA_FILE';
+export const REMOVE_DRAFT_ENTRY_MEDIA_FILES = 'REMOVE_DRAFT_ENTRY_MEDIA_FILES';
 export const REMOVE_DRAFT_ENTRY_MEDIA_FILE = 'REMOVE_DRAFT_ENTRY_MEDIA_FILE';
 
 export const CHANGE_VIEW_STYLE = 'CHANGE_VIEW_STYLE';
@@ -454,6 +455,10 @@ export function addDraftEntryMediaFile(file: ImplementationMediaFile) {
   return { type: ADD_DRAFT_ENTRY_MEDIA_FILE, payload: file };
 }
 
+export function removeDraftEntryMediaFiles() {
+  return { type: REMOVE_DRAFT_ENTRY_MEDIA_FILES };
+}
+
 export function removeDraftEntryMediaFile({ id }: { id: string }) {
   return { type: REMOVE_DRAFT_ENTRY_MEDIA_FILE, payload: { id } };
 }
@@ -506,7 +511,7 @@ export function retrieveLocalBackup(collection: Collection, slug: string) {
           }
         }),
       );
-      dispatch(addAssets(assetProxies));
+      dispatch(addAssets(entry, assetProxies));
 
       return dispatch(localBackupRetrieved(entry));
     }

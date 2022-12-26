@@ -268,7 +268,7 @@ export function loadUnpublishedEntry(collection: Collection, slug: string) {
             }),
           ),
       );
-      dispatch(addAssets(assetProxies));
+      dispatch(addAssets(entry, assetProxies));
       dispatch(unpublishedEntryLoaded(collection, entry));
       dispatch(createDraftFromEntry(entry));
     } catch (error) {
