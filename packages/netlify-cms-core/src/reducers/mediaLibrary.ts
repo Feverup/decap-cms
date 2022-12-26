@@ -49,7 +49,7 @@ const defaultState: {
   replaceIndex?: number;
 } = {
   isVisible: false,
-  showMediaButton: true,
+  showMediaButton: false,
   controlMedia: Map(),
   displayURLs: Map(),
   config: Map(),
