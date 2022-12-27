@@ -128,6 +128,7 @@ export interface CmsFieldFileOrImage {
   default?: string;
 
   media_library?: CmsMediaLibrary;
+  media_validation?: CmsMediaValidation;
   allow_multiple?: boolean;
   choose_url?: boolean;
   config?: unknown;
@@ -400,6 +401,7 @@ export interface CmsConfig {
   public_folder?: string;
   media_folder_relative?: boolean;
   media_library?: CmsMediaLibrary;
+  media_validation?: CmsMediaValidation;
   publish_mode?: CmsPublishMode;
   load_config_file?: boolean;
   integrations?: {
@@ -425,6 +427,23 @@ export type CmsMediaLibraryOptions = unknown; // TODO: type properly
 export interface CmsMediaLibrary {
   name: string;
   config?: CmsMediaLibraryOptions;
+}
+
+export interface CmsMediaImageValidation {
+  aspect_ratio: string
+  keep_aspect_ratio: boolean;
+  max_width: number
+  max_height: number
+  min_width: number
+  min_height: number
+}
+
+export interface CmsMediaValidation {
+  file_extensions: Array<string>
+  keep_file_name: boolean
+  max_file_size: number
+  file_name_pattern: string
+  images?: CmsMediaImageValidation;
 }
 
 export type SlugConfig = StaticallyTypedRecord<{

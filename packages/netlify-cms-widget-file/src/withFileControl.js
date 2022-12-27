@@ -130,10 +130,10 @@ const FileWidgetButton = styled.button`
   margin-bottom: 12px;
 `;
 
-const FileWidgetButtonRemove = styled.button`
-  ${buttons.button};
-  ${components.badgeDanger};
-`;
+// const FileWidgetButtonRemove = styled.button`
+//   ${buttons.button};
+//   ${components.badgeDanger};
+// `;
 
 function isMultiple(value) {
   return Array.isArray(value) || List.isList(value);
@@ -232,6 +232,7 @@ export default function withFileControl({ forImage } = {}) {
       const { field, onOpenMediaLibrary, value } = this.props;
       e.preventDefault();
       const mediaLibraryFieldOptions = this.getMediaLibraryFieldOptions();
+      const validation = this.getMediaLibraryValidationOptions();
 
       return onOpenMediaLibrary({
         controlID: this.controlID,
@@ -240,6 +241,7 @@ export default function withFileControl({ forImage } = {}) {
         value: valueListToArray(value),
         allowMultiple: !!mediaLibraryFieldOptions.get('allow_multiple', true),
         config: mediaLibraryFieldOptions.get('config'),
+        validation,
         field,
       });
     };
@@ -270,6 +272,7 @@ export default function withFileControl({ forImage } = {}) {
 
       return onOpenMediaLibrary({
         controlID: this.controlID,
+        fileExtensions: field.get('file_extensions'),
         forImage,
         privateUpload: field.get('private'),
         value: valueListToArray(value),
@@ -278,6 +281,12 @@ export default function withFileControl({ forImage } = {}) {
         config: mediaLibraryFieldOptions.get('config'),
         field,
       });
+    };
+
+    getMediaLibraryValidationOptions = () => {
+      const { field } = this.props;
+
+      return field.get('media_validation', Map());
     };
 
     getMediaLibraryFieldOptions = () => {
@@ -373,7 +382,7 @@ export default function withFileControl({ forImage } = {}) {
 
     renderSelection = subject => {
       const { t, field } = this.props;
-      const allowsMultiple = this.allowsMultiple();
+      // const allowsMultiple = this.allowsMultiple();
       return (
         <div>
           {forImage ? this.renderImages() : null}
@@ -391,9 +400,9 @@ export default function withFileControl({ forImage } = {}) {
                 {t(`editor.editorWidgets.${subject}.replaceUrl`)}
               </FileWidgetButton>
             ) : null}
-            <FileWidgetButtonRemove onClick={this.handleRemove}>
+            {/* <FileWidgetButtonRemove onClick={this.handleRemove}>
               {t(`editor.editorWidgets.${subject}.remove${allowsMultiple ? 'All' : ''}`)}
-            </FileWidgetButtonRemove>
+            </FileWidgetButtonRemove> */}
           </div>
         </div>
       );

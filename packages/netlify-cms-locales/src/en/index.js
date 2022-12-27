@@ -224,6 +224,8 @@ const en = {
     mediaLibrary: {
       onDelete: 'Are you sure you want to delete selected media?',
       fileTooLarge: 'File too large.\nConfigured to not allow files greater than %{size} kB.',
+      fileNamePatternError: 'The name of the file must be with this pattern:\n\n%{pattern}\n\nPlease rename the file with a correct file name in order to continue.',
+      fileNameCheckReplacement: 'The name of the file must be %{fileName}.\n\nDo you want to make the name replacement?',
     },
     mediaLibraryModal: {
       loading: 'Loading...',

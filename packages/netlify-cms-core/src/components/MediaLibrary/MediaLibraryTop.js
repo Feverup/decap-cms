@@ -1,7 +1,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import styled from '@emotion/styled';
-import { basename } from 'netlify-cms-lib-util';
 
 import MediaLibrarySearch from './MediaLibrarySearch';
 import MediaLibraryHeader from './MediaLibraryHeader';
@@ -33,7 +32,6 @@ function MediaLibraryTop({
   onClose,
   privateUpload,
   forImage,
-  value,
   onDownload,
   onUpload,
   query,
@@ -47,11 +45,12 @@ function MediaLibraryTop({
   isPersisting,
   isDeleting,
   selectedFile,
+  fileExtensions,
 }) {
-  const isNewOrReplacement = !value || selectedFile.draft && selectedFile.name === basename(value);
   const shouldShowButtonLoader = isPersisting || isDeleting;
   const uploadEnabled = !shouldShowButtonLoader;
-  const chooseEnabled = hasSelection && isNewOrReplacement;
+
+  const acceptFiles = fileExtensions && fileExtensions.map(extension => `.${extension}`).join();
 
   const uploadButtonLabel = isPersisting
     ? t('mediaLibrary.mediaLibraryModal.uploading')
@@ -68,8 +67,8 @@ function MediaLibraryTop({
         <MediaLibraryHeader
           onClose={onClose}
           title={`${privateUpload ? t('mediaLibrary.mediaLibraryModal.private') : ''}${forImage
-              ? t('mediaLibrary.mediaLibraryModal.images')
-              : t('mediaLibrary.mediaLibraryModal.mediaAssets')
+            ? t('mediaLibrary.mediaLibraryModal.images')
+            : t('mediaLibrary.mediaLibraryModal.mediaAssets')
             }`}
           isPrivate={privateUpload}
         />
@@ -85,12 +84,13 @@ function MediaLibraryTop({
             {downloadButtonLabel}
           </DownloadButton>
           {!canInsert ? null : (
-              <UploadButton
-            label={uploadButtonLabel}
-            imagesOnly={forImage}
-            onChange={onUpload}
-            disabled={!uploadEnabled}
-          />
+            <UploadButton
+              label={uploadButtonLabel}
+              acceptFiles={acceptFiles}
+              imagesOnly={forImage}
+              onChange={onUpload}
+              disabled={!uploadEnabled}
+            />
           )}
         </ButtonsContainer>
       </RowContainer>
@@ -107,7 +107,7 @@ function MediaLibraryTop({
             {deleteButtonLabel}
           </DeleteButton> */}
           {!canInsert ? null : (
-            <InsertButton onClick={onInsert} disabled={!chooseEnabled}>
+            <InsertButton onClick={onInsert} disabled={!hasSelection}>
               {insertButtonLabel}
             </InsertButton>
           )}
@@ -143,6 +143,7 @@ MediaLibraryTop.propTypes = {
     }),
     PropTypes.shape({}),
   ]),
+  fileExtensions: PropTypes.arrayOf(PropTypes.string),
 };
 
 export default MediaLibraryTop;

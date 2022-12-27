@@ -24,6 +24,7 @@ import type {
   MediaLibraryInstance,
   EntryField,
   EntryMap,
+  CmsMediaValidation,
 } from '../types/redux';
 import type { AnyAction } from 'redux';
 import type { ThunkDispatch } from 'redux-thunk';
@@ -35,6 +36,7 @@ const { notifSend } = notifActions;
 export const MEDIA_LIBRARY_OPEN = 'MEDIA_LIBRARY_OPEN';
 export const MEDIA_LIBRARY_CLOSE = 'MEDIA_LIBRARY_CLOSE';
 export const MEDIA_LIBRARY_CREATE = 'MEDIA_LIBRARY_CREATE';
+export const MEDIA_LIBRARY_VALIDATION = 'MEDIA_LIBRARY_VALIDATION';
 export const MEDIA_INSERT = 'MEDIA_INSERT';
 export const MEDIA_REMOVE_INSERTED = 'MEDIA_REMOVE_INSERTED';
 export const MEDIA_LOAD_REQUEST = 'MEDIA_LOAD_REQUEST';
@@ -59,6 +61,10 @@ export function createMediaLibrary(instance: MediaLibraryInstance) {
     enableStandalone: instance.enableStandalone || (() => undefined),
   };
   return { type: MEDIA_LIBRARY_CREATE, payload: api } as const;
+}
+
+export function createMediaLibraryValidation(validation: CmsMediaValidation) {
+  return { type: MEDIA_LIBRARY_VALIDATION, payload: validation } as const;
 }
 
 export function clearMediaControl(id: string) {
@@ -89,6 +95,7 @@ export function openMediaLibrary(
     value?: string;
     allowMultiple?: boolean;
     config?: Map<string, unknown>;
+    validation?: Map<string, unknown>;
     field?: EntryField;
   } = {},
 ) {
@@ -213,31 +220,8 @@ function createMediaFileFromAsset({
   return mediaFile;
 }
 
-function loadImage(src: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = reject;
-    img.src = src;
-  });
-}
-
-function resizeImage(image: HTMLImageElement, { name, type, width, height }: { name: string, type: string, width: number, height: number }): Promise<File> {
-  const canvas = document.createElement("canvas");
-  const context = canvas.getContext("2d");
-
-  canvas.width = width;
-  canvas.height = height;
-
-  if (context) context.drawImage(image as CanvasImageSource, 0, 0, width, height);
-
-  return new Promise(resolve => {
-    canvas.toBlob((blob) => resolve(new File([blob as Blob], name, { type })), type);
-  });
-}
-
 export function persistMedia(file: File, opts: MediaOptions = {}) {
-  const { privateUpload, field } = opts;
+  const { privateUpload, field, } = opts;
   return async (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
     const state = getState();
     const backend = currentBackend(state.config);
@@ -280,21 +264,6 @@ export function persistMedia(file: File, opts: MediaOptions = {}) {
       const collection = state.collections.get(entry?.get('collection'));
 
       if (existingFile) {
-        const { displayURL } = existingFile;
-        const existingFileDisplayUrl = typeof displayURL === 'string' ? displayURL : displayURL && await backend.getMediaDisplayURL(displayURL);
-
-        const existingImage = await loadImage(existingFileDisplayUrl as string);
-        const fileImage = await loadImage(URL.createObjectURL(file));
-
-        const { height: currentHeight, width: currentWidth } = existingImage;
-        const { height, width } = fileImage;
-        if (currentHeight !== height || currentWidth !== width) {
-          if (!window.confirm(`${existingFile.name} must have a height of ${currentHeight} and a width of ${currentWidth}. Do you want to resize it?`)) {
-            return;
-          }
-          file = await resizeImage(fileImage, { name: file.name, type: file.type, height: currentHeight, width: currentWidth });
-        }
-
         await dispatch(removeDraftEntryMediaFile({ id: existingFile.id }));
       }
 
@@ -446,6 +415,7 @@ function mediaLibraryOpened(payload: {
   replaceIndex?: number;
   allowMultiple?: boolean;
   config?: Map<string, unknown>;
+  validation?: Map<string, unknown>;
   field?: EntryField;
 }) {
   return { type: MEDIA_LIBRARY_OPEN, payload } as const;
@@ -473,6 +443,8 @@ interface MediaOptions {
   canPaginate?: boolean;
   dynamicSearch?: boolean;
   dynamicSearchQuery?: string;
+  forImage?: boolean;
+  validation?: Map<string, unknown>;
 }
 
 export function mediaLoaded(files: ImplementationMediaFile[], opts: MediaOptions = {}) {
@@ -587,6 +559,7 @@ export async function getMediaDisplayURL(
 
 export type MediaLibraryAction = ReturnType<
   | typeof createMediaLibrary
+  | typeof createMediaLibraryValidation
   | typeof mediaLibraryOpened
   | typeof mediaLibraryClosed
   | typeof mediaInserted
