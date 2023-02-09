@@ -254,7 +254,7 @@ class MediaLibrary extends React.Component {
         }
       }
 
-      if (keepAspectRatio) {
+      if (keepAspectRatio && value) {
         const valueName = basename(value);
         const currentFile = currentFiles && currentFiles.find(findFile => findFile.name === valueName);
         if (currentFile) {
