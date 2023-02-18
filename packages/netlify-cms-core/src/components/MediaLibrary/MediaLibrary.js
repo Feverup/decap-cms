@@ -266,11 +266,7 @@ class MediaLibrary extends React.Component {
           if (currentRoundAspectRatio !== fileRoundAspectRatio) {
             const currentAspectRatio = this.getAspectRatio(existingImage.width, existingImage.height);
             const fileAspectRatio = this.getAspectRatio(fileImage.width, fileImage.height);
-            if (!window.confirm(
-              `${file.name} should have an aspect ratio of ${currentAspectRatio} but the image has an aspect ratio of ${fileAspectRatio}. Do you want to continue?`
-            )) {
-              return;
-            }
+            return window.alert(`${file.name} should have an aspect ratio of ${currentAspectRatio} but the image has an aspect ratio of ${fileAspectRatio}.`);
           }
         }
       }
