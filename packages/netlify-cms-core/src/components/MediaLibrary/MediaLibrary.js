@@ -178,13 +178,6 @@ class MediaLibrary extends React.Component {
     return Math.round(ratio * 10) / 10;
   }
 
-  renameFile = (originalFile, newName) => {
-    return new File([originalFile], newName, {
-      type: originalFile.type,
-      lastModified: originalFile.lastModified,
-    });
-  }
-
   getDisplayURL = (file) => {
     if (!file) return
 
@@ -293,21 +286,15 @@ class MediaLibrary extends React.Component {
       const isFile = file instanceof File;
       if (isFile) {
         const valueName = basename(value);
-        const valueExtension = fileExtension(value);
-        if (valueName !== file.name) {
-          if (valueExtension === fileExtension(file.name)) {
-            if (!window.confirm(
-              t('mediaLibrary.mediaLibrary.fileNameCheckReplacement', {
-                fileName: valueName,
-              }),)) {
-              return;
-            }
-            return this.renameFile(file, valueName);
-          }
+        const fileModuleName = valueName.replace(/^([^_]*).*/, "$1_");
+        const fileNameRegex = new RegExp(`^${fileModuleName}`);
+        if (!fileNameRegex.test(file.name)) {
           return window.alert(
             t('mediaLibrary.mediaLibrary.fileNamePatternError', {
-              pattern: valueName,
-            }),)
+              pattern: `${fileModuleName}name`,
+            })
+          );
+
         }
       }
     }
