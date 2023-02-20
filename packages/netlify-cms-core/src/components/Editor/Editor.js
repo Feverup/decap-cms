@@ -166,18 +166,18 @@ export class Editor extends React.Component {
   }
 
   componentDidUpdate(prevProps) {
-    if (!prevProps.localBackup && this.props.localBackup) {
-      const confirmLoadBackup = window.confirm(this.props.t('editor.editor.confirmLoadBackup'));
-      if (confirmLoadBackup) {
-        this.props.loadLocalBackup();
-      } else {
-        this.deleteBackup();
-      }
-    }
+    // if (!prevProps.localBackup && this.props.localBackup) {
+    //   const confirmLoadBackup = window.confirm(this.props.t('editor.editor.confirmLoadBackup'));
+    //   if (confirmLoadBackup) {
+    //     this.props.loadLocalBackup();
+    //   } else {
+    //     this.deleteBackup();
+    //   }
+    // }
 
-    if (this.props.hasChanged) {
-      this.createBackup(this.props.entryDraft.get('entry'), this.props.collection);
-    }
+    // if (this.props.hasChanged) {
+    //   this.createBackup(this.props.entryDraft.get('entry'), this.props.collection);
+    // }
 
     if (prevProps.entry === this.props.entry) return;
 
