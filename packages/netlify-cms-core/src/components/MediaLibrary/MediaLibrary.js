@@ -215,6 +215,24 @@ class MediaLibrary extends React.Component {
       );
     }
 
+    const keepFileName = validation.get('keep_file_name');
+    if (keepFileName && value) {
+      const isFile = file instanceof File;
+      if (isFile) {
+        const valueName = basename(value);
+        const fileModuleName = valueName.replace(/^([^_]*).*/, "$1_");
+        const fileNameRegex = new RegExp(`^${fileModuleName}`);
+        if (!fileNameRegex.test(file.name)) {
+          return window.alert(
+            t('mediaLibrary.mediaLibrary.fileNamePatternError', {
+              pattern: `${fileModuleName}name`,
+            })
+          );
+
+        }
+      }
+    }
+
     const maxFileSize = validation.get('max_file_size');
     if (maxFileSize && file.size > maxFileSize * 100) {
       return window.alert(
@@ -278,24 +296,6 @@ class MediaLibrary extends React.Component {
 
       if (minHeight && fileImage.height < minHeight) {
         return window.alert(`${file.name} must have a min height of ${minHeight}.`)
-      }
-    }
-
-    const keepFileName = validation.get('keep_file_name');
-    if (keepFileName && value) {
-      const isFile = file instanceof File;
-      if (isFile) {
-        const valueName = basename(value);
-        const fileModuleName = valueName.replace(/^([^_]*).*/, "$1_");
-        const fileNameRegex = new RegExp(`^${fileModuleName}`);
-        if (!fileNameRegex.test(file.name)) {
-          return window.alert(
-            t('mediaLibrary.mediaLibrary.fileNamePatternError', {
-              pattern: `${fileModuleName}name`,
-            })
-          );
-
-        }
       }
     }
 
