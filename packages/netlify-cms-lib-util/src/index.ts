@@ -40,6 +40,7 @@ import {
 import {
   CMS_BRANCH_PREFIX,
   generateContentKey,
+  isCmsRefSuffix,
   isCMSLabel,
   labelToStatus,
   statusToLabel,
@@ -133,6 +134,7 @@ export const NetlifyCmsLibUtil = {
   readFileMetadata,
   CMS_BRANCH_PREFIX,
   generateContentKey,
+  isCmsRefSuffix,
   isCMSLabel,
   labelToStatus,
   statusToLabel,
@@ -190,6 +192,7 @@ export {
   readFileMetadata,
   CMS_BRANCH_PREFIX,
   generateContentKey,
+  isCmsRefSuffix,
   isCMSLabel,
   labelToStatus,
   statusToLabel,

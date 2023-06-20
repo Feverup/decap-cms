@@ -78,6 +78,7 @@ export default class GitHub implements Implementation {
   openAuthoringEnabled: boolean;
   useOpenAuthoring?: boolean;
   alwaysForkEnabled: boolean;
+  main?: string;
   branch: string;
   apiRoot: string;
   mediaFolder: string;
@@ -129,6 +130,7 @@ export default class GitHub implements Implementation {
       this.repo = this.originRepo = config.backend.repo || '';
     }
     this.alwaysForkEnabled = config.backend.always_fork || false;
+    this.main = config.backend.main?.trim();
     this.branch = config.backend.branch?.trim() || 'master';
     this.apiRoot = config.backend.api_root || 'https://api.github.com';
     this.token = '';
@@ -339,6 +341,7 @@ export default class GitHub implements Implementation {
     this.api = new apiCtor({
       token: this.token,
       googleAuth: this.googleAuth,
+      main: this.main,
       branch: this.branch,
       repo: this.repo,
       requestFunction: this.useApps ? this.appsRequestFunction : unsentRequest.performRequest,
@@ -726,12 +729,62 @@ export default class GitHub implements Implementation {
     );
   }
 
+  publishUnpublishedEntryMain(collection: string, slug: string, options: { mainCommitMessage: string, publishMain?: boolean }) {
+    // publishUnpublishedEntryMain is a transactional operation
+    return runWithLock(
+      this.lock,
+      () => this.api!.publishUnpublishedEntryMain(collection, slug, options),
+      'Failed to acquire publish entry lock',
+    );
+  }
+
   publishUnpublishedEntry(collection: string, slug: string) {
     // publishUnpublishedEntry is a transactional operation
     return runWithLock(
       this.lock,
       () => this.api!.publishUnpublishedEntry(collection, slug),
       'Failed to acquire publish entry lock',
+    );
+  }
+
+  mainStatus() {
+    return runWithLock(
+      this.lock,
+      () => this.api!.fetchMain(),
+      'Failed to acquire main status lock',
+    );
+  }
+
+  updateMainStatus(newStatus: string) {
+    // updateMainStatus is a transactional operation
+    return runWithLock(
+      this.lock,
+      () => this.api!.updateMainStatus(newStatus),
+      'Failed to acquire main update status lock',
+    );
+  }
+
+  publishMain() {
+    return runWithLock(
+      this.lock,
+      () => this.api!.publishMain(),
+      'Failed to publish main status lock',
+    );
+  }
+
+  closeMain() {
+    return runWithLock(
+      this.lock,
+      () => this.api!.closeMain(),
+      'Failed to close main status lock',
+    );
+  }
+
+  createMainPR(title?: string) {
+    return runWithLock(
+      this.lock,
+      () => this.api!.createMainPR(title),
+      'Failed to close main status lock',
     );
   }
 }

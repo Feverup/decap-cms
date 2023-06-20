@@ -4,7 +4,7 @@ import ImmutablePropTypes from 'react-immutable-proptypes';
 import { connect } from 'react-redux';
 import { Loader } from 'netlify-cms-ui-default';
 import { translate } from 'react-polyglot';
-import { debounce } from 'lodash';
+// import { debounce } from 'lodash';
 
 import { history, navigateToCollection, navigateToNewEntry } from '../../routing/history';
 import { logoutUser } from '../../actions/auth';
@@ -18,10 +18,10 @@ import {
   changeDraftFieldValidation,
   persistEntry,
   deleteEntry,
-  persistLocalBackup,
-  loadLocalBackup,
-  retrieveLocalBackup,
-  deleteLocalBackup,
+  // persistLocalBackup,
+  // loadLocalBackup,
+  // retrieveLocalBackup,
+  // deleteLocalBackup,
   removeDraftEntryMediaFiles,
 } from '../../actions/entries';
 import {
@@ -76,11 +76,11 @@ export class Editor extends React.Component {
     }),
     hasChanged: PropTypes.bool,
     t: PropTypes.func.isRequired,
-    retrieveLocalBackup: PropTypes.func.isRequired,
-    localBackup: ImmutablePropTypes.map,
-    loadLocalBackup: PropTypes.func,
-    persistLocalBackup: PropTypes.func.isRequired,
-    deleteLocalBackup: PropTypes.func,
+    // retrieveLocalBackup: PropTypes.func.isRequired,
+    // localBackup: ImmutablePropTypes.map,
+    // loadLocalBackup: PropTypes.func,
+    // persistLocalBackup: PropTypes.func.isRequired,
+    // deleteLocalBackup: PropTypes.func,
   };
 
   componentDidMount() {
@@ -91,12 +91,12 @@ export class Editor extends React.Component {
       loadEntry,
       createEmptyDraft,
       loadEntries,
-      retrieveLocalBackup,
+      // retrieveLocalBackup,
       collectionEntriesLoaded,
       t,
     } = this.props;
 
-    retrieveLocalBackup(collection, slug);
+    // retrieveLocalBackup(collection, slug);
 
     if (newEntry) {
       createEmptyDraft(collection, this.props.location.search);
@@ -154,7 +154,7 @@ export class Editor extends React.Component {
         return;
       }
 
-      this.deleteBackup();
+      // this.deleteBackup();
 
       unblock();
       this.unlisten();
@@ -189,7 +189,7 @@ export class Editor extends React.Component {
   }
 
   componentWillUnmount() {
-    this.createBackup.flush();
+    // this.createBackup.flush();
     this.props.discardDraft();
     if (this.props.hasChanged) {
       this.props.removeAssets();
@@ -197,9 +197,9 @@ export class Editor extends React.Component {
     window.removeEventListener('beforeunload', this.exitBlocker);
   }
 
-  createBackup = debounce(function (entry, collection) {
-    this.props.persistLocalBackup(entry, collection);
-  }, 2000);
+  // createBackup = debounce(function (entry, collection) {
+  //   this.props.persistLocalBackup(entry, collection);
+  // }, 2000);
 
   handleChangeDraftField = (field, value, metadata, i18n) => {
     const entries = [this.props.unPublishedEntry, this.props.publishedEntry].filter(Boolean);
@@ -217,11 +217,11 @@ export class Editor extends React.Component {
     updateUnpublishedEntryStatus(collection.get('name'), slug, currentStatus, newStatus);
   };
 
-  deleteBackup() {
-    const { deleteLocalBackup, collection, slug, newEntry } = this.props;
-    this.createBackup.cancel();
-    deleteLocalBackup(collection, !newEntry && slug);
-  }
+  // deleteBackup() {
+  //   const { deleteLocalBackup, collection, slug, newEntry } = this.props;
+  //   this.createBackup.cancel();
+  //   deleteLocalBackup(collection, !newEntry && slug);
+  // }
 
   handlePersistEntry = async (opts = {}) => {
     const { createNew = false, duplicate = false } = opts;
@@ -238,7 +238,7 @@ export class Editor extends React.Component {
 
     await persistEntry(collection);
 
-    this.deleteBackup();
+    // this.deleteBackup();
 
     if (createNew) {
       navigateToNewEntry(collection.get('name'));
@@ -249,10 +249,10 @@ export class Editor extends React.Component {
   };
 
   handlePublishEntry = async (opts = {}) => {
-    const { createNew = false, duplicate = false } = opts;
+    const { publishMain = false } = opts;
+
     const {
       publishUnpublishedEntry,
-      createDraftDuplicateFromEntry,
       entryDraft,
       collection,
       slug,
@@ -269,15 +269,7 @@ export class Editor extends React.Component {
       return;
     }
 
-    await publishUnpublishedEntry(collection.get('name'), slug);
-
-    this.deleteBackup();
-
-    if (createNew) {
-      navigateToNewEntry(collection.get('name'));
-    }
-
-    duplicate && createDraftDuplicateFromEntry(entryDraft.get('entry'));
+    await publishUnpublishedEntry(collection.get('name'), slug, publishMain);
   };
 
   handleUnpublishEntry = async () => {
@@ -311,7 +303,7 @@ export class Editor extends React.Component {
 
     setTimeout(async () => {
       await deleteEntry(collection, slug);
-      this.deleteBackup();
+      // this.deleteBackup();
       return navigateToCollection(collection.get('name'));
     }, 0);
   };
@@ -330,7 +322,7 @@ export class Editor extends React.Component {
 
     await deleteUnpublishedEntry(collection.get('name'), slug);
 
-    this.deleteBackup();
+    // this.deleteBackup();
 
     removeAssets();
     removeDraftEntryMediaFiles();
@@ -365,6 +357,7 @@ export class Editor extends React.Component {
       slug,
       t,
       editorBackLink,
+      canStack,
     } = this.props;
 
     const isPublished = !newEntry && !unpublishedEntry;
@@ -414,6 +407,7 @@ export class Editor extends React.Component {
         deployPreview={deployPreview}
         loadDeployPreview={opts => loadDeployPreview(collection, slug, entry, isPublished, opts)}
         editorBackLink={editorBackLink}
+        canStack={canStack}
         t={t}
       />
     );
@@ -421,7 +415,7 @@ export class Editor extends React.Component {
 }
 
 function mapStateToProps(state, ownProps) {
-  const { collections, entryDraft, auth, config, entries, globalUI } = state;
+  const { collections, entryDraft, auth, config, entries, globalUI, main } = state;
   const slug = ownProps.match.params[0];
   const collection = collections.get(ownProps.match.params.name);
   const collectionName = collection.get('name');
@@ -439,7 +433,7 @@ function mapStateToProps(state, ownProps) {
   const publishedEntry = selectEntry(state, collectionName, slug);
   const currentStatus = unPublishedEntry && unPublishedEntry.get('status');
   const deployPreview = selectDeployPreview(state, collectionName, slug);
-  const localBackup = entryDraft.get('localBackup');
+  // const localBackup = entryDraft.get('localBackup');
   const draftKey = entryDraft.get('key');
   let editorBackLink = `/collections/${collectionName}`;
   if (new URLSearchParams(ownProps.location.search).get('ref') === 'workflow') {
@@ -452,6 +446,8 @@ function mapStateToProps(state, ownProps) {
       editorBackLink = `${editorBackLink}/filter/${pathParts.slice(0, -2).join('/')}`;
     }
   }
+
+  const canStack = main.canStack;
 
   return {
     collection,
@@ -470,11 +466,12 @@ function mapStateToProps(state, ownProps) {
     collectionEntriesLoaded,
     currentStatus,
     deployPreview,
-    localBackup,
+    // localBackup,
     draftKey,
     publishedEntry,
     unPublishedEntry,
     editorBackLink,
+    canStack,
   };
 }
 
@@ -484,10 +481,10 @@ const mapDispatchToProps = {
   loadEntry,
   loadEntries,
   loadDeployPreview,
-  loadLocalBackup,
-  retrieveLocalBackup,
-  persistLocalBackup,
-  deleteLocalBackup,
+  // loadLocalBackup,
+  // retrieveLocalBackup,
+  // persistLocalBackup,
+  // deleteLocalBackup,
   createDraftDuplicateFromEntry,
   createEmptyDraft,
   discardDraft,

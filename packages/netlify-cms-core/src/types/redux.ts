@@ -1,9 +1,11 @@
 import type { Action } from 'redux';
+import type { Options as PrettierOptions } from 'prettier';
 import type { StaticallyTypedRecord } from './immutable';
 import type { Map, List, OrderedMap, Set } from 'immutable';
 import type { FILES, FOLDER } from '../constants/collectionTypes';
 import type { MediaFile as BackendMediaFile } from '../backend';
 import type { Auth } from '../reducers/auth';
+import type { MainStatus } from '../reducers/main';
 import type { Status } from '../reducers/status';
 import type { Medias } from '../reducers/medias';
 import type { Deploys } from '../reducers/deploys';
@@ -360,6 +362,7 @@ export interface CmsBackend {
   auth_scope?: CmsAuthScope;
   open_authoring?: boolean;
   repo?: string;
+  main?: string;
   branch?: string;
   api_root?: string;
   site_domain?: string;
@@ -369,6 +372,7 @@ export interface CmsBackend {
   squash_merges?: boolean;
   proxy_url?: string;
   commit_messages?: {
+    main?: string;
     create?: string;
     update?: string;
     delete?: string;
@@ -620,6 +624,8 @@ type i18n = StaticallyTypedRecord<{
 
 export type Format = keyof typeof formatExtensions;
 
+export type PrettierMapOptions = Map<keyof PrettierOptions, PrettierOptions[keyof PrettierOptions]>
+
 type CollectionObject = {
   name: string;
   folder?: string;
@@ -635,6 +641,7 @@ type CollectionObject = {
   type: 'file_based_collection' | 'folder_based_collection';
   extension?: string;
   format?: Format;
+  prettier?: PrettierMapOptions;
   frontmatter_delimiter?: List<string> | string | [string, string];
   create?: boolean;
   delete?: boolean;
@@ -718,6 +725,7 @@ export interface State {
   mediaLibrary: MediaLibrary;
   search: Search;
   notifs: { message: { key: string }; kind: string; id: number }[];
+  main: MainStatus;
   status: Status;
 }
 

@@ -100,6 +100,7 @@ export type Config = {
     repo?: string | null;
     open_authoring?: boolean;
     always_fork?: boolean;
+    main?: string;
     branch?: string;
     api_root?: string;
     squash_merges?: boolean;
@@ -172,6 +173,7 @@ export interface Implementation {
     slug: string,
     newStatus: string,
   ) => Promise<void>;
+  publishUnpublishedEntryMain: (collection: string, slug: string, options: { mainCommitMessage: string, publishMain?: boolean }) => Promise<void>;
   publishUnpublishedEntry: (collection: string, slug: string) => Promise<void>;
   deleteUnpublishedEntry: (collection: string, slug: string) => Promise<void>;
   getDeployPreview: (
@@ -195,6 +197,14 @@ export interface Implementation {
     auth: { status: boolean };
     api: { status: boolean; statusPage: string };
   }>;
+  mainStatus: () => Promise<{
+    status?: string;
+    updatedAt?: string;
+  } | undefined>;
+  updateMainStatus: (newStatus: string) => Promise<void>;
+  publishMain: () => Promise<void>;
+  closeMain: () => Promise<void>;
+  createMainPR: (title?: string) => Promise<void>;
 }
 
 const MAX_CONCURRENT_DOWNLOADS = 10;

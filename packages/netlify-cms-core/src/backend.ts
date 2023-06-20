@@ -878,7 +878,7 @@ export class Backend {
     }
 
     const dataFiles = sortBy(
-      entryData.diffs.filter(d => d.path.endsWith(extension)),
+      entryData.diffs.filter(d => d.path.endsWith(extension) && d.path.includes(slug)),
       f => f.path.length,
     );
 
@@ -1266,12 +1266,33 @@ export class Backend {
     return this.implementation.updateUnpublishedEntryStatus!(collection, slug, newStatus);
   }
 
-  async publishUnpublishedEntry(entry: EntryMap) {
+  async publishUnpublishedEntry(entry: EntryMap, publishMain?: boolean) {
     const collection = entry.get('collection');
     const slug = entry.get('slug');
 
     await this.invokePrePublishEvent(entry);
-    await this.implementation.publishUnpublishedEntry!(collection, slug);
+
+    const config = this.config;
+    if (config.backend.main) {
+      const user = (await this.currentUser()) as User;
+      const mainCommitMessage = commitMessageFormatter(
+        'main',
+        config,
+        {
+          main: config.backend.main,
+          authorLogin: user.login,
+          authorName: user.name,
+        },
+        user.useOpenAuthoring,
+      );
+      await this.implementation.publishUnpublishedEntryMain!(collection, slug, {
+        mainCommitMessage,
+        publishMain,
+      });
+    } else {
+      await this.implementation.publishUnpublishedEntry!(collection, slug);
+    }
+
     await this.invokePostPublishEvent(entry);
   }
 
@@ -1317,6 +1338,26 @@ export class Backend {
       }
       return fieldValue === filterRule.get('value');
     });
+  }
+
+  mainStatus() {
+    return this.implementation.mainStatus();
+  }
+
+  updateMainStatus(newStatus: string) {
+    return this.implementation.updateMainStatus(newStatus);
+  }
+
+  publishMain() {
+    return this.implementation.publishMain();
+  }
+
+  closeMain() {
+    return this.implementation.closeMain();
+  }
+
+  createMainPR() {
+    return this.implementation.createMainPR(this.config.backend.commit_messages?.main);
   }
 }
 
