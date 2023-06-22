@@ -389,11 +389,11 @@ export default class GitGateway implements Implementation {
     return this.tokenPromise!();
   }
 
-  async entriesByFolder(folder: string, extension: string, depth: number) {
-    return this.backend!.entriesByFolder(folder, extension, depth);
+  async entriesByFolder(folder: string, extension: string, depth: number, indexFile: string) {
+    return this.backend!.entriesByFolder(folder, extension, depth, indexFile);
   }
-  allEntriesByFolder(folder: string, extension: string, depth: number) {
-    return this.backend!.allEntriesByFolder(folder, extension, depth);
+  allEntriesByFolder(folder: string, extension: string, depth: number, indexFile: string) {
+    return this.backend!.allEntriesByFolder(folder, extension, depth, indexFile);
   }
   entriesByFiles(files: ImplementationFile[]) {
     return this.backend!.entriesByFiles(files);

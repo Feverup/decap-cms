@@ -84,7 +84,9 @@ export type PersistOptions = {
 
 export type DeleteOptions = {};
 
-export type Credentials = { token: string | {}; refresh_token?: string };
+export type GoogleCredentials = { name: string, email: string, picture: string, token: string }
+
+export type Credentials = { token: string | {}; refresh_token?: string; google_auth?: GoogleCredentials };
 
 export type User = Credentials & {
   backendName?: string;
@@ -98,11 +100,15 @@ export type Config = {
     repo?: string | null;
     open_authoring?: boolean;
     always_fork?: boolean;
+    main?: string;
     branch?: string;
     api_root?: string;
     squash_merges?: boolean;
     use_graphql?: boolean;
     graphql_api_root?: string;
+    apps_api_root?: string;
+    apps_login_path?: string;
+    apps_token_path?: string;
     preview_context?: string;
     identity_url?: string;
     gateway_url?: string;
@@ -132,6 +138,7 @@ export interface Implementation {
     folder: string,
     extension: string,
     depth: number,
+    indexFile: string,
   ) => Promise<ImplementationEntry[]>;
   entriesByFiles: (files: ImplementationFile[]) => Promise<ImplementationEntry[]>;
 
@@ -166,6 +173,7 @@ export interface Implementation {
     slug: string,
     newStatus: string,
   ) => Promise<void>;
+  publishUnpublishedEntryMain: (collection: string, slug: string, options: { mainCommitMessage: string, publishMain?: boolean }) => Promise<void>;
   publishUnpublishedEntry: (collection: string, slug: string) => Promise<void>;
   deleteUnpublishedEntry: (collection: string, slug: string) => Promise<void>;
   getDeployPreview: (
@@ -177,6 +185,7 @@ export interface Implementation {
     folder: string,
     extension: string,
     depth: number,
+    indexFile: string,
   ) => Promise<ImplementationEntry[]>;
   traverseCursor?: (
     cursor: Cursor,
@@ -188,6 +197,14 @@ export interface Implementation {
     auth: { status: boolean };
     api: { status: boolean; statusPage: string };
   }>;
+  mainStatus: () => Promise<{
+    status?: string;
+    updatedAt?: string;
+  } | undefined>;
+  updateMainStatus: (newStatus: string) => Promise<void>;
+  publishMain: () => Promise<void>;
+  closeMain: () => Promise<void>;
+  createMainPR: (title?: string) => Promise<void>;
 }
 
 const MAX_CONCURRENT_DOWNLOADS = 10;
@@ -457,9 +474,11 @@ type AllEntriesByFolderArgs = GetKeyArgs &
       folder: string,
       extension: string,
       depth: number,
+      indexFile: string,
     ) => Promise<ImplementationFile[]>;
     readFile: ReadFile;
     readFileMetadata: ReadFileMetadata;
+    indexFile: string;
     getDefaultBranch: () => Promise<{ name: string; sha: string }>;
     isShaExistsInBranch: (branch: string, sha: string) => Promise<boolean>;
     apiName: string;
@@ -477,6 +496,7 @@ export async function allEntriesByFolder({
   folder,
   extension,
   depth,
+  indexFile,
   getDefaultBranch,
   isShaExistsInBranch,
   getDifferences,
@@ -485,7 +505,7 @@ export async function allEntriesByFolder({
   customFetch,
 }: AllEntriesByFolderArgs) {
   async function listAllFilesAndPersist() {
-    const files = await listAllFiles(folder, extension, depth);
+    const files = await listAllFiles(folder, extension, depth, indexFile);
     const branch = await getDefaultBranch();
     await persistLocalTree({
       localForage,

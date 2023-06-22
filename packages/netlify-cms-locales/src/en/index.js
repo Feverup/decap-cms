@@ -110,9 +110,11 @@ const en = {
       onDeleteUnpublishedChangesWithUnsavedChanges:
         'This will delete all unpublished changes to this entry, as well as your unsaved changes from the current session. Do you still want to delete?',
       onDeleteUnpublishedChanges:
-        'All unpublished changes to this entry will be deleted. Do you still want to delete?',
+        'All changes to this entry will be deleted.\n\n Do you still want to delete?',
       loadingEntry: 'Loading entry...',
       confirmLoadBackup: 'A local backup was recovered for this entry, would you like to use it?',
+      onMainPublishing: 'Are you sure you want to publish all changes?',
+      onMainClosing: 'Are you sure you want to discard all changes?',
     },
     editorInterface: {
       toggleI18n: 'Toggle i18n',
@@ -125,9 +127,10 @@ const en = {
       published: 'Published',
       unpublish: 'Unpublish',
       duplicate: 'Duplicate',
-      unpublishing: 'Unpublishing...',
+      unpublishing: 'Loading...',
       publishAndCreateNew: 'Publish and create new',
       publishAndDuplicate: 'Publish and duplicate',
+      discardChanges: 'Discard changes',
       deleteUnpublishedChanges: 'Delete unpublished changes',
       deleteUnpublishedEntry: 'Delete unpublished entry',
       deletePublishedEntry: 'Delete published entry',
@@ -138,6 +141,7 @@ const en = {
         'Entry status is set to draft. To finalize and submit it for review, set the status to ‘In review’',
       statusInfoTooltipInReview:
         'Entry is being reviewed, no further actions are required. However, you can still make additional changes while it is being reviewed.',
+      discarding: 'Discarding...',
       deleting: 'Deleting...',
       updating: 'Updating...',
       status: 'Status: %{status}',
@@ -148,6 +152,7 @@ const en = {
       inReview: 'In review',
       ready: 'Ready',
       publishNow: 'Publish now',
+      stackChange: 'Stack change',
       deployPreviewPendingButtonLabel: 'Check for Preview',
       deployPreviewButtonLabel: 'View Preview',
       deployButtonLabel: 'View Live',
@@ -224,6 +229,7 @@ const en = {
     mediaLibrary: {
       onDelete: 'Are you sure you want to delete selected media?',
       fileTooLarge: 'File too large.\nConfigured to not allow files greater than %{size} kB.',
+      fileNamePatternError: 'The name of the file must be with this pattern:\n\n%{pattern}\n\nPlease rename the file with a correct file name in order to continue.',
     },
     mediaLibraryModal: {
       loading: 'Loading...',
@@ -280,6 +286,9 @@ const en = {
       onLoggedOut: 'You have been logged out, please back up any data and login again',
       onBackendDown:
         'The backend service is experiencing an outage. See %{details} for more information',
+      mainUpdated: 'Status updated',
+      mainPublished: 'Changes published',
+      mainClosed: 'Changes discarded',
     },
   },
   workflow: {

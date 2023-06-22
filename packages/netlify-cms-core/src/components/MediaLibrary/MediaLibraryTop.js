@@ -6,7 +6,7 @@ import MediaLibrarySearch from './MediaLibrarySearch';
 import MediaLibraryHeader from './MediaLibraryHeader';
 import {
   UploadButton,
-  DeleteButton,
+  // DeleteButton,
   DownloadButton,
   CopyToClipBoardButton,
   InsertButton,
@@ -38,24 +38,26 @@ function MediaLibraryTop({
   onSearchChange,
   onSearchKeyDown,
   searchDisabled,
-  onDelete,
+  // onDelete,
   canInsert,
   onInsert,
   hasSelection,
   isPersisting,
   isDeleting,
   selectedFile,
+  fileExtensions,
 }) {
   const shouldShowButtonLoader = isPersisting || isDeleting;
   const uploadEnabled = !shouldShowButtonLoader;
-  const deleteEnabled = !shouldShowButtonLoader && hasSelection;
+
+  const acceptFiles = fileExtensions && fileExtensions.map(extension => `.${extension}`).join();
 
   const uploadButtonLabel = isPersisting
     ? t('mediaLibrary.mediaLibraryModal.uploading')
     : t('mediaLibrary.mediaLibraryModal.upload');
-  const deleteButtonLabel = isDeleting
-    ? t('mediaLibrary.mediaLibraryModal.deleting')
-    : t('mediaLibrary.mediaLibraryModal.deleteSelected');
+  // const deleteButtonLabel = isDeleting
+  //   ? t('mediaLibrary.mediaLibraryModal.deleting')
+  //   : t('mediaLibrary.mediaLibraryModal.deleteSelected');
   const downloadButtonLabel = t('mediaLibrary.mediaLibraryModal.download');
   const insertButtonLabel = t('mediaLibrary.mediaLibraryModal.chooseSelected');
 
@@ -64,11 +66,10 @@ function MediaLibraryTop({
       <RowContainer>
         <MediaLibraryHeader
           onClose={onClose}
-          title={`${privateUpload ? t('mediaLibrary.mediaLibraryModal.private') : ''}${
-            forImage
-              ? t('mediaLibrary.mediaLibraryModal.images')
-              : t('mediaLibrary.mediaLibraryModal.mediaAssets')
-          }`}
+          title={`${privateUpload ? t('mediaLibrary.mediaLibraryModal.private') : ''}${forImage
+            ? t('mediaLibrary.mediaLibraryModal.images')
+            : t('mediaLibrary.mediaLibraryModal.mediaAssets')
+            }`}
           isPrivate={privateUpload}
         />
         <ButtonsContainer>
@@ -82,12 +83,15 @@ function MediaLibraryTop({
           <DownloadButton onClick={onDownload} disabled={!hasSelection}>
             {downloadButtonLabel}
           </DownloadButton>
-          <UploadButton
-            label={uploadButtonLabel}
-            imagesOnly={forImage}
-            onChange={onUpload}
-            disabled={!uploadEnabled}
-          />
+          {!canInsert ? null : (
+            <UploadButton
+              label={uploadButtonLabel}
+              acceptFiles={acceptFiles}
+              imagesOnly={forImage}
+              onChange={onUpload}
+              disabled={!uploadEnabled}
+            />
+          )}
         </ButtonsContainer>
       </RowContainer>
       <RowContainer>
@@ -99,9 +103,9 @@ function MediaLibraryTop({
           disabled={searchDisabled}
         />
         <ButtonsContainer>
-          <DeleteButton onClick={onDelete} disabled={!deleteEnabled}>
+          {/* <DeleteButton onClick={onDelete} disabled={!deleteEnabled}>
             {deleteButtonLabel}
-          </DeleteButton>
+          </DeleteButton> */}
           {!canInsert ? null : (
             <InsertButton onClick={onInsert} disabled={!hasSelection}>
               {insertButtonLabel}
@@ -118,13 +122,14 @@ MediaLibraryTop.propTypes = {
   onClose: PropTypes.func.isRequired,
   privateUpload: PropTypes.bool,
   forImage: PropTypes.bool,
+  value: PropTypes.string,
   onDownload: PropTypes.func.isRequired,
   onUpload: PropTypes.func.isRequired,
   query: PropTypes.string,
   onSearchChange: PropTypes.func.isRequired,
   onSearchKeyDown: PropTypes.func.isRequired,
   searchDisabled: PropTypes.bool.isRequired,
-  onDelete: PropTypes.func.isRequired,
+  // onDelete: PropTypes.func.isRequired,
   canInsert: PropTypes.bool,
   onInsert: PropTypes.func.isRequired,
   hasSelection: PropTypes.bool.isRequired,
@@ -138,6 +143,7 @@ MediaLibraryTop.propTypes = {
     }),
     PropTypes.shape({}),
   ]),
+  fileExtensions: PropTypes.arrayOf(PropTypes.string),
 };
 
 export default MediaLibraryTop;

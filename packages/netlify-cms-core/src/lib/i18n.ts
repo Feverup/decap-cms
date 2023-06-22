@@ -420,7 +420,9 @@ export function serializeI18n(
     .filter(locale => locale !== defaultLocale)
     .forEach(locale => {
       const dataPath = getLocaleDataPath(locale);
-      entry = entry.setIn(dataPath, serializeValues(entry.getIn(dataPath)));
+      const data = entry.getIn(dataPath);
+      if (!data) return;
+      entry = entry.setIn(dataPath, serializeValues(data));
     });
 
   return entry;

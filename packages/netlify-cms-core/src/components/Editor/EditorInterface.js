@@ -173,10 +173,10 @@ class EditorInterface extends Component {
   };
 
   handleOnPublish = async (opts = {}) => {
-    const { createNew = false, duplicate = false } = opts;
+    const { createNew = false, duplicate = false, publishMain = false } = opts;
     await this.controlPaneRef.switchToDefaultLocale();
     this.controlPaneRef.validate();
-    this.props.onPublish({ createNew, duplicate });
+    this.props.onPublish({ createNew, duplicate, publishMain });
   };
 
   handleTogglePreview = () => {
@@ -231,6 +231,7 @@ class EditorInterface extends Component {
       deployPreview,
       draftKey,
       editorBackLink,
+      canStack,
       t,
     } = this.props;
 
@@ -238,8 +239,8 @@ class EditorInterface extends Component {
 
     const previewEnabled = isPreviewEnabled(collection, entry);
 
-    const collectionI18nEnabled = hasI18n(collection);
     const { locales, defaultLocale } = getI18nInfo(this.props.collection);
+    const collectionI18nEnabled = hasI18n(collection) && locales.length > 1;
     const editorProps = {
       collection,
       entry,
@@ -335,6 +336,7 @@ class EditorInterface extends Component {
           onDeleteUnpublishedChanges={onDeleteUnpublishedChanges}
           onChangeStatus={onChangeStatus}
           showDelete={showDelete}
+          onPublishMain={() => this.handleOnPublish({ publishMain: true })}
           onPublish={onPublish}
           unPublish={unPublish}
           onDuplicate={onDuplicate}
@@ -354,6 +356,7 @@ class EditorInterface extends Component {
           loadDeployPreview={loadDeployPreview}
           deployPreview={deployPreview}
           editorBackLink={editorBackLink}
+          canStack={canStack}
         />
         <Editor key={draftKey}>
           <ViewControls>
@@ -428,6 +431,7 @@ EditorInterface.propTypes = {
   deployPreview: PropTypes.object,
   loadDeployPreview: PropTypes.func.isRequired,
   draftKey: PropTypes.string.isRequired,
+  canStack: PropTypes.string.isRequired,
   t: PropTypes.func.isRequired,
 };
 

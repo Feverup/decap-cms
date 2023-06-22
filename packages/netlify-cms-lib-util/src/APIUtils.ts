@@ -4,8 +4,18 @@ export const MERGE_COMMIT_MESSAGE = 'Automatically generated. Merged on Netlify 
 
 const DEFAULT_NETLIFY_CMS_LABEL_PREFIX = 'netlify-cms/';
 
+export const REF_SUFFIX = (() => {
+  const { pathname } = window.location;
+  const cleanPathname = pathname.replace(/^\//, '');
+  return cleanPathname ? `(${cleanPathname})` : '';
+})();
+
 function getLabelPrefix(labelPrefix: string) {
   return labelPrefix || DEFAULT_NETLIFY_CMS_LABEL_PREFIX;
+}
+
+export function isCmsRefSuffix(ref: string) {
+  return ref.endsWith(REF_SUFFIX)
 }
 
 export function isCMSLabel(label: string, labelPrefix: string) {
@@ -21,12 +31,15 @@ export function statusToLabel(status: string, labelPrefix: string) {
 }
 
 export function generateContentKey(collectionName: string, slug: string) {
-  return `${collectionName}/${slug}`;
+  return `${collectionName}/${slug}${REF_SUFFIX}`;
 }
 
 export function parseContentKey(contentKey: string) {
   const index = contentKey.indexOf('/');
-  return { collection: contentKey.slice(0, index), slug: contentKey.slice(index + 1) };
+  return {
+    collection: contentKey.slice(0, index),
+    slug: contentKey.slice(index + 1).replace(REF_SUFFIX, ''),
+  };
 }
 
 export function contentKeyFromBranch(branch: string) {

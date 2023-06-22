@@ -307,6 +307,10 @@ function collectionDepth(collection: Collection) {
   return depth;
 }
 
+function collectionIndexFile(collection: Collection) {
+  return collection.get('meta')?.get('path')?.get('index_file') as string;
+}
+
 export class Backend {
   implementation: Implementation;
   backendName: string;
@@ -505,10 +509,12 @@ export class Backend {
     if (collectionType === FOLDER) {
       listMethod = () => {
         const depth = collectionDepth(collection);
+        const indexFile = collectionIndexFile(collection);
         return this.implementation.entriesByFolder(
           collection.get('folder') as string,
           extension,
           depth,
+          indexFile,
         );
       };
     } else if (collectionType === FILES) {
@@ -550,9 +556,10 @@ export class Backend {
   async listAllEntries(collection: Collection) {
     if (collection.get('folder') && this.implementation.allEntriesByFolder) {
       const depth = collectionDepth(collection);
+      const indexFile = collectionIndexFile(collection);
       const extension = selectFolderEntryExtension(collection);
       return this.implementation
-        .allEntriesByFolder(collection.get('folder') as string, extension, depth)
+        .allEntriesByFolder(collection.get('folder') as string, extension, depth, indexFile)
         .then(entries => this.processEntries(entries, collection));
     }
 
@@ -871,7 +878,7 @@ export class Backend {
     }
 
     const dataFiles = sortBy(
-      entryData.diffs.filter(d => d.path.endsWith(extension)),
+      entryData.diffs.filter(d => d.path.endsWith(extension) && d.path.includes(slug)),
       f => f.path.length,
     );
 
@@ -1259,12 +1266,33 @@ export class Backend {
     return this.implementation.updateUnpublishedEntryStatus!(collection, slug, newStatus);
   }
 
-  async publishUnpublishedEntry(entry: EntryMap) {
+  async publishUnpublishedEntry(entry: EntryMap, publishMain?: boolean) {
     const collection = entry.get('collection');
     const slug = entry.get('slug');
 
     await this.invokePrePublishEvent(entry);
-    await this.implementation.publishUnpublishedEntry!(collection, slug);
+
+    const config = this.config;
+    if (config.backend.main) {
+      const user = (await this.currentUser()) as User;
+      const mainCommitMessage = commitMessageFormatter(
+        'main',
+        config,
+        {
+          main: config.backend.main,
+          authorLogin: user.login,
+          authorName: user.name,
+        },
+        user.useOpenAuthoring,
+      );
+      await this.implementation.publishUnpublishedEntryMain!(collection, slug, {
+        mainCommitMessage,
+        publishMain,
+      });
+    } else {
+      await this.implementation.publishUnpublishedEntry!(collection, slug);
+    }
+
     await this.invokePostPublishEvent(entry);
   }
 
@@ -1310,6 +1338,26 @@ export class Backend {
       }
       return fieldValue === filterRule.get('value');
     });
+  }
+
+  mainStatus() {
+    return this.implementation.mainStatus();
+  }
+
+  updateMainStatus(newStatus: string) {
+    return this.implementation.updateMainStatus(newStatus);
+  }
+
+  publishMain() {
+    return this.implementation.publishMain();
+  }
+
+  closeMain() {
+    return this.implementation.closeMain();
+  }
+
+  createMainPR() {
+    return this.implementation.createMainPR(this.config.backend.commit_messages?.main);
   }
 }
 

@@ -13,6 +13,7 @@ import medias from './medias';
 import mediaLibrary from './mediaLibrary';
 import deploys, * as fromDeploys from './deploys';
 import globalUI from './globalUI';
+import main from './main';
 import status from './status';
 
 import type { Status } from '../constants/publishModes';
@@ -32,6 +33,7 @@ const reducers = {
   mediaLibrary,
   deploys,
   globalUI,
+  main,
   status,
 };
 

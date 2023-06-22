@@ -257,6 +257,7 @@ export class EditorToolbar extends React.Component {
     onDelete: PropTypes.func.isRequired,
     onDeleteUnpublishedChanges: PropTypes.func.isRequired,
     onChangeStatus: PropTypes.func.isRequired,
+    onPublishMain: PropTypes.func.isRequired,
     onPublish: PropTypes.func.isRequired,
     unPublish: PropTypes.func.isRequired,
     onDuplicate: PropTypes.func.isRequired,
@@ -403,8 +404,8 @@ export class EditorToolbar extends React.Component {
     );
   };
 
-  renderNewEntryWorkflowPublishControls = ({ canCreate, canPublish }) => {
-    const { isPublishing, onPublish, onPublishAndNew, onPublishAndDuplicate, t } = this.props;
+  renderNewEntryWorkflowPublishControls = ({ canPublish }) => {
+    const { isPublishing, onPublish, onPublishMain, canStack, t } = this.props;
 
     return canPublish ? (
       <ToolbarDropdown
@@ -422,9 +423,16 @@ export class EditorToolbar extends React.Component {
           label={t('editor.editorToolbar.publishNow')}
           icon="arrow"
           iconDirection="right"
-          onClick={onPublish}
+          onClick={onPublishMain}
         />
-        {canCreate ? (
+        {canStack && (
+          <DropdownItem
+            label={t('editor.editorToolbar.stackChange')}
+            icon="add"
+            onClick={onPublish}
+          />
+        )}
+        {/* {canCreate ? (
           <>
             <PublishDropDownItem
               label={t('editor.editorToolbar.publishAndCreateNew')}
@@ -437,7 +445,7 @@ export class EditorToolbar extends React.Component {
               onClick={onPublishAndDuplicate}
             />
           </>
-        ) : null}
+        ) : null} */}
       </ToolbarDropdown>
     ) : (
       ''
@@ -574,14 +582,15 @@ export class EditorToolbar extends React.Component {
     const canPublish = collection.get('publish') && !useOpenAuthoring;
     const canDelete = collection.get('delete', true);
 
-    const deleteLabel =
-      (hasUnpublishedChanges &&
-        isModification &&
-        t('editor.editorToolbar.deleteUnpublishedChanges')) ||
-      (hasUnpublishedChanges &&
-        (isNewEntry || !isModification) &&
-        t('editor.editorToolbar.deleteUnpublishedEntry')) ||
-      (!hasUnpublishedChanges && !isModification && t('editor.editorToolbar.deletePublishedEntry'));
+    const deleteLabel = t('editor.editorToolbar.discardChanges');
+    // const deleteLabel =
+    //   (hasUnpublishedChanges &&
+    //     isModification &&
+    //     t('editor.editorToolbar.deleteUnpublishedChanges')) ||
+    //   (hasUnpublishedChanges &&
+    //     (isNewEntry || !isModification) &&
+    //     t('editor.editorToolbar.deleteUnpublishedEntry')) ||
+    //   (!hasUnpublishedChanges && !isModification && t('editor.editorToolbar.deletePublishedEntry'));
 
     return [
       <SaveButton
@@ -593,17 +602,18 @@ export class EditorToolbar extends React.Component {
       </SaveButton>,
       currentStatus
         ? [
-            this.renderWorkflowStatusControls(),
-            this.renderNewEntryWorkflowPublishControls({ canCreate, canPublish }),
-          ]
+          this.renderWorkflowStatusControls(),
+          currentStatus === status.get('PENDING_PUBLISH') &&
+          this.renderNewEntryWorkflowPublishControls({ canCreate, canPublish }),
+        ]
         : !isNewEntry &&
-          this.renderExistingEntryWorkflowPublishControls({ canCreate, canPublish, canDelete }),
+        this.renderExistingEntryWorkflowPublishControls({ canCreate, canPublish, canDelete }),
       (!showDelete || useOpenAuthoring) && !hasUnpublishedChanges && !isModification ? null : (
         <DeleteButton
           key="delete-button"
           onClick={hasUnpublishedChanges ? onDeleteUnpublishedChanges : onDelete}
         >
-          {isDeleting ? t('editor.editorToolbar.deleting') : deleteLabel}
+          {isDeleting ? t('editor.editorToolbar.discarding') : deleteLabel}
         </DeleteButton>
       ),
     ];
@@ -658,9 +668,9 @@ export class EditorToolbar extends React.Component {
             {hasWorkflow ? this.renderWorkflowControls() : this.renderSimpleControls()}
           </ToolbarSubSectionFirst>
           <ToolbarSubSectionLast>
-            {hasWorkflow
+            {/* {hasWorkflow
               ? this.renderWorkflowDeployPreviewControls()
-              : this.renderSimpleDeployPreviewControls()}
+              : this.renderSimpleDeployPreviewControls()} */}
           </ToolbarSubSectionLast>
         </ToolbarSectionMain>
         <ToolbarSectionMeta>

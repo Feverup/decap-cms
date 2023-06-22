@@ -5,6 +5,15 @@ site_url: https://example.com
 
 publish_mode: editorial_workflow
 media_folder: assets/uploads
+media_validation:
+  # max_file_size: 200
+  # file_name_pattern: ""
+  keep_file_name: true
+  images:
+    keep_aspect_ratio: true
+    # aspect_ratio: "16:9"
+    # max_width: 2000
+    # max_height: 2000
 
 collections: # A list of collections the CMS should be able to edit
   - name: 'posts' # Used in routes, ie.: /admin/collections/:slug/edit
@@ -40,6 +49,7 @@ collections: # A list of collections the CMS should be able to edit
           label: 'Publish Date',
           name: 'date',
           widget: 'datetime',
+          default: '',
           date_format: 'YYYY-MM-DD',
           time_format: 'HH:mm',
           format: 'YYYY-MM-DD HH:mm',
@@ -49,6 +59,19 @@ collections: # A list of collections the CMS should be able to edit
         widget: 'image'
         required: false
         tagname: ''
+        media_folder: 'src/assets/img/foo'
+        public_folder: '/assets/img/foo'
+        media_validation:
+          # max_file_size: 200000
+          file_extensions: ['jpg']
+          # file_name_pattern: "pepe[0-9]*\\..*"
+          # keep_file_name: false
+          images:
+            max_width: 2000
+            min_width: 451
+            max_height: 2000
+            # aspect_ratio: "16:9"
+          #   keep_aspect_ratio: true
 
       - { label: 'Body', name: 'body', widget: 'markdown', hint: 'Main content goes here.' }
 

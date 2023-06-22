@@ -7,9 +7,9 @@ import { translate } from 'react-polyglot';
 import { NavLink } from 'react-router-dom';
 import {
   Icon,
-  Dropdown,
-  DropdownItem,
-  StyledDropdownButton,
+  // Dropdown,
+  // DropdownItem,
+  // StyledDropdownButton,
   colors,
   lengths,
   shadows,
@@ -20,6 +20,8 @@ import { connect } from 'react-redux';
 
 import { SettingsDropdown } from '../UI';
 import { checkBackendStatus } from '../../actions/status';
+import { checkMainStatus } from '../../actions/main';
+import MainToolbar from './MainToolbar.js';
 
 const styles = {
   buttonActive: css`
@@ -97,16 +99,16 @@ const AppHeaderActions = styled.div`
   align-items: center;
 `;
 
-const AppHeaderQuickNewButton = styled(StyledDropdownButton)`
-  ${buttons.button};
-  ${buttons.medium};
-  ${buttons.gray};
-  margin-right: 8px;
+// const AppHeaderQuickNewButton = styled(StyledDropdownButton)`
+//   ${buttons.button};
+//   ${buttons.medium};
+//   ${buttons.gray};
+//   margin-right: 8px;
 
-  &:after {
-    top: 11px;
-  }
-`;
+//   &:after {
+//     top: 11px;
+//   }
+// `;
 
 const AppHeaderNavList = styled.ul`
   display: flex;
@@ -126,6 +128,7 @@ class Header extends React.Component {
     isTestRepo: PropTypes.bool,
     t: PropTypes.func.isRequired,
     checkBackendStatus: PropTypes.func.isRequired,
+    checkMainStatus: PropTypes.func.isRequired,
   };
 
   intervalId;
@@ -133,6 +136,7 @@ class Header extends React.Component {
   componentDidMount() {
     this.intervalId = setInterval(() => {
       this.props.checkBackendStatus();
+      this.props.checkMainStatus();
     }, 5 * 60 * 1000);
   }
 
@@ -150,7 +154,7 @@ class Header extends React.Component {
   render() {
     const {
       user,
-      collections,
+      // collections,
       onLogoutClick,
       openMediaLibrary,
       hasWorkflow,
@@ -160,9 +164,11 @@ class Header extends React.Component {
       showMediaButton,
     } = this.props;
 
-    const createableCollections = collections
-      .filter(collection => collection.get('create'))
-      .toList();
+    // const createableCollections = collections
+    //   .filter(collection => collection.get('create'))
+    //   .toList();
+
+    // console.log(Object.fromEntries(collections))
 
     return (
       <AppHeader>
@@ -198,7 +204,15 @@ class Header extends React.Component {
             </AppHeaderNavList>
           </nav>
           <AppHeaderActions>
-            {createableCollections.size > 0 && (
+            {hasWorkflow && (
+              <MainToolbar
+                hasWorkflow={hasWorkflow}
+                collection={new Map()}
+                loadDeployPreview={() => { }}
+              >
+              </MainToolbar>
+            )}
+            {/* {createableCollections.size > 0 && (
               <Dropdown
                 renderButton={() => (
                   <AppHeaderQuickNewButton> {t('app.header.quickAdd')}</AppHeaderQuickNewButton>
@@ -215,7 +229,7 @@ class Header extends React.Component {
                   />
                 ))}
               </Dropdown>
-            )}
+            )} */}
             <SettingsDropdown
               displayUrl={displayUrl}
               isTestRepo={isTestRepo}
@@ -231,6 +245,7 @@ class Header extends React.Component {
 
 const mapDispatchToProps = {
   checkBackendStatus,
+  checkMainStatus
 };
 
 export default connect(null, mapDispatchToProps)(translate()(Header));

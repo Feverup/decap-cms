@@ -3,10 +3,14 @@ import { produce } from 'immer';
 import {
   ADD_ASSETS,
   ADD_ASSET,
+  REMOVE_ASSETS,
   REMOVE_ASSET,
   LOAD_ASSET_REQUEST,
   LOAD_ASSET_SUCCESS,
   LOAD_ASSET_FAILURE,
+  getEntryMediaFilePath,
+  getEntryMapMediaFilePath,
+  getMediaFilePath,
 } from '../actions/media';
 
 import type { MediasAction } from '../actions/media';
@@ -21,20 +25,29 @@ const defaultState: Medias = {};
 const medias = produce((state: Medias, action: MediasAction) => {
   switch (action.type) {
     case ADD_ASSETS: {
-      const assets = action.payload;
+      const { entry, assets } = action.payload;
       assets.forEach(asset => {
-        state[asset.path] = { asset, isLoading: false, error: null };
+        const resolvedPath = getEntryMediaFilePath(entry, asset.path);
+        state[resolvedPath] = { asset, isLoading: false, error: null };
       });
       break;
     }
     case ADD_ASSET: {
-      const asset = action.payload;
-      state[asset.path] = { asset, isLoading: false, error: null };
+      const { entry, asset } = action.payload;
+      const resolvedPath = getEntryMapMediaFilePath(entry, asset.path);
+      state[resolvedPath] = { asset, isLoading: false, error: null };
+      break;
+    }
+    case REMOVE_ASSETS: {
+      Object.keys(state).forEach(path => {
+        delete state[path];
+      });
       break;
     }
     case REMOVE_ASSET: {
-      const path = action.payload;
-      delete state[path];
+      const { entryPath, path } = action.payload;
+      const resolvedPath = getMediaFilePath(entryPath, path);
+      delete state[resolvedPath];
       break;
     }
     case LOAD_ASSET_REQUEST: {

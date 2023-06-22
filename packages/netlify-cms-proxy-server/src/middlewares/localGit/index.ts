@@ -200,9 +200,9 @@ export function localGitMiddleware({ repoPath, logger }: GitOptions) {
       switch (body.action) {
         case 'entriesByFolder': {
           const payload = body.params as EntriesByFolderParams;
-          const { folder, extension, depth } = payload;
+          const { folder, extension, depth, indexFile } = payload;
           const entries = await runOnBranch(git, branch, () =>
-            listRepoFiles(repoPath, folder, extension, depth).then(files =>
+            listRepoFiles(repoPath, folder, extension, depth, indexFile).then(files =>
               entriesFromFiles(
                 repoPath,
                 files.map(file => ({ path: file })),
@@ -367,7 +367,7 @@ export function localGitMiddleware({ repoPath, logger }: GitOptions) {
         case 'getMedia': {
           const { mediaFolder } = body.params as GetMediaParams;
           const mediaFiles = await runOnBranch(git, branch, async () => {
-            const files = await listRepoFiles(repoPath, mediaFolder, '', 1);
+            const files = await listRepoFiles(repoPath, mediaFolder, '', 1, '');
             const serializedFiles = await Promise.all(
               files.map(file => readMediaFile(repoPath, file)),
             );
