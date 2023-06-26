@@ -139,14 +139,11 @@ type MediaFile = {
 };
 
 function withCmsRefSuffix(pr: GitHubPull) {
-  return (isCmsRefSuffix(pr.head.ref));
+  return isCmsRefSuffix(pr.head.ref);
 }
 
 function withCmsLabel(pr: GitHubPull, cmsLabelPrefix: string) {
-  return (
-    withCmsRefSuffix(pr) &&
-    pr.labels.some(l => isCMSLabel(l.name, cmsLabelPrefix))
-  );
+  return withCmsRefSuffix(pr) && pr.labels.some(l => isCMSLabel(l.name, cmsLabelPrefix));
 }
 
 function withoutCmsLabel(pr: GitHubPull, cmsLabelPrefix: string) {

@@ -89,6 +89,13 @@ const PublishButton = styled(DropdownButton)`
 const StatusButton = styled(DropdownButton)`
   background-color: ${colorsRaw.tealLight};
   color: ${colorsRaw.teal};
+
+  ${props =>
+    props.label === 'stale' &&
+    css`
+      background-color: ${colors.staleBackground};
+      color: ${colors.staleText};
+    `}
 `;
 
 const StatusDropdownItem = styled(DropdownItem)`
@@ -157,6 +164,7 @@ export class EditorToolbar extends React.Component {
       [status.get('DRAFT')]: t('editor.editorToolbar.draft'),
       [status.get('PENDING_REVIEW')]: t('editor.editorToolbar.inReview'),
       [status.get('PENDING_PUBLISH')]: t('editor.editorToolbar.ready'),
+      [status.get('STALE')]: t('editor.editorToolbar.inStale'),
     };
 
     const buttonText = isUpdatingStatus
@@ -168,7 +176,7 @@ export class EditorToolbar extends React.Component {
         <ToolbarDropdown
           dropdownTopOverlap="40px"
           dropdownWidth="120px"
-          renderButton={() => <StatusButton>{buttonText}</StatusButton>}
+          renderButton={() => <StatusButton label={currentStatus}>{buttonText}</StatusButton>}
         >
           <StatusDropdownItem
             label={t('editor.editorToolbar.draft')}
