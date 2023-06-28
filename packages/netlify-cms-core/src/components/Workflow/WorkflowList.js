@@ -15,7 +15,7 @@ import { selectEntryCollectionTitle } from '../../reducers/collections';
 const WorkflowListContainer = styled.div`
   min-height: 60%;
   display: grid;
-  grid-template-columns: 33.3% 33.3% 33.3%;
+  grid-template-columns: 25% 25% 25% 25%;
 `;
 
 const WorkflowListContainerOpenAuthoring = styled.div`
@@ -104,6 +104,13 @@ const ColumnHeader = styled.h2`
       background-color: ${colors.statusReadyBackground};
       color: ${colors.statusReadyText};
     `}
+
+  ${props =>
+    props.name === 'stale' &&
+    css`
+      background-color: ${colors.staleBackground};
+      color: ${colors.staleText};
+    `}
 `;
 
 const ColumnCount = styled.p`
@@ -121,6 +128,8 @@ function getColumnHeaderText(columnName, t) {
   switch (columnName) {
     case 'draft':
       return t('workflow.workflowList.draftHeader');
+    case 'stale':
+      return t('workflow.workflowList.inStaleHeader');
     case 'pending_review':
       return t('workflow.workflowList.inReviewHeader');
     case 'pending_publish':
@@ -143,6 +152,10 @@ class WorkflowList extends React.Component {
     const slug = dragProps.slug;
     const collection = dragProps.collection;
     const oldStatus = dragProps.ownStatus;
+    if (newStatus === 'stale') {
+      window.alert(this.props.t('workflow.workflowList.onStaleUpdate'));
+      return;
+    }
     this.props.handleChangeStatus(collection, slug, oldStatus, newStatus);
   };
 
