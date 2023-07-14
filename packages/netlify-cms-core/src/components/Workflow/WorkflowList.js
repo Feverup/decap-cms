@@ -166,7 +166,7 @@ class WorkflowList extends React.Component {
   };
 
   requestPublish = (collection, slug, ownStatus) => {
-    if (ownStatus !== status.last()) {
+    if (ownStatus !== status.get('PENDING_PUBLISH')) {
       window.alert(this.props.t('workflow.workflowList.onPublishingNotReadyEntry'));
       return;
     } else if (!window.confirm(this.props.t('workflow.workflowList.onPublishEntry'))) {
@@ -232,7 +232,7 @@ class WorkflowList extends React.Component {
           const isModification = entry.get('isModification');
 
           const allowPublish = collection?.get('publish');
-          const canPublish = ownStatus === status.last() && !entry.get('isPersisting', false);
+          const canPublish = ownStatus === status.get('PENDING_PUBLISH') && !entry.get('isPersisting', false);
           const postAuthor = entry.get('author');
 
           return (
