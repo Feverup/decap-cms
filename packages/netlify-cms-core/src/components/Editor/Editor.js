@@ -259,7 +259,7 @@ export class Editor extends React.Component {
       currentStatus,
       t,
     } = this.props;
-    if (currentStatus !== status.last()) {
+    if (currentStatus !== status.get('PENDING_PUBLISH')) {
       window.alert(t('editor.editor.onPublishingNotReady'));
       return;
     } else if (entryDraft.get('hasChanged')) {
