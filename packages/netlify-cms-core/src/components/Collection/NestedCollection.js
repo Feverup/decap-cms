@@ -84,13 +84,14 @@ function TreeNode(props) {
     if (leaf) {
       return null;
     }
+
     let to = `/collections/${collectionName}`;
     if (depth > 0) {
       to = `${to}/filter${node.path}`;
     }
     const title = getNodeTitle(node);
 
-    const hasChildren = depth === 0 || node.children.some(c => c.children.some(c => c.isDir));
+    const hasChildren = node.children.some(c => c.children.some(c => c.isDir));
 
     return (
       <React.Fragment key={node.path}>
