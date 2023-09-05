@@ -211,6 +211,8 @@ class EditorControl extends React.Component {
       locale,
     } = this.props;
 
+    const widgetTitle = field.get('title');
+    const widgetSubtitle = field.get('subtitle');
     const widgetName = field.get('widget');
     const widget = resolveWidget(widgetName);
     const fieldName = field.get('name');
@@ -221,6 +223,7 @@ class EditorControl extends React.Component {
     const errors = fieldsErrors && fieldsErrors.get(this.uniqueFieldId);
     const childErrors = this.isAncestorOfFieldError();
     const hasErrors = !!errors || childErrors;
+    const isFlat = widgetName === 'object' && field.has('flat');
 
     return (
       <ClassNames>
@@ -231,6 +234,8 @@ class EditorControl extends React.Component {
               ${isHidden && styleStrings.hidden};
             `}
           >
+            {widgetTitle && <h1>{widgetTitle}</h1>}
+            {widgetSubtitle && <h2>{widgetSubtitle}</h2>}
             {widget.globalStyles && <Global styles={coreCss`${widget.globalStyles}`} />}
             {errors && (
               <ControlErrorsList>
@@ -245,14 +250,14 @@ class EditorControl extends React.Component {
                 )}
               </ControlErrorsList>
             )}
-            <LabelComponent
+            {!isFlat && <LabelComponent
               field={field}
               isActive={isSelected || this.state.styleActive}
               hasErrors={hasErrors}
               uniqueFieldId={this.uniqueFieldId}
               isFieldOptional={isFieldOptional}
               t={t}
-            />
+            />}
             <Widget
               classNameWrapper={cx(
                 css`
@@ -296,6 +301,7 @@ class EditorControl extends React.Component {
               mediaPaths={mediaPaths}
               metadata={metadata}
               onChange={(newValue, newMetadata) => onChange(field, newValue, newMetadata)}
+              onChangeObject={onChange}
               onValidate={onValidate && partial(onValidate, this.uniqueFieldId)}
               onOpenMediaLibrary={openMediaLibrary}
               onClearMediaControl={clearMediaControl}
