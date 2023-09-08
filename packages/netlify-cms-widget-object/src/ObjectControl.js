@@ -78,9 +78,26 @@ export default class ObjectControl extends React.Component {
     });
   };
 
+  getFieldValue(field) {
+    const { value } = this.props;
+
+    const isWrapper = field.has('wrapper');
+    if (isWrapper) {
+      const wrapper = field.get('wrapper');
+      const isRootWrapper = wrapper === '';
+
+      return isRootWrapper ? value : value.getIn([...wrapper.split('.')]);
+    }
+
+    const fieldName = field.get('name');
+    const parentName = field.get('parentName');
+    if (parentName) return value.getIn([...(parentName.split('.')), fieldName]);
+
+    return value.get(fieldName);
+  }
+
   controlFor(field, key) {
     const {
-      value,
       onChangeObject,
       onValidateObject,
       clearFieldErrors,
@@ -97,13 +114,8 @@ export default class ObjectControl extends React.Component {
     if (field.get('widget') === 'hidden') {
       return null;
     }
-    const fieldName = field.get('name');
-    const parentName = field.get('parentName');
-    const fieldValue = value && Map.isMap(value) ?
-      (parentName ?
-        value.getIn([...(parentName.split('.')), fieldName]) :
-        value.get(fieldName)
-      ) : value;
+
+    const fieldValue = this.getFieldValue(field)
 
     const isDuplicate = isFieldDuplicate && isFieldDuplicate(field);
     const isHidden = isFieldHidden && isFieldHidden(field);
