@@ -212,7 +212,6 @@ class EditorControl extends React.Component {
     } = this.props;
 
     const widgetTitle = field.get('title');
-    const widgetSubtitle = field.get('subtitle');
     const widgetName = field.get('widget');
     const widget = resolveWidget(widgetName);
     const fieldName = field.get('name');
@@ -235,7 +234,6 @@ class EditorControl extends React.Component {
             `}
           >
             {widgetTitle && <h1>{widgetTitle}</h1>}
-            {widgetSubtitle && <h2>{widgetSubtitle}</h2>}
             {widget.globalStyles && <Global styles={coreCss`${widget.globalStyles}`} />}
             {errors && (
               <ControlErrorsList>

@@ -158,8 +158,8 @@ export default class ObjectControl extends React.Component {
     const notordered = [];
     renderedFields.forEach(render => {
       const { field } = render.props;
-      const parentName = field.get('parentName');
       const name = field.get('name');
+      const parentName = field.get('parentName');
       const orderKey = parentName ? `${parentName}.${name}` : name;
       if (orderMap[orderKey]) {
         return orderMap[orderKey].push(render);
@@ -178,9 +178,11 @@ export default class ObjectControl extends React.Component {
         if (isFlat) {
           const name = f.get('name');
           const parentName = f.get('parentName');
+
           const fieldParentName = parentName ? `${parentName}.${name}` : name;
           const multiFields = f.get('fields')?.map(field => field.set('parentName', fieldParentName));
           const singleField = f.get('field')?.set('parentName', fieldParentName);
+
           return mappedMultiFields.push(...this.renderFields(multiFields, singleField, f));
         }
         return mappedMultiFields.push(this.controlFor(f, idx));
