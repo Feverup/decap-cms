@@ -104,6 +104,10 @@ function entryDraftReducer(state = Map(), action) {
         const meta = field.get('meta');
 
         const dataPath = (i18n && getDataPath(i18n.currentLocale, i18n.defaultLocale)) || ['data'];
+
+        const parentName = field.get('parentName');
+        if (parentName) dataPath.push(...parentName.split('.'));
+
         if (meta) {
           state.setIn(['entry', 'meta', name], value);
         } else {

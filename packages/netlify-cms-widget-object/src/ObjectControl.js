@@ -68,14 +68,36 @@ export default class ObjectControl extends React.Component {
     let fields = field.get('field') || field.get('fields');
     fields = List.isList(fields) ? fields : List([fields]);
     fields.forEach(field => {
-      if (field.get('widget') === 'hidden') return;
-      this.componentValidate[field.get('name')]();
+      const widget = field.get('widget');
+      if (widget === 'hidden' || widget === 'object' && field.has('flat')) return;
+      const parentName = field.get('parentName');
+      const name = field.get('name');
+
+      const validateName = parentName ? `${parentName}.${name}` : name;
+      this.componentValidate[validateName]();
     });
   };
 
+  getFieldValue(field) {
+    const { value } = this.props;
+
+    const isWrapper = field.has('wrapper');
+    if (isWrapper) {
+      const wrapper = field.get('wrapper');
+      const isRootWrapper = wrapper === '';
+
+      return isRootWrapper ? value : value.getIn([...wrapper.split('.')]);
+    }
+
+    const fieldName = field.get('name');
+    const parentName = field.get('parentName');
+    if (parentName) return value.getIn([...(parentName.split('.')), fieldName]);
+
+    return value.get(fieldName);
+  }
+
   controlFor(field, key) {
     const {
-      value,
       onChangeObject,
       onValidateObject,
       clearFieldErrors,
@@ -92,8 +114,8 @@ export default class ObjectControl extends React.Component {
     if (field.get('widget') === 'hidden') {
       return null;
     }
-    const fieldName = field.get('name');
-    const fieldValue = value && Map.isMap(value) ? value.get(fieldName) : value;
+
+    const fieldValue = this.getFieldValue(field)
 
     const isDuplicate = isFieldDuplicate && isFieldDuplicate(field);
     const isHidden = isFieldHidden && isFieldHidden(field);
@@ -124,9 +146,49 @@ export default class ObjectControl extends React.Component {
     this.setState({ collapsed: !this.state.collapsed });
   };
 
-  renderFields = (multiFields, singleField) => {
+  orderRenderedFields = (renderedFields, field) => {
+    const order = field.get('order').toJS();
+    if (!order.length) return renderedFields;
+
+    const orderMap = {};
+    order.forEach(key => {
+      orderMap[key] = [];
+    });
+
+    const notordered = [];
+    renderedFields.forEach(render => {
+      const { field } = render.props;
+      const name = field.get('name');
+      const parentName = field.get('parentName');
+      const orderKey = parentName ? `${parentName}.${name}` : name;
+      if (orderMap[orderKey]) {
+        return orderMap[orderKey].push(render);
+      }
+      return notordered.push(render);
+    });
+
+    return [...Object.values(orderMap), ...notordered];
+  }
+
+  renderFields = (multiFields, singleField, field) => {
     if (multiFields) {
-      return multiFields.map((f, idx) => this.controlFor(f, idx));
+      const mappedMultiFields = [];
+      multiFields.forEach((f, idx) => {
+        const isFlat = f.has('flat');
+        if (isFlat) {
+          const name = f.get('name');
+          const parentName = f.get('parentName');
+
+          const fieldParentName = parentName ? `${parentName}.${name}` : name;
+          const multiFields = f.get('fields')?.map(field => field.set('parentName', fieldParentName));
+          const singleField = f.get('field')?.set('parentName', fieldParentName);
+
+          return mappedMultiFields.push(...this.renderFields(multiFields, singleField, f));
+        }
+        return mappedMultiFields.push(this.controlFor(f, idx));
+      });
+
+      return field.has('order') ? this.orderRenderedFields(mappedMultiFields, field) : mappedMultiFields;
     }
     return this.controlFor(singleField);
   };
@@ -143,11 +205,16 @@ export default class ObjectControl extends React.Component {
     const collapsed = forList ? this.props.collapsed : this.state.collapsed;
     const multiFields = field.get('fields');
     const singleField = field.get('field');
+    const isFlat = field.has('flat');
 
     if (multiFields || singleField) {
       return (
         <ClassNames>
-          {({ css, cx }) => (
+          {({ css, cx }) => isFlat ? (
+            <div id={forID}>
+              {this.renderFields(multiFields, singleField, field)}
+            </div>
+          ) : (
             <div
               id={forID}
               className={cx(
@@ -182,7 +249,7 @@ export default class ObjectControl extends React.Component {
                   `]: collapsed,
                 })}
               >
-                {this.renderFields(multiFields, singleField)}
+                {this.renderFields(multiFields, singleField, field)}
               </div>
             </div>
           )}
