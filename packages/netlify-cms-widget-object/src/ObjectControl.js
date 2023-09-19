@@ -89,11 +89,16 @@ export default class ObjectControl extends React.Component {
       return isRootWrapper ? value : value.getIn([...wrapper.split('.')]);
     }
 
-    const fieldName = field.get('name');
-    const parentName = field.get('parentName');
-    if (parentName) return value.getIn([...(parentName.split('.')), fieldName]);
+    const isMap = value && Map.isMap(value);
 
-    return value.get(fieldName);
+    const fieldName = field.get('name');
+    if (isMap) {
+      const parentName = field.get('parentName');
+      if (parentName) return value.getIn([...(parentName.split('.')), fieldName]);
+      return value.get(fieldName)
+    }
+
+    return value;
   }
 
   controlFor(field, key) {
