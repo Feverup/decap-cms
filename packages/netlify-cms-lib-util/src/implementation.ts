@@ -78,6 +78,7 @@ export type PersistOptions = {
   commitMessage: string;
   collectionName?: string;
   useWorkflow?: boolean;
+  publishMain?: boolean;
   unpublished?: boolean;
   status?: string;
 };
