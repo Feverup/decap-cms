@@ -273,6 +273,7 @@ interface PersistArgs {
   entryDraft: EntryDraft;
   assetProxies: AssetProxy[];
   usedSlugs: List<string>;
+  publishMain?: boolean;
   unpublished?: boolean;
   status?: string;
 }
@@ -1058,6 +1059,7 @@ export class Backend {
     entryDraft: draft,
     assetProxies,
     usedSlugs,
+    publishMain = false,
     unpublished = false,
     status,
   }: PersistArgs) {
@@ -1139,6 +1141,7 @@ export class Backend {
       commitMessage,
       collectionName,
       useWorkflow,
+      publishMain,
       ...updatedOptions,
     };
 

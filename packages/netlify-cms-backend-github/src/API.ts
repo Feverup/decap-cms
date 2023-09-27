@@ -830,8 +830,7 @@ export default class API {
     }
 
     console.log(
-      `Done migrating Pull Request '${
-        number === newNumber ? newNumber : `${number} => ${newNumber}`
+      `Done migrating Pull Request '${number === newNumber ? newNumber : `${number} => ${newNumber}`
       }'`,
     );
   }
@@ -986,8 +985,7 @@ export default class API {
     const unpublished = options.unpublished || false;
     if (this.useMain) await this.createBranchToMain();
     if (!unpublished) {
-      const branchData = (await this.getMainBranch()) || (await this.getDefaultBranch());
-      // const branchData = await this.getDefaultBranch();
+      const branchData = options.publishMain ? (await this.getMainBranch() || await this.getDefaultBranch()) : (await this.getDefaultBranch());
       const changeTree = await this.updateTree(branchData.commit.sha, files);
       const commitResponse = await this.commit(options.commitMessage, changeTree);
 

@@ -224,7 +224,7 @@ export class Editor extends React.Component {
   // }
 
   handlePersistEntry = async (opts = {}) => {
-    const { createNew = false, duplicate = false } = opts;
+    const { createNew = false, duplicate = false, publishMain = false } = opts;
     const {
       persistEntry,
       collection,
@@ -236,7 +236,7 @@ export class Editor extends React.Component {
       entryDraft,
     } = this.props;
 
-    await persistEntry(collection);
+    await persistEntry(collection, publishMain);
 
     // this.deleteBackup();
 

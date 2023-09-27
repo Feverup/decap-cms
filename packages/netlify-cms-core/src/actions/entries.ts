@@ -884,7 +884,7 @@ export function getSerializedEntry(collection: Collection, entry: Entry) {
   return serializedEntry;
 }
 
-export function persistEntry(collection: Collection) {
+export function persistEntry(collection: Collection, publishMain?: boolean) {
   return async (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
     const state = getState();
     const entryDraft = state.entryDraft;
@@ -928,6 +928,7 @@ export function persistEntry(collection: Collection) {
         entryDraft: serializedEntryDraft,
         assetProxies,
         usedSlugs,
+        publishMain,
       })
       .then(async (newSlug: string) => {
         dispatch(
