@@ -53,7 +53,7 @@ export interface Config {
   apiRoot?: string;
   token?: string;
   googleAuth?: GoogleCredentials;
-  main?: string;
+  stack?: string;
   branch?: string;
   useOpenAuthoring?: boolean;
   repo?: string;
@@ -181,9 +181,9 @@ export default class API {
   apiRoot: string;
   token: string;
   googleAuth?: GoogleCredentials;
-  main?: string;
+  stack?: string;
   branch: string;
-  useMain: boolean;
+  useStack: boolean;
   useOpenAuthoring?: boolean;
   repo: string;
   originRepo: string;
@@ -207,9 +207,9 @@ export default class API {
     this.apiRoot = config.apiRoot || 'https://api.github.com';
     this.token = config.token || '';
     this.googleAuth = config.googleAuth;
-    this.main = config.main;
     this.branch = config.branch || 'master';
-    this.useMain = Boolean(this.main);
+    this.stack = config.stack;
+    this.useStack = false;
     this.useOpenAuthoring = config.useOpenAuthoring;
     this.repo = config.repo || '';
     this.originRepo = config.originRepo || this.repo;
@@ -983,9 +983,10 @@ export default class API {
     const contentKey = this.generateContentKey(options.collectionName as string, slug);
     const branch = branchFromContentKey(contentKey);
     const unpublished = options.unpublished || false;
-    if (this.useMain) await this.createBranchToMain();
     if (!unpublished) {
-      const branchData = options.publishMain ? (await this.getMainBranch() || await this.getDefaultBranch()) : (await this.getDefaultBranch());
+      const branchData = this.useStack
+        ? (await this.getStackBranch()) || (await this.getDefaultBranch())
+        : await this.getDefaultBranch();
       const changeTree = await this.updateTree(branchData.commit.sha, files);
       const commitResponse = await this.commit(options.commitMessage, changeTree);
 
@@ -1165,50 +1166,27 @@ export default class API {
     await this.deleteBranch(branch);
   }
 
-  async publishUnpublishedEntryMain(
+  async publishUnpublishedEntryStack(
     collectionName: string,
     slug: string,
-    options: { mainCommitMessage: string, publishMain?: boolean },
+    options: { stackCommitMessage: string; publishStack?: boolean },
   ) {
-    if (!this.main) return this.publishUnpublishedEntry(collectionName, slug);
-
-    const { publishMain, mainCommitMessage } = options;
+    const { stackCommitMessage, publishStack } = options
+    if (!this.stack || !this.useStack && !publishStack) return this.publishUnpublishedEntry(collectionName, slug);
 
     const contentKey = this.generateContentKey(collectionName, slug);
     const branch = branchFromContentKey(contentKey);
 
     const pullRequest = await this.getBranchPullRequest(branch);
-    const mainPullRequest = await this.getMainPullRequest();
+    const stackPullRequest = await this.getStackPullRequest();
 
-    if (publishMain) {
-      if (mainPullRequest) {
-        const mainDiffs = await this.getDifferences(
-          mainPullRequest.base.ref,
-          mainPullRequest.head.ref,
-        );
-        const hasOnlyOneFile = mainDiffs.files.length === 1;
-        const hasOnlyCurrentFile = hasOnlyOneFile && mainDiffs.files[0].filename.includes(slug);
-        if (hasOnlyCurrentFile) {
-          await this.mergeAndCleanPR(pullRequest, { force: true });
-          await this.publishMain();
-        } else {
-          const mainPullRequestMerge = await this.createMainPR(
-            mainCommitMessage,
-            pullRequest.head.ref,
-          );
-          await this.mergeAndCleanPR(mainPullRequestMerge);
-          await this.mergeAndCleanPR(pullRequest, { force: true });
-        }
-      } else {
-        await this.updatePR(pullRequest.number, { base: this.main });
-        await this.mergeAndCleanPR(pullRequest);
-        await this.removeBranchToMain();
-      }
-    } else {
-      await this.mergeAndCleanPR(pullRequest, { force: true });
+    if (!stackPullRequest) await this.createBranch(this.stack, pullRequest.base.sha);
 
-      if (!mainPullRequest) await this.createMainPR(mainCommitMessage);
-      await this.updateMainStatus(this.initialWorkflowStatus);
+    await this.updatePR(pullRequest.number, { base: this.stack });
+    await this.mergeAndCleanPR(pullRequest);
+    if (!stackPullRequest) {
+      const stackPullRequest = await this.createStackPR(stackCommitMessage);
+      await this.setPullRequestStatus(stackPullRequest, this.initialWorkflowStatus);
     }
   }
 
@@ -1388,20 +1366,6 @@ export default class API {
     return result;
   }
 
-  async updateBaseOfOpenPRs(update: string) {
-    if (update !== this.main && update !== this.branch) return;
-    const updateToMain = update === this.main;
-    const openPullRequest = updateToMain
-      ? await this.getPullRequests(undefined, PullRequestState.Open, () => true)
-      : await this.getMainPullRequests(undefined, PullRequestState.Open);
-    if (!updateToMain) await this.createBranchToMain();
-    for (const pullRequest of openPullRequest) {
-      if (!updateToMain)
-        await this.mergeBranch(pullRequest.head.ref, this.branch, pullRequest.title);
-      await this.updatePR(pullRequest.number, { base: update });
-    }
-  }
-
   async closePR(number: number) {
     console.log('%c Deleting PR', 'line-height: 30px;text-align: center;font-weight: bold');
     const result: Octokit.PullsUpdateBranchResponse = await this.request(
@@ -1571,11 +1535,11 @@ export default class API {
     return pullRequest.head.sha;
   }
 
-  async getMainBranch() {
-    if (!this.main) return;
+  async getStackBranch() {
+    if (!this.stack) return;
     try {
       const result: Octokit.ReposGetBranchResponse = await this.request(
-        `${this.originRepoURL}/branches/${encodeURIComponent(this.main)}`,
+        `${this.originRepoURL}/branches/${encodeURIComponent(this.stack)}`,
       );
       return result;
     } catch (error) {
@@ -1583,13 +1547,13 @@ export default class API {
     }
   }
 
-  async getMainPullRequests(head: string | undefined, state: PullRequestState) {
+  async getStackPullRequests(head: string | undefined, state: PullRequestState) {
     const pullRequests: Octokit.PullsListResponse = await this.requestAllPages(
       `${this.originRepoURL}/pulls`,
       {
         params: {
           ...(head ? { head: await this.getHeadReference(head) } : {}),
-          base: this.main,
+          base: this.branch,
           state,
           per_page: 100,
         },
@@ -1603,14 +1567,14 @@ export default class API {
     return cmsPullRequests;
   }
 
-  async getMainPullRequest() {
-    const mainPullRequests = await this.getMainPullRequests(this.branch, PullRequestState.Open);
-    return mainPullRequests[0];
+  async getStackPullRequest() {
+    const stackPullRequests = await this.getStackPullRequests(this.stack, PullRequestState.Open);
+    return stackPullRequests[0];
   }
 
   getCurrentBranch() {
-    if (!this.main) return this.branch;
-    return this.useMain ? this.main : this.branch;
+    if (!this.stack) return this.branch;
+    return this.useStack ? this.stack : this.branch;
   }
 
   async branchExists(branch: string) {
@@ -1622,28 +1586,20 @@ export default class API {
     }
   }
 
-  async createBranchToMain() {
-    if (!this.main) return;
-    const mainBranch = await this.getMainBranch();
-    if (!mainBranch) return;
-    await this.createBranch(this.branch, mainBranch.commit.sha);
-    this.useMain = false;
+  async removeBranchToStack() {
+    if (!this.stack) return;
+    await this.deleteBranch(this.stack);
+    this.useStack = false;
   }
 
-  async removeBranchToMain() {
-    if (!this.main) return;
-    await this.deleteBranch(this.branch);
-    this.useMain = true;
-  }
+  async fetchStack() {
+    if (!this.stack) return;
 
-  async fetchMain() {
-    if (!this.main) return;
+    const stack = await this.branchExists(this.stack);
+    if (!stack) return;
+    this.useStack = true;
 
-    const branch = await this.branchExists(this.branch);
-    if (!branch) return;
-    this.useMain = false;
-
-    const pullRequest = await this.getMainPullRequest();
+    const pullRequest = await this.getStackPullRequest();
     if (!pullRequest) return;
 
     const label = pullRequest.labels.find(l => isCMSLabel(l.name, this.cmsLabelPrefix)) as {
@@ -1657,42 +1613,39 @@ export default class API {
     };
   }
 
-  async updateMainStatus(newStatus: string) {
-    if (!this.main) return;
-    const pullRequest = await this.getMainPullRequest();
+  async updateStackStatus(newStatus: string) {
+    if (!this.stack) return;
+    const pullRequest = await this.getStackPullRequest();
     await this.setPullRequestStatus(pullRequest, newStatus);
   }
 
-  async publishMain() {
-    if (!this.main) return;
-    const pullRequest = await this.getMainPullRequest();
-    await this.updateBaseOfOpenPRs(this.main);
-    await this.mergePR(pullRequest);
-    await this.deleteBranch(this.branch);
-    await this.updateBaseOfOpenPRs(this.branch);
-    this.useMain = true;
+  async publishStack() {
+    if (!this.stack) return;
+    await this.mergePR(await this.getStackPullRequest());
+    await this.deleteBranch(this.stack);
+    this.useStack = false;
   }
 
-  async closeMain() {
-    if (!this.main) return;
-    const pullRequest = await this.getMainPullRequest();
+  async closeStack() {
+    if (!this.stack) return;
+    const pullRequest = await this.getStackPullRequest();
     await this.closePR(pullRequest.number);
-    await this.deleteBranch(this.branch);
-    this.useMain = true;
+    await this.deleteBranch(this.stack);
+    this.useStack = false;
   }
 
-  async createMainPR(title: string, head?: string) {
+  async createStackPR(title: string, head?: string) {
     const result: Octokit.PullsCreateResponse = await this.request(`${this.originRepoURL}/pulls`, {
       method: 'POST',
       body: JSON.stringify({
         title,
         body: DEFAULT_PR_BODY,
-        head: head || this.branch,
-        base: this.main,
+        head: head || this.stack,
+        base: this.branch,
       }),
     });
 
-    this.useMain = false;
+    this.useStack = true;
 
     return result;
   }
