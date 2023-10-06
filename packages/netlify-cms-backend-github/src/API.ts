@@ -1596,7 +1596,7 @@ export default class API {
     if (!this.stack) return;
 
     const stack = await this.branchExists(this.stack);
-    if (!stack) return;
+    if (!stack) return this.useStack = false;
     this.useStack = true;
 
     const pullRequest = await this.getStackPullRequest();
