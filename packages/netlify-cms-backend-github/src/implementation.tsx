@@ -78,8 +78,8 @@ export default class GitHub implements Implementation {
   openAuthoringEnabled: boolean;
   useOpenAuthoring?: boolean;
   alwaysForkEnabled: boolean;
-  main?: string;
   branch: string;
+  stack?: string;
   apiRoot: string;
   mediaFolder: string;
   previewContext: string;
@@ -130,7 +130,7 @@ export default class GitHub implements Implementation {
       this.repo = this.originRepo = config.backend.repo || '';
     }
     this.alwaysForkEnabled = config.backend.always_fork || false;
-    this.main = config.backend.main?.trim();
+    this.stack = config.backend.stack?.trim();
     this.branch = config.backend.branch?.trim() || 'master';
     this.apiRoot = config.backend.api_root || 'https://api.github.com';
     this.token = '';
@@ -341,8 +341,8 @@ export default class GitHub implements Implementation {
     this.api = new apiCtor({
       token: this.token,
       googleAuth: this.googleAuth,
-      main: this.main,
       branch: this.branch,
+      stack: this.stack,
       repo: this.repo,
       requestFunction: this.useApps ? this.appsRequestFunction : unsentRequest.performRequest,
       originRepo: this.originRepo,
@@ -729,11 +729,11 @@ export default class GitHub implements Implementation {
     );
   }
 
-  publishUnpublishedEntryMain(collection: string, slug: string, options: { mainCommitMessage: string, publishMain?: boolean }) {
-    // publishUnpublishedEntryMain is a transactional operation
+  publishUnpublishedEntryStack(collection: string, slug: string, options: { stackCommitMessage: string, publishStack?: boolean }) {
+    // publishUnpublishedEntryStack is a transactional operation
     return runWithLock(
       this.lock,
-      () => this.api!.publishUnpublishedEntryMain(collection, slug, options),
+      () => this.api!.publishUnpublishedEntryStack(collection, slug, options),
       'Failed to acquire publish entry lock',
     );
   }
@@ -747,44 +747,44 @@ export default class GitHub implements Implementation {
     );
   }
 
-  mainStatus() {
+  stackStatus() {
     return runWithLock(
       this.lock,
-      () => this.api!.fetchMain(),
-      'Failed to acquire main status lock',
+      () => this.api!.fetchStack(),
+      'Failed to acquire stack status lock',
     );
   }
 
-  updateMainStatus(newStatus: string) {
-    // updateMainStatus is a transactional operation
+  updateStackStatus(newStatus: string) {
+    // updateStackStatus is a transactional operation
     return runWithLock(
       this.lock,
-      () => this.api!.updateMainStatus(newStatus),
-      'Failed to acquire main update status lock',
+      () => this.api!.updateStackStatus(newStatus),
+      'Failed to acquire stack update status lock',
     );
   }
 
-  publishMain() {
+  publishStack() {
     return runWithLock(
       this.lock,
-      () => this.api!.publishMain(),
-      'Failed to publish main status lock',
+      () => this.api!.publishStack(),
+      'Failed to publish stack status lock',
     );
   }
 
-  closeMain() {
+  closeStack() {
     return runWithLock(
       this.lock,
-      () => this.api!.closeMain(),
-      'Failed to close main status lock',
+      () => this.api!.closeStack(),
+      'Failed to close stack status lock',
     );
   }
 
-  createMainPR(title?: string) {
+  createStackPR(title?: string) {
     return runWithLock(
       this.lock,
-      () => this.api!.createMainPR(title),
-      'Failed to close main status lock',
+      () => this.api!.createStackPR(title),
+      'Failed to close stack status lock',
     );
   }
 }

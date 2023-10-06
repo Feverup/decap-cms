@@ -1,20 +1,20 @@
 import { produce } from 'immer';
 
 import {
-  STATUS_MAIN_REQUEST,
-  STATUS_MAIN_SUCCESS,
-  STATUS_MAIN_FAILURE,
-  CLOSE_MAIN_REQUEST,
-  CLOSE_MAIN_SUCCESS,
-  CLOSE_MAIN_FAILURE,
-  PUBLISH_MAIN_REQUEST,
-  PUBLISH_MAIN_SUCCESS,
-  PUBLISH_MAIN_FAILURE,
-} from '../actions/main';
+  STATUS_STACK_REQUEST,
+  STATUS_STACK_SUCCESS,
+  STATUS_STACK_FAILURE,
+  CLOSE_STACK_REQUEST,
+  CLOSE_STACK_SUCCESS,
+  CLOSE_STACK_FAILURE,
+  PUBLISH_STACK_REQUEST,
+  PUBLISH_STACK_SUCCESS,
+  PUBLISH_STACK_FAILURE,
+} from '../actions/stack';
 
-import type { MainStatusAction } from '../actions/main';
+import type { StackStatusAction } from '../actions/stack';
 
-export type MainStatus = {
+export type StackStatus = {
   isFetching: boolean;
   canStack: boolean;
   status: {
@@ -24,44 +24,44 @@ export type MainStatus = {
   error: Error | undefined;
 };
 
-const defaultState: MainStatus = {
+const defaultState: StackStatus = {
   isFetching: false,
   canStack: false,
   status: {},
   error: undefined,
 };
 
-const status = produce((state: MainStatus, action: MainStatusAction) => {
+const status = produce((state: StackStatus, action: StackStatusAction) => {
   switch (action.type) {
-    case STATUS_MAIN_REQUEST:
+    case STATUS_STACK_REQUEST:
       state.isFetching = true;
       break;
-    case STATUS_MAIN_SUCCESS:
+    case STATUS_STACK_SUCCESS:
       state.isFetching = false;
       state.canStack = true;
       state.status = action.payload.status;
       break;
-    case STATUS_MAIN_FAILURE:
+    case STATUS_STACK_FAILURE:
       state.isFetching = false;
       state.canStack = false;
       state.error = action.payload.error;
       break;
-    case PUBLISH_MAIN_REQUEST:
+    case PUBLISH_STACK_REQUEST:
       state.isFetching = true;
       break;
-    case PUBLISH_MAIN_SUCCESS:
+    case PUBLISH_STACK_SUCCESS:
       state.isFetching = false;
       break;
-    case PUBLISH_MAIN_FAILURE:
+    case PUBLISH_STACK_FAILURE:
       state.isFetching = false;
       break;
-    case CLOSE_MAIN_REQUEST:
+    case CLOSE_STACK_REQUEST:
       state.isFetching = true;
       break;
-    case CLOSE_MAIN_SUCCESS:
+    case CLOSE_STACK_SUCCESS:
       state.isFetching = false;
       break;
-    case CLOSE_MAIN_FAILURE:
+    case CLOSE_STACK_FAILURE:
       state.isFetching = false;
   }
 }, defaultState);

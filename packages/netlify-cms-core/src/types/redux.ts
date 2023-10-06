@@ -5,7 +5,7 @@ import type { Map, List, OrderedMap, Set } from 'immutable';
 import type { FILES, FOLDER } from '../constants/collectionTypes';
 import type { MediaFile as BackendMediaFile } from '../backend';
 import type { Auth } from '../reducers/auth';
-import type { MainStatus } from '../reducers/main';
+import type { StackStatus } from '../reducers/stack';
 import type { Status } from '../reducers/status';
 import type { Medias } from '../reducers/medias';
 import type { Deploys } from '../reducers/deploys';
@@ -362,8 +362,8 @@ export interface CmsBackend {
   auth_scope?: CmsAuthScope;
   open_authoring?: boolean;
   repo?: string;
-  main?: string;
   branch?: string;
+  stack?: string;
   api_root?: string;
   site_domain?: string;
   base_url?: string;
@@ -372,7 +372,7 @@ export interface CmsBackend {
   squash_merges?: boolean;
   proxy_url?: string;
   commit_messages?: {
-    main?: string;
+    stack?: string;
     create?: string;
     update?: string;
     delete?: string;
@@ -725,7 +725,7 @@ export interface State {
   mediaLibrary: MediaLibrary;
   search: Search;
   notifs: { message: { key: string }; kind: string; id: number }[];
-  main: MainStatus;
+  stack: StackStatus;
   status: Status;
 }
 

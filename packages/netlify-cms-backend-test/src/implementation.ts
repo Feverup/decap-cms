@@ -141,7 +141,7 @@ export default class TestBackend implements Implementation {
     return Promise.resolve({ auth: { status: true }, api: { status: true, statusPage: '' } });
   }
 
-  mainStatus() {
+  stackStatus() {
     return Promise.resolve({ status: '', updatedAt: '' });
   }
 

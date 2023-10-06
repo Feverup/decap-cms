@@ -25,7 +25,7 @@ import { addAssets } from './media';
 import { loadMedia } from './mediaLibrary';
 import ValidationErrorTypes from '../constants/validationErrorTypes';
 import { navigateToEntry } from '../routing/history';
-import { checkMainStatus } from './main';
+import { checkStackStatus } from './stack';
 
 import type {
   Collection,
@@ -251,7 +251,7 @@ export function loadUnpublishedEntry(collection: Collection, slug: string) {
         const { entries, pagination } = await backend.unpublishedEntries(state.collections);
         dispatch(unpublishedEntriesLoaded(entries, pagination));
         // eslint-disable-next-line no-empty
-      } catch (e) {}
+      } catch (e) { }
     }
 
     dispatch(unpublishedEntryLoading(collection, slug));
@@ -485,7 +485,7 @@ export function deleteUnpublishedEntry(collection: string, slug: string) {
 export function publishUnpublishedEntry(
   collectionName: string,
   slug: string,
-  publishMain: boolean,
+  publishStack: boolean,
 ) {
   return async (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
     const state = getState();
@@ -494,9 +494,20 @@ export function publishUnpublishedEntry(
     const entry = selectUnpublishedEntry(state, collectionName, slug);
     dispatch(unpublishedEntryPublishRequest(collectionName, slug));
     try {
-      await backend.publishUnpublishedEntry(entry, publishMain);
+      if (!publishStack && state.stack.status.status) {
+        dispatch(
+          notifSend({
+            message: { key: 'ui.toast.onFailToPublishEntry', details: "\nCan't publish having stack changes.\n\n You must stack them!" },
+            kind: 'danger',
+            dismissAfter: 8000,
+          }),
+        );
+        return dispatch(unpublishedEntryPublishError(collectionName, slug));
+      }
 
-      await dispatch(checkMainStatus());
+      await backend.publishUnpublishedEntry(entry, publishStack);
+
+      await dispatch(checkStackStatus());
 
       dispatch(loadMedia());
       dispatch(

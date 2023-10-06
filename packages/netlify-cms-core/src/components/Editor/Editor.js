@@ -224,7 +224,7 @@ export class Editor extends React.Component {
   // }
 
   handlePersistEntry = async (opts = {}) => {
-    const { createNew = false, duplicate = false, publishMain = false } = opts;
+    const { createNew = false, duplicate = false, publishStack = false } = opts;
     const {
       persistEntry,
       collection,
@@ -236,7 +236,7 @@ export class Editor extends React.Component {
       entryDraft,
     } = this.props;
 
-    await persistEntry(collection, publishMain);
+    await persistEntry(collection, publishStack);
 
     // this.deleteBackup();
 
@@ -249,7 +249,7 @@ export class Editor extends React.Component {
   };
 
   handlePublishEntry = async (opts = {}) => {
-    const { publishMain = false } = opts;
+    const { publishStack = false } = opts;
 
     const {
       publishUnpublishedEntry,
@@ -269,7 +269,7 @@ export class Editor extends React.Component {
       return;
     }
 
-    await publishUnpublishedEntry(collection.get('name'), slug, publishMain);
+    await publishUnpublishedEntry(collection.get('name'), slug, publishStack);
   };
 
   handleUnpublishEntry = async () => {
@@ -415,7 +415,7 @@ export class Editor extends React.Component {
 }
 
 function mapStateToProps(state, ownProps) {
-  const { collections, entryDraft, auth, config, entries, globalUI, main } = state;
+  const { collections, entryDraft, auth, config, entries, globalUI, stack } = state;
   const slug = ownProps.match.params[0];
   const collection = collections.get(ownProps.match.params.name);
   const collectionName = collection.get('name');
@@ -447,7 +447,7 @@ function mapStateToProps(state, ownProps) {
     }
   }
 
-  const canStack = main.canStack;
+  const canStack = stack.canStack;
 
   return {
     collection,
