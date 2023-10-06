@@ -1,7 +1,7 @@
 import { actions as notifActions } from 'redux-notifications';
 
 import { currentBackend } from '../backend';
-import { checkMainStatus } from './main';
+import { checkStackStatus } from './stack';
 
 import type { Credentials, User } from 'netlify-cms-lib-util';
 import type { ThunkDispatch } from 'redux-thunk';
@@ -68,7 +68,7 @@ export function authenticateUser() {
           if (user.useOpenAuthoring) {
             dispatch(useOpenAuthoring());
           }
-          dispatch(checkMainStatus()).then(() => {
+          dispatch(checkStackStatus()).then(() => {
             dispatch(authenticate(user));
           });
         } else {
@@ -94,7 +94,7 @@ export function loginUser(credentials: Credentials) {
         if (user.useOpenAuthoring) {
           dispatch(useOpenAuthoring());
         }
-        dispatch(checkMainStatus()).then(() => {
+        dispatch(checkStackStatus()).then(() => {
           dispatch(authenticate(user));
         });
       })

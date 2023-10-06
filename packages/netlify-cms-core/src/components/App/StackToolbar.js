@@ -14,7 +14,7 @@ import {
 } from 'netlify-cms-ui-default';
 import { connect } from 'react-redux';
 
-import { updateMainStatus, publishMain, closeMain } from '../../actions/main';
+import { updateStackStatus, publishStack, closeStack } from '../../actions/stack';
 import { status } from '../../constants/publishModes';
 
 const styles = {
@@ -122,25 +122,25 @@ export class EditorToolbar extends React.Component {
   };
 
   handleChangeStatus = newStatusName => {
-    const { updateMainStatus, currentStatus, } = this.props;
+    const { updateStackStatus, currentStatus, } = this.props;
     const newStatus = status.get(newStatusName);
-    updateMainStatus(currentStatus, newStatus);
+    updateStackStatus(currentStatus, newStatus);
   };
 
   handleDelete = () => {
-    const { closeMain, t } = this.props;
-    if (!window.confirm(t('editor.editor.onMainClosing'))) {
+    const { closeStack, t } = this.props;
+    if (!window.confirm(t('editor.editor.onStackClosing'))) {
       return;
     }
-    closeMain();
+    closeStack();
   };
 
   handlePublish = () => {
-    const { publishMain, t } = this.props;
-    if (!window.confirm(t('editor.editor.onMainPublishing'))) {
+    const { publishStack, t } = this.props;
+    if (!window.confirm(t('editor.editor.onStackPublishing'))) {
       return;
     }
-    publishMain()
+    publishStack()
   };
 
   componentDidMount() {
@@ -264,7 +264,7 @@ export class EditorToolbar extends React.Component {
 }
 
 function mapStateToProps(state) {
-  const { status } = state.main;
+  const { status } = state.stack;
   return {
     currentStatus: status.status,
     ...status
@@ -272,9 +272,9 @@ function mapStateToProps(state) {
 }
 
 const mapDispatchToProps = {
-  updateMainStatus,
-  publishMain,
-  closeMain
+  updateStackStatus,
+  publishStack,
+  closeStack
 };
 
 export default connect(mapStateToProps, mapDispatchToProps)(translate()(EditorToolbar));

@@ -273,7 +273,7 @@ interface PersistArgs {
   entryDraft: EntryDraft;
   assetProxies: AssetProxy[];
   usedSlugs: List<string>;
-  publishMain?: boolean;
+  publishStack?: boolean;
   unpublished?: boolean;
   status?: string;
 }
@@ -1059,7 +1059,7 @@ export class Backend {
     entryDraft: draft,
     assetProxies,
     usedSlugs,
-    publishMain = false,
+    publishStack = false,
     unpublished = false,
     status,
   }: PersistArgs) {
@@ -1141,7 +1141,7 @@ export class Backend {
       commitMessage,
       collectionName,
       useWorkflow,
-      publishMain,
+      publishStack,
       ...updatedOptions,
     };
 
@@ -1269,28 +1269,28 @@ export class Backend {
     return this.implementation.updateUnpublishedEntryStatus!(collection, slug, newStatus);
   }
 
-  async publishUnpublishedEntry(entry: EntryMap, publishMain?: boolean) {
+  async publishUnpublishedEntry(entry: EntryMap, publishStack?: boolean) {
     const collection = entry.get('collection');
     const slug = entry.get('slug');
 
     await this.invokePrePublishEvent(entry);
 
     const config = this.config;
-    if (config.backend.main) {
+    if (config.backend.stack) {
       const user = (await this.currentUser()) as User;
-      const mainCommitMessage = commitMessageFormatter(
-        'main',
+      const stackCommitMessage = commitMessageFormatter(
+        'stack',
         config,
         {
-          main: config.backend.main,
+          stack: config.backend.stack,
           authorLogin: user.login,
           authorName: user.name,
         },
         user.useOpenAuthoring,
       );
-      await this.implementation.publishUnpublishedEntryMain!(collection, slug, {
-        mainCommitMessage,
-        publishMain,
+      await this.implementation.publishUnpublishedEntryStack!(collection, slug, {
+        stackCommitMessage,
+        publishStack,
       });
     } else {
       await this.implementation.publishUnpublishedEntry!(collection, slug);
@@ -1343,24 +1343,24 @@ export class Backend {
     });
   }
 
-  mainStatus() {
-    return this.implementation.mainStatus();
+  stackStatus() {
+    return this.implementation.stackStatus();
   }
 
-  updateMainStatus(newStatus: string) {
-    return this.implementation.updateMainStatus(newStatus);
+  updateStackStatus(newStatus: string) {
+    return this.implementation.updateStackStatus(newStatus);
   }
 
-  publishMain() {
-    return this.implementation.publishMain();
+  publishStack() {
+    return this.implementation.publishStack();
   }
 
-  closeMain() {
-    return this.implementation.closeMain();
+  closeStack() {
+    return this.implementation.closeStack();
   }
 
-  createMainPR() {
-    return this.implementation.createMainPR(this.config.backend.commit_messages?.main);
+  createStackPR() {
+    return this.implementation.createStackPR(this.config.backend.commit_messages?.stack);
   }
 }
 
