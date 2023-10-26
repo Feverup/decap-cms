@@ -1,6 +1,8 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import ImmutablePropTypes from 'react-immutable-proptypes';
+import { debounce } from 'lodash';
+
 const ValidationErrorTypes = {
   PRESENCE: 'PRESENCE',
   PATTERN: 'PATTERN',
@@ -68,16 +70,15 @@ export default class NumberControl extends React.Component {
     value: '',
   };
 
+  handleNumberChange = debounce(value => {
+    const { onChange } = this.props;
+    onChange(!isNaN(value) ? value : '');
+  }, 250);
+
   handleChange = e => {
     const valueType = this.props.field.get('value_type');
-    const { onChange } = this.props;
     const value = valueType === 'float' ? parseFloat(e.target.value) : parseInt(e.target.value, 10);
-
-    if (!isNaN(value)) {
-      onChange(value);
-    } else {
-      onChange('');
-    }
+    this.handleNumberChange(value);
   };
 
   isValid = () => {
