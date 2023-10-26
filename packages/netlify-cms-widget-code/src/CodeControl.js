@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 import ImmutablePropTypes from 'react-immutable-proptypes';
 import { ClassNames } from '@emotion/core';
 import { Map } from 'immutable';
-import { uniq, isEqual, isEmpty } from 'lodash';
+import { uniq, isEqual, isEmpty, debounce } from 'lodash';
 import uuid from 'uuid/v4';
 import { UnControlled as ReactCodeMirror } from 'react-codemirror2';
 import CodeMirror from 'codemirror';
@@ -200,11 +200,19 @@ export default class CodeControl extends React.Component {
   }
 
   handleChange(newValue) {
+    this.setState({ lastKnownValue: newValue });
+    this.handleCodeChange(newValue);
+  }
+
+  /**
+ * When the document value changes, serialize from Slate's AST back to
+ * code and pass that up as the new value.
+ */
+  handleCodeChange = debounce(newValue => {
     const cursor = this.cm.doc.getCursor();
     const selections = this.cm.doc.listSelections();
-    this.setState({ lastKnownValue: newValue });
     this.props.onChange(this.toValue('code', newValue), { cursor, selections });
-  }
+  }, 250);
 
   showSettings = () => {
     this.setState({ settingsVisible: true });

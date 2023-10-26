@@ -105,7 +105,7 @@ export default class RawEditor extends React.Component {
   handleDocumentChange = debounce(editor => {
     const value = Plain.serialize(editor.value);
     this.props.onChange(value);
-  }, 150);
+  }, 250);
 
   handleToggleMode = () => {
     this.props.onMode('rich_text');
