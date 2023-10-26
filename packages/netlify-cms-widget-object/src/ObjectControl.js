@@ -59,8 +59,16 @@ export default class ObjectControl extends React.Component {
    * which only updates if the value changes, but every widget must be allowed
    * to override this.
    */
-  shouldComponentUpdate() {
-    return true;
+  shouldComponentUpdate(nextProps, nextState = {}) {
+    if (this.props.forList) {
+      if (nextProps.collapsed !== this.props.collapsed) return true;
+      return !nextProps.collapsed;
+    }
+    if (nextState.collapsed !== undefined) {
+      if (nextState.collapsed !== this.state.collapsed) return true;
+      return !nextState.collapsed;
+    }
+    return !this.state.collapsed;
   }
 
   validate = () => {
@@ -176,6 +184,8 @@ export default class ObjectControl extends React.Component {
   }
 
   renderFields = (multiFields, singleField, field) => {
+    const collapsed = this.props.forList ? this.props.collapsed : this.state.collapsed;
+    if (collapsed) return;
     if (multiFields) {
       const mappedMultiFields = [];
       multiFields.forEach((f, idx) => {
