@@ -103,7 +103,7 @@ export default class ObjectControl extends React.Component {
     if (isMap) {
       const parentName = field.get('parentName');
       if (parentName) return value.getIn([...(parentName.split('.')), fieldName]);
-      return value.get(fieldName)
+      return value.get(fieldName);
     }
 
     return value;
@@ -128,7 +128,7 @@ export default class ObjectControl extends React.Component {
       return null;
     }
 
-    const fieldValue = this.getFieldValue(field)
+    const fieldValue = this.getFieldValue(field);
 
     const isDuplicate = isFieldDuplicate && isFieldDuplicate(field);
     const isHidden = isFieldHidden && isFieldHidden(field);
@@ -184,8 +184,6 @@ export default class ObjectControl extends React.Component {
   }
 
   renderFields = (multiFields, singleField, field) => {
-    const collapsed = this.props.forList ? this.props.collapsed : this.state.collapsed;
-    if (collapsed) return;
     if (multiFields) {
       const mappedMultiFields = [];
       multiFields.forEach((f, idx) => {
@@ -221,13 +219,15 @@ export default class ObjectControl extends React.Component {
     const multiFields = field.get('fields');
     const singleField = field.get('field');
     const isFlat = field.has('flat');
+    const lazy = field.get('lazy');
+    const render = lazy ? !collapsed : true;
 
     if (multiFields || singleField) {
       return (
         <ClassNames>
           {({ css, cx }) => isFlat ? (
             <div id={forID}>
-              {this.renderFields(multiFields, singleField, field)}
+              {render && this.renderFields(multiFields, singleField, field)}
             </div>
           ) : (
             <div
@@ -264,7 +264,7 @@ export default class ObjectControl extends React.Component {
                   `]: collapsed,
                 })}
               >
-                {this.renderFields(multiFields, singleField, field)}
+                {render && this.renderFields(multiFields, singleField, field)}
               </div>
             </div>
           )}
