@@ -60,6 +60,8 @@ export default class ObjectControl extends React.Component {
    * to override this.
    */
   shouldComponentUpdate(nextProps, nextState = {}) {
+    if (!this.props.parentIds.length) return true;
+
     if (this.props.forList) {
       if (nextProps.collapsed !== this.props.collapsed) return true;
       return !nextProps.collapsed;
@@ -99,11 +101,11 @@ export default class ObjectControl extends React.Component {
 
     const isMap = value && Map.isMap(value);
 
-    const fieldName = field.get('name');
     if (isMap) {
       const parentName = field.get('parentName');
-      if (parentName) return value.getIn([...(parentName.split('.')), fieldName]);
-      return value.get(fieldName);
+      const name = field.get('name');
+      if (parentName) return value.getIn([...(parentName.split('.')), name]);
+      return value.get(name);
     }
 
     return value;
@@ -171,8 +173,8 @@ export default class ObjectControl extends React.Component {
     const notordered = [];
     renderedFields.forEach(render => {
       const { field } = render.props;
-      const name = field.get('name');
       const parentName = field.get('parentName');
+      const name = field.get('name');
       const orderKey = parentName ? `${parentName}.${name}` : name;
       if (orderMap[orderKey]) {
         return orderMap[orderKey].push(render);
@@ -189,8 +191,8 @@ export default class ObjectControl extends React.Component {
       multiFields.forEach((f, idx) => {
         const isFlat = f.has('flat');
         if (isFlat) {
-          const name = f.get('name');
           const parentName = f.get('parentName');
+          const name = f.get('name');
 
           const fieldParentName = parentName ? `${parentName}.${name}` : name;
           const multiFields = f.get('fields')?.map(field => field.set('parentName', fieldParentName));
