@@ -10,6 +10,7 @@ import { connect } from 'react-redux';
 import { FieldLabel, colors, transitions, lengths, borders } from 'netlify-cms-ui-default';
 import ReactMarkdown from 'react-markdown';
 import gfm from 'remark-gfm';
+import { List, Map } from 'immutable';
 
 import { resolveWidget, getEditorComponents } from '../../../lib/registry';
 import { clearFieldErrors, tryLoadEntry, validateMetaField } from '../../../actions/entries';
@@ -67,6 +68,10 @@ const styleStrings = {
   hidden: `
     visibility: hidden;
   `,
+  unused: `
+    opacity: 0.5;
+    background: #ccc;
+  `
 };
 
 const ControlContainer = styled.div`
@@ -146,6 +151,8 @@ class EditorControl extends React.Component {
     isHidden: PropTypes.bool,
     isFieldDuplicate: PropTypes.func,
     isFieldHidden: PropTypes.func,
+    isFieldUnused: PropTypes.func,
+    setFieldUnused: PropTypes.func,
     locale: PropTypes.string,
   };
 
@@ -155,7 +162,19 @@ class EditorControl extends React.Component {
 
   state = {
     activeLabel: false,
+    unused: true
   };
+
+  setFieldUnused = (unused) => {
+    if (unused === this.state.unused) return
+    return this.setState({ unused })
+  }
+
+  isFieldUnused = (value) => {
+    if (value === undefined) return true;
+    if (List.isList(value) && value.size === 0) return true;
+    return Map.isMap(value) ? this.state.unused : false;
+  }
 
   uniqueFieldId = uniqueId(`${this.props.field.get('name')}-field-`);
 
@@ -223,13 +242,20 @@ class EditorControl extends React.Component {
     const childErrors = this.isAncestorOfFieldError();
     const hasErrors = !!errors || childErrors;
     const isFlat = widgetName === 'object' && field.has('flat');
+    const styleActive = isSelected || this.state.styleActive;
+    const unused = !styleActive && this.isFieldUnused(value);
 
     return (
       <ClassNames>
         {({ css, cx }) => (
           <ControlContainer
             className={className}
+            {...(unused && {
+              onClick: () => !this.state.use && this.setState({ use: true }),
+              onMouseLeave: () => this.state.use && this.setState({ use: false })
+            })}
             css={css`
+              ${(!this.state.use && unused) && styleStrings.unused}
               ${isHidden && styleStrings.hidden};
             `}
           >
@@ -333,6 +359,8 @@ class EditorControl extends React.Component {
               isDisabled={isDisabled}
               isFieldDuplicate={isFieldDuplicate}
               isFieldHidden={isFieldHidden}
+              isFieldUnused={this.isFieldUnused}
+              setFieldUnused={this.setFieldUnused}
               locale={locale}
             />
             {fieldHint && (
