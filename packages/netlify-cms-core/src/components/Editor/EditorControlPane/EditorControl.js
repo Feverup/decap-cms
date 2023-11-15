@@ -242,7 +242,7 @@ class EditorControl extends React.Component {
     const hasErrors = !!errors || childErrors;
     const isFlat = widgetName === 'object' && field.has('flat');
     const styleActive = isSelected || this.state.styleActive;
-    const unused = !styleActive && this.isFieldUnused(value);
+    const unused = field.get('opacity') && (!styleActive && this.isFieldUnused(value));
 
     return (
       <ClassNames>
