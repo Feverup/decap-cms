@@ -88,6 +88,32 @@ export default class ObjectControl extends React.Component {
     });
   };
 
+  isFieldUnused(field) {
+    const { isFieldUnused, setFieldUnused } = this.props;
+    const isObjectField = field.get('widget') === 'object';
+    const value = this.getFieldValue(field);
+    const isUnused = isFieldUnused(value);
+    if (!isUnused) {
+      if (!isObjectField) setFieldUnused(false);
+      return false;
+    }
+    if (isObjectField) {
+      const singleField = field.get('field');
+      const multiFields = field.get('fields');
+      const fields = singleField ? [singleField] : multiFields;
+      const fieldName = field.get('name');
+      const isWrapper = field.has('wrapper');
+      const isAnyFieldUsed = fields.some(f => {
+        if (isWrapper) return !this.isFieldUnused(f)
+        const parentName = field.get('parentName');
+        const fieldParentName = parentName ? `${parentName}.${fieldName}` : fieldName;
+        return !this.isFieldUnused(f.set('parentName', fieldParentName));
+      });
+      if (isAnyFieldUsed) return false;
+    }
+    return true;
+  }
+
   getFieldValue(field) {
     const { value } = this.props;
 
@@ -223,6 +249,8 @@ export default class ObjectControl extends React.Component {
     const isFlat = field.has('flat');
     const lazy = field.get('lazy');
     const render = lazy ? !collapsed : true;
+    const opacity = field.get('opacity');
+    if (opacity) this.isFieldUnused(field);
 
     if (multiFields || singleField) {
       return (

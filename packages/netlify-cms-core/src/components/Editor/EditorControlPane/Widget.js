@@ -71,6 +71,8 @@ export default class Widget extends Component {
     isDisabled: PropTypes.bool,
     isFieldDuplicate: PropTypes.func,
     isFieldHidden: PropTypes.func,
+    isFieldUnused: PropTypes.func,
+    setFieldUnused: PropTypes.func,
     locale: PropTypes.string,
   };
 
@@ -299,6 +301,8 @@ export default class Widget extends Component {
       isDisabled,
       isFieldDuplicate,
       isFieldHidden,
+      isFieldUnused,
+      setFieldUnused,
       locale,
     } = this.props;
 
@@ -351,6 +355,8 @@ export default class Widget extends Component {
       isDisabled,
       isFieldDuplicate,
       isFieldHidden,
+      isFieldUnused,
+      setFieldUnused,
       locale,
     });
   }
