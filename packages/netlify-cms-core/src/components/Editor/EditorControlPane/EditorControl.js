@@ -70,7 +70,6 @@ const styleStrings = {
   `,
   unused: `
     opacity: 0.5;
-    background: #ccc;
   `
 };
 
