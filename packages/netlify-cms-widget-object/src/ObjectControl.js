@@ -88,11 +88,13 @@ export default class ObjectControl extends React.Component {
     });
   };
 
-  isFieldUnused(field) {
+  isFieldUnused(field, value) {
     const { isFieldUnused, setFieldUnused } = this.props;
     const isObjectField = field.get('widget') === 'object';
-    const value = this.getFieldValue(field);
-    const isUnused = isFieldUnused(value);
+    const fieldValue = value ?
+      this.getFieldValue.bind({ props: { value } })(field) :
+      this.getFieldValue(field);
+    const isUnused = isFieldUnused(fieldValue);
     if (!isUnused) {
       if (!isObjectField) setFieldUnused(false);
       return false;
@@ -101,13 +103,10 @@ export default class ObjectControl extends React.Component {
       const singleField = field.get('field');
       const multiFields = field.get('fields');
       const fields = singleField ? [singleField] : multiFields;
-      const fieldName = field.get('name');
       const isWrapper = field.has('wrapper');
       const isAnyFieldUsed = fields.some(f => {
         if (isWrapper) return !this.isFieldUnused(f)
-        const parentName = field.get('parentName');
-        const fieldParentName = parentName ? `${parentName}.${fieldName}` : fieldName;
-        return !this.isFieldUnused(f.set('parentName', fieldParentName));
+        return !this.isFieldUnused(f, value || fieldValue);
       });
       if (isAnyFieldUsed) return false;
     }
