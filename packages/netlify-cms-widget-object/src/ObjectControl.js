@@ -106,7 +106,7 @@ export default class ObjectControl extends React.Component {
       const isWrapper = field.has('wrapper');
       const isAnyFieldUsed = fields.some(f => {
         if (isWrapper) return !this.isFieldUnused(f)
-        return !this.isFieldUnused(f, value || fieldValue);
+        return !this.isFieldUnused(f, fieldValue);
       });
       if (isAnyFieldUsed) return false;
     }
