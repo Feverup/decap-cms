@@ -1,6 +1,6 @@
 import { get } from 'lodash';
 import { actions as notifActions } from 'redux-notifications';
-import { Map, List } from 'immutable';
+import { Map } from 'immutable';
 import { EDITORIAL_WORKFLOW_ERROR } from 'netlify-cms-lib-util';
 
 import { currentBackend, slugFromCustomPath } from '../backend';
@@ -27,6 +27,7 @@ import ValidationErrorTypes from '../constants/validationErrorTypes';
 import { navigateToEntry } from '../routing/history';
 import { checkStackStatus } from './stack';
 
+import type { List } from 'immutable';
 import type {
   Collection,
   EntryMap,
@@ -547,20 +548,9 @@ export function unpublishPublishedEntry(collection: Collection, slug: string) {
     const state = getState();
     const backend = currentBackend(state.config);
     const entry = selectEntry(state, collection.get('name'), slug);
-    const entryDraft = Map().set('entry', entry) as unknown as EntryDraft;
     dispatch(unpublishedEntryPersisting(collection, slug));
     return backend
       .deleteEntry(state, collection, slug)
-      .then(() =>
-        backend.persistEntry({
-          config: state.config,
-          collection,
-          entryDraft,
-          assetProxies: [],
-          usedSlugs: List(),
-          status: status.get('PENDING_PUBLISH'),
-        }),
-      )
       .then(() => {
         dispatch(unpublishedEntryPersisted(collection, entry));
         dispatch(entryDeleted(collection, slug));

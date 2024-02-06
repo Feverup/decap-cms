@@ -21,6 +21,7 @@ import { selectCustomPath } from '../reducers/entryDraft';
 import { navigateToEntry } from '../routing/history';
 import { getProcessSegment } from '../lib/formatters';
 import { hasI18n, duplicateDefaultI18nFields, serializeI18n, I18N, I18N_FIELD } from '../lib/i18n';
+import { loadUnpublishedEntry } from './editorialWorkflow';
 
 import type { ImplementationMediaFile } from 'netlify-cms-lib-util';
 import type { AnyAction } from 'redux';
@@ -979,8 +980,18 @@ export function deleteEntry(collection: Collection, slug: string) {
     dispatch(entryDeleting(collection, slug));
     return backend
       .deleteEntry(state, collection, slug)
-      .then(() => {
-        return dispatch(entryDeleted(collection, slug));
+      .then(async () => {
+        dispatch(entryDeleted(collection, slug));
+        dispatch(loadUnpublishedEntry(collection, slug));
+        dispatch(
+          notifSend({
+            message: {
+              key: 'ui.toast.entryUnpublished',
+            },
+            kind: 'success',
+            dismissAfter: 4000,
+          }),
+        );
       })
       .catch((error: Error) => {
         dispatch(

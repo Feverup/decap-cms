@@ -278,7 +278,7 @@ const en = {
       missingRequiredField: "Oops, you've missed a required field. Please complete before saving.",
       entrySaved: 'Entry saved',
       entryPublished: 'Entry published',
-      entryUnpublished: 'Entry unpublished',
+      entryUnpublished: 'Entry being unpublished',
       onFailToPublishEntry: 'Failed to publish: %{details}',
       onFailToUnpublishEntry: 'Failed to unpublish entry: %{details}',
       entryUpdated: 'Entry status updated',

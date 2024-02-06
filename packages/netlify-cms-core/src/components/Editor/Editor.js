@@ -277,8 +277,6 @@ export class Editor extends React.Component {
     if (!window.confirm(t('editor.editor.onUnpublishing'))) return;
 
     await unpublishPublishedEntry(collection, slug);
-
-    return navigateToCollection(collection.get('name'));
   };
 
   handleDuplicateEntry = () => {
@@ -289,7 +287,7 @@ export class Editor extends React.Component {
   };
 
   handleDeleteEntry = () => {
-    const { entryDraft, newEntry, collection, deleteEntry, slug, t } = this.props;
+    const { entryDraft, newEntry, collection, deleteEntry, slug, t, } = this.props;
     if (entryDraft.get('hasChanged')) {
       if (!window.confirm(t('editor.editor.onDeleteWithUnsavedChanges'))) {
         return;
@@ -303,8 +301,6 @@ export class Editor extends React.Component {
 
     setTimeout(async () => {
       await deleteEntry(collection, slug);
-      // this.deleteBackup();
-      return navigateToCollection(collection.get('name'));
     }, 0);
   };
 

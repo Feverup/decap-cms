@@ -950,6 +950,34 @@ export default class API {
     await this.patchBranch(this.branch, commit.sha);
   }
 
+
+  async deleteCollectionFiles(paths: string[], message: string, collection: string, slug: string) {
+    if (this.useOpenAuthoring || !collection || !slug) return this.deleteFiles(paths, message);
+
+    const files = paths.map(path => ({ path, sha: null }));
+    const contentKey = this.generateContentKey(collection as string, slug);
+    const branch = branchFromContentKey(contentKey);
+
+    const branchData = this.useStack
+    ? (await this.getStackBranch()) || (await this.getDefaultBranch())
+    : await this.getDefaultBranch();
+    const changeTree = await this.updateTree(branchData.commit.sha, files);
+    const commitResponse = await this.commit(message, changeTree);
+
+    if (this.useOpenAuthoring) {
+      await this.createBranch(branch, commitResponse.sha);
+    } else {
+      const pr = await this.createBranchAndPullRequest(
+        branch,
+        commitResponse.sha,
+        message,
+      );
+      await this.setPullRequestStatus(pr, this.initialWorkflowStatus);
+    }
+
+    await this.patchBranch(branch, commitResponse.sha);
+  }
+
   async createBranchAndPullRequest(branchName: string, sha: string, commitMessage: string) {
     await this.createBranch(branchName, sha);
     return this.createPR(commitMessage, branchName);
