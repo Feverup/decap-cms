@@ -86,6 +86,11 @@ const PublishButton = styled.button`
   }
 `;
 
+const PublishDeleteButton = styled(PublishButton)`
+  background-color: ${colorsRaw.redLight};
+  color: ${colors.ed};
+`;
+
 const WorkflowCardContainer = styled.div`
   ${components.card};
   margin-bottom: 24px;
@@ -116,6 +121,26 @@ const CardDate = translate()(({ t, date, author }) => {
   }
 });
 
+const PublishButtonWorkflow = translate()(({
+  canPublish,
+  onPublish,
+  isDeletingWorkflow,
+  isModification,
+  t
+}) => {
+  const Component = isDeletingWorkflow ? PublishDeleteButton : PublishButton;
+
+  return (
+    <Component
+      disabled={!canPublish} onClick={onPublish}>
+      {isModification
+        ? t('workflow.workflowCard.publishChanges')
+        : t('workflow.workflowCard.publishNewEntry')}
+    </Component>
+  );
+});
+
+
 function WorkflowCard({
   collectionLabel,
   title,
@@ -126,9 +151,10 @@ function WorkflowCard({
   timestamp,
   onDelete,
   allowPublish,
+  postAuthor,
   canPublish,
   onPublish,
-  postAuthor,
+  isDeletingWorkflow,
   t,
 }) {
   return (
@@ -146,13 +172,7 @@ function WorkflowCard({
             ? t('workflow.workflowCard.deleteChanges')
             : t('workflow.workflowCard.deleteNewEntry')}
         </DeleteButton>
-        {allowPublish && (
-          <PublishButton disabled={!canPublish} onClick={onPublish}>
-            {isModification
-              ? t('workflow.workflowCard.publishChanges')
-              : t('workflow.workflowCard.publishNewEntry')}
-          </PublishButton>
-        )}
+        {allowPublish && <PublishButtonWorkflow canPublish={canPublish} onPublish={onPublish} isDeletingWorkflow={isDeletingWorkflow} />}
       </CardButtonContainer>
     </WorkflowCardContainer>
   );
@@ -164,6 +184,7 @@ WorkflowCard.propTypes = {
   authorLastChange: PropTypes.string,
   body: PropTypes.string,
   isModification: PropTypes.bool,
+  isDeletingWorkflow: PropTypes.bool,
   editLink: PropTypes.string.isRequired,
   timestamp: PropTypes.string.isRequired,
   onDelete: PropTypes.func.isRequired,

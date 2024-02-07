@@ -60,6 +60,7 @@ export class Editor extends React.Component {
     useOpenAuthoring: PropTypes.bool,
     unpublishedEntry: PropTypes.bool,
     isModification: PropTypes.bool,
+    isDeletingWorkflow: PropTypes.bool,
     collectionEntriesLoaded: PropTypes.bool,
     updateUnpublishedEntryStatus: PropTypes.func.isRequired,
     publishUnpublishedEntry: PropTypes.func.isRequired,
@@ -257,6 +258,7 @@ export class Editor extends React.Component {
       collection,
       slug,
       currentStatus,
+      isDeletingWorkflow,
       t,
     } = this.props;
     if (currentStatus !== status.get('PENDING_PUBLISH')) {
@@ -265,7 +267,7 @@ export class Editor extends React.Component {
     } else if (entryDraft.get('hasChanged')) {
       window.alert(t('editor.editor.onPublishingWithUnsavedChanges'));
       return;
-    } else if (!window.confirm(t('editor.editor.onPublishing'))) {
+    } else if (!window.confirm(t(isDeletingWorkflow ? 'editor.editor.onDeleteUnpublishedChanges' : 'editor.editor.onPublishing'))) {
       return;
     }
 
@@ -345,6 +347,7 @@ export class Editor extends React.Component {
       unpublishedEntry,
       newEntry,
       isModification,
+      isDeletingWorkflow,
       currentStatus,
       logoutUser,
       deployPreview,
@@ -398,6 +401,7 @@ export class Editor extends React.Component {
         hasUnpublishedChanges={unpublishedEntry}
         isNewEntry={newEntry}
         isModification={isModification}
+        isDeletingWorkflow={isDeletingWorkflow}
         currentStatus={currentStatus}
         onLogoutClick={logoutUser}
         deployPreview={deployPreview}
@@ -424,6 +428,7 @@ function mapStateToProps(state, ownProps) {
   const hasWorkflow = config.publish_mode === EDITORIAL_WORKFLOW;
   const useOpenAuthoring = globalUI.useOpenAuthoring;
   const isModification = entryDraft.getIn(['entry', 'isModification']);
+  const isDeletingWorkflow = entryDraft.getIn(['entry', 'isDeletingWorkflow']);
   const collectionEntriesLoaded = !!entries.getIn(['pages', collectionName]);
   const unPublishedEntry = selectUnpublishedEntry(state, collectionName, slug);
   const publishedEntry = selectEntry(state, collectionName, slug);
@@ -459,6 +464,7 @@ function mapStateToProps(state, ownProps) {
     hasWorkflow,
     useOpenAuthoring,
     isModification,
+    isDeletingWorkflow,
     collectionEntriesLoaded,
     currentStatus,
     deployPreview,

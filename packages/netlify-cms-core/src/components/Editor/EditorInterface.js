@@ -225,6 +225,7 @@ class EditorInterface extends Component {
       hasUnpublishedChanges,
       isNewEntry,
       isModification,
+      isDeletingWorkflow,
       currentStatus,
       onLogoutClick,
       loadDeployPreview,
@@ -351,6 +352,7 @@ class EditorInterface extends Component {
           hasUnpublishedChanges={hasUnpublishedChanges}
           isNewEntry={isNewEntry}
           isModification={isModification}
+          isDeletingWorkflow={isDeletingWorkflow}
           currentStatus={currentStatus}
           onLogoutClick={onLogoutClick}
           loadDeployPreview={loadDeployPreview}
@@ -426,6 +428,7 @@ EditorInterface.propTypes = {
   hasUnpublishedChanges: PropTypes.bool,
   isNewEntry: PropTypes.bool,
   isModification: PropTypes.bool,
+  isDeletingWorkflow: PropTypes.bool,
   currentStatus: PropTypes.string,
   onLogoutClick: PropTypes.func.isRequired,
   deployPreview: PropTypes.object,
