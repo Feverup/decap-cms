@@ -124,11 +124,11 @@ const CardDate = translate()(({ t, date, author }) => {
 const PublishButtonWorkflow = translate()(({
   canPublish,
   onPublish,
-  isDeletingWorkflow,
   isModification,
+  isDeleteWorkflow,
   t
 }) => {
-  const Component = isDeletingWorkflow ? PublishDeleteButton : PublishButton;
+  const Component = isDeleteWorkflow ? PublishDeleteButton : PublishButton;
 
   return (
     <Component
@@ -147,6 +147,7 @@ function WorkflowCard({
   authorLastChange,
   body,
   isModification,
+  isDeleteWorkflow,
   editLink,
   timestamp,
   onDelete,
@@ -154,7 +155,6 @@ function WorkflowCard({
   postAuthor,
   canPublish,
   onPublish,
-  isDeletingWorkflow,
   t,
 }) {
   return (
@@ -172,7 +172,7 @@ function WorkflowCard({
             ? t('workflow.workflowCard.deleteChanges')
             : t('workflow.workflowCard.deleteNewEntry')}
         </DeleteButton>
-        {allowPublish && <PublishButtonWorkflow canPublish={canPublish} onPublish={onPublish} isDeletingWorkflow={isDeletingWorkflow} />}
+        {allowPublish && <PublishButtonWorkflow canPublish={canPublish} onPublish={onPublish} isDeleteWorkflow={isDeleteWorkflow} />}
       </CardButtonContainer>
     </WorkflowCardContainer>
   );
@@ -184,7 +184,7 @@ WorkflowCard.propTypes = {
   authorLastChange: PropTypes.string,
   body: PropTypes.string,
   isModification: PropTypes.bool,
-  isDeletingWorkflow: PropTypes.bool,
+  isDeleteWorkflow: PropTypes.bool,
   editLink: PropTypes.string.isRequired,
   timestamp: PropTypes.string.isRequired,
   onDelete: PropTypes.func.isRequired,

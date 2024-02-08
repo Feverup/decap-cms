@@ -148,6 +148,7 @@ async function getDiffs(git: SimpleGit, source: string, dest: string) {
       newPath,
       status: d.status,
       newFile: d.status === 'added',
+      deletedFile: d.status === 'removed',
       path,
       id: path,
       binary: d.binary || /.svg$/.test(path),

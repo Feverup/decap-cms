@@ -295,7 +295,7 @@ export class EditorToolbar extends React.Component {
     hasUnpublishedChanges: PropTypes.bool,
     isNewEntry: PropTypes.bool,
     isModification: PropTypes.bool,
-    isDeletingWorkflow: PropTypes.bool,
+    isDeleteWorkflow: PropTypes.bool,
     currentStatus: PropTypes.string,
     onLogoutClick: PropTypes.func.isRequired,
     deployPreview: PropTypes.object,
@@ -433,8 +433,8 @@ export class EditorToolbar extends React.Component {
     const { isPublishing, onPublish, onPublishStack, canStack, t } = this.props;
 
     const renderPublishDropDownItem = () => {
-      const { isDeletingWorkflow, t } = this.props;
-      const Component = isDeletingWorkflow ? PublishDeleteDropDownItem : PublishDropDownItem;
+      const { isDeleteWorkflow, t } = this.props;
+      const Component = isDeleteWorkflow ? PublishDeleteDropDownItem : PublishDropDownItem;
 
       return (
         <Component
@@ -606,7 +606,7 @@ export class EditorToolbar extends React.Component {
       isDeleting,
       isNewEntry,
       isModification,
-      // isDeletingWorkflow,
+      // isDeleteWorkflow,
       currentStatus,
       collection,
       t,

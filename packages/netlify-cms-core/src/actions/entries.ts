@@ -986,7 +986,7 @@ export function deleteEntry(collection: Collection, slug: string) {
         dispatch(
           notifSend({
             message: {
-              key: 'ui.toast.entryUnpublished',
+              key: 'ui.toast.entryBeingUnpublished',
             },
             kind: 'success',
             dismissAfter: 4000,

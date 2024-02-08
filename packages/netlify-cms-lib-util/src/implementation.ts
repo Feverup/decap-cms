@@ -37,6 +37,7 @@ export interface UnpublishedEntryDiff {
   id: string;
   path: string;
   newFile: boolean;
+  deleteFile: boolean;
 }
 
 export interface UnpublishedEntry {

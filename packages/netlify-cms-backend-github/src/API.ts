@@ -173,6 +173,7 @@ function getTreeFiles(files: GitHubCompareFiles) {
 export type Diff = {
   path: string;
   newFile: boolean;
+  deletedFile: boolean;
   sha: string;
   binary: boolean;
 };
@@ -627,7 +628,7 @@ export default class API {
       collection,
       slug,
       status,
-      diffs: diffs.map(d => ({ path: d.path, newFile: d.newFile, id: d.sha })),
+      diffs: diffs.map(d => ({ path: d.path, newFile: d.newFile, deletedFile: d.deletedFile, id: d.sha })),
       updatedAt,
       pullRequestAuthor,
     };
@@ -995,6 +996,7 @@ export default class API {
     return {
       path: diff.filename,
       newFile: diff.status === 'added',
+      deletedFile: diff.status === 'removed',
       sha: diff.sha,
       // media files diffs don't have a patch attribute, except svg files
       // renamed files don't have a patch attribute too

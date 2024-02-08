@@ -9,6 +9,7 @@ interface Options {
   data?: any;
   label?: string | null;
   isModification?: boolean | null;
+  isDeleteWorkflow?: boolean | null;
   mediaFiles?: MediaFile[] | null;
   author?: string;
   updatedOn?: string;
@@ -30,6 +31,7 @@ export interface EntryValue {
   data: any;
   label: string | null;
   isModification: boolean | null;
+  isDeleteWorkflow: boolean | null;
   mediaFiles: MediaFile[];
   author: string;
   updatedOn: string;
@@ -51,6 +53,7 @@ export function createEntry(collection: string, slug = '', path = '', options: O
     data: options.data || {},
     label: options.label || null,
     isModification: isBoolean(options.isModification) ? options.isModification : null,
+    isDeleteWorkflow: isBoolean(options.isDeleteWorkflow) ? options.isDeleteWorkflow : null,
     mediaFiles: options.mediaFiles || [],
     author: options.author || '',
     updatedOn: options.updatedOn || '',

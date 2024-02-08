@@ -230,7 +230,7 @@ class WorkflowList extends React.Component {
           );
           const collectionLabel = collection?.get('label');
           const isModification = entry.get('isModification');
-          const isDeletingWorkflow = entry.get('isDeletingWorkflow');
+          const isDeleteWorkflow = entry.get('isDeleteWorkflow');
 
           const allowPublish = collection?.get('publish');
           const canPublish = ownStatus === status.get('PENDING_PUBLISH') && !entry.get('isPersisting', false);
@@ -253,7 +253,7 @@ class WorkflowList extends React.Component {
                       authorLastChange={entry.getIn(['metaData', 'user'])}
                       body={entry.getIn(['data', 'body'])}
                       isModification={isModification}
-                      isDeletingWorkflow={isDeletingWorkflow}
+                      isDeleteWorkflow={isDeleteWorkflow}
                       editLink={editLink}
                       timestamp={timestamp}
                       onDelete={this.requestDelete.bind(this, collectionName, slug, ownStatus)}
