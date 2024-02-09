@@ -158,6 +158,9 @@ function entryDraftReducer(state = Map(), action) {
       return state.setIn(['entry', 'isPublishing'], true);
 
     case UNPUBLISHED_ENTRY_PUBLISH_SUCCESS:
+      state.deleteIn(['entry', 'isDeleteWorkflow']);
+      return state.deleteIn(['entry', 'isPublishing']);
+
     case UNPUBLISHED_ENTRY_PUBLISH_FAILURE:
       return state.deleteIn(['entry', 'isPublishing']);
 
@@ -174,6 +177,7 @@ function entryDraftReducer(state = Map(), action) {
     case ENTRY_DELETE_SUCCESS:
       return state.withMutations(state => {
         state.deleteIn(['entry', 'isPersisting']);
+        state.setIn(['entry', 'isDeleteWorkflow'], true);
         state.set('hasChanged', false);
       });
 

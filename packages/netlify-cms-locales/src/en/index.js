@@ -279,6 +279,7 @@ const en = {
       entrySaved: 'Entry saved',
       entryPublished: 'Entry published',
       entryUnpublished: 'Entry unpublished',
+      entryBeingUnpublished: 'Entry being unpublished',
       onFailToPublishEntry: 'Failed to publish: %{details}',
       onFailToUnpublishEntry: 'Failed to unpublish entry: %{details}',
       entryUpdated: 'Entry status updated',

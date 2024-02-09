@@ -580,6 +580,10 @@ export default class GitHub implements Implementation {
     return this.api!.deleteFiles(paths, commitMessage);
   }
 
+  deleteCollectionFiles(paths: string[], commitMessage: string, collection: string, slug: string) {
+    return this.api!.deleteCollectionFiles(paths, commitMessage, collection, slug);
+  }
+
   async traverseCursor(cursor: Cursor, action: string) {
     const meta = cursor.meta!;
     const files = cursor.data!.get('files')!.toJS() as ApiFile[];

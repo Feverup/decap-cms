@@ -180,6 +180,14 @@ const DeleteButton = styled(ToolbarButton)`
   ${buttons.lightRed};
 `;
 
+const DropdownDiscardItem = styled(DropdownItem)`
+  background-color: ${colorsRaw.redLight} !important;
+  color: ${colorsRaw.redDark} !important;
+  ${Icon} {
+    color: ${colorsRaw.redDark} !important;
+  }
+`;
+
 const SaveButton = styled(ToolbarButton)`
   ${buttons.lightBlue};
   &[disabled] {
@@ -197,6 +205,14 @@ const PublishedButton = styled(ToolbarButton)`
 
 const PublishButton = styled(DropdownButton)`
   background-color: ${colorsRaw.teal};
+`;
+
+const PublishDeleteDropDownItem = styled(DropdownItem)`
+  background-color: ${colorsRaw.redLight} !important;
+  color: ${colorsRaw.redDark} !important;
+  ${Icon} {
+    color: ${colorsRaw.redDark} !important;
+  }
 `;
 
 const StatusButton = styled(DropdownButton)`
@@ -279,6 +295,7 @@ export class EditorToolbar extends React.Component {
     hasUnpublishedChanges: PropTypes.bool,
     isNewEntry: PropTypes.bool,
     isModification: PropTypes.bool,
+    isDeleteWorkflow: PropTypes.bool,
     currentStatus: PropTypes.string,
     onLogoutClick: PropTypes.func.isRequired,
     deployPreview: PropTypes.object,
@@ -415,6 +432,20 @@ export class EditorToolbar extends React.Component {
   renderNewEntryWorkflowPublishControls = ({ canPublish }) => {
     const { isPublishing, onPublish, onPublishStack, canStack, t } = this.props;
 
+    const renderPublishDropDownItem = () => {
+      const { isDeleteWorkflow, t } = this.props;
+      const Component = isDeleteWorkflow ? PublishDeleteDropDownItem : PublishDropDownItem;
+
+      return (
+        <Component
+          label={t('editor.editorToolbar.publishNow')}
+          icon="arrow"
+          iconDirection="right"
+          onClick={onPublish}
+        />
+      );
+    }
+
     return canPublish ? (
       <ToolbarDropdown
         dropdownTopOverlap="40px"
@@ -427,12 +458,7 @@ export class EditorToolbar extends React.Component {
           </PublishButton>
         )}
       >
-        <PublishDropDownItem
-          label={t('editor.editorToolbar.publishNow')}
-          icon="arrow"
-          iconDirection="right"
-          onClick={onPublish}
-        />
+        {renderPublishDropDownItem()}
         {canStack && (
           <DropdownItem
             label={t('editor.editorToolbar.stackChange')}
@@ -475,19 +501,18 @@ export class EditorToolbar extends React.Component {
           </PublishedToolbarButton>
         )}
       >
-        {canDelete && canPublish && (
-          <DropdownItem
-            label={t('editor.editorToolbar.unpublish')}
-            icon="arrow"
-            iconDirection="right"
-            onClick={unPublish}
-          />
-        )}
         {canCreate && (
           <DropdownItem
             label={t('editor.editorToolbar.duplicate')}
             icon="add"
             onClick={onDuplicate}
+          />
+        )}
+        {canDelete && canPublish && (
+          <DropdownDiscardItem
+            label={t('editor.editorToolbar.deleteEntry')}
+            icon="close"
+            onClick={unPublish}
           />
         )}
       </ToolbarDropdown>
@@ -573,7 +598,7 @@ export class EditorToolbar extends React.Component {
       onPersist,
       onDelete,
       onDeleteUnpublishedChanges,
-      showDelete,
+      // showDelete,
       hasChanged,
       hasUnpublishedChanges,
       useOpenAuthoring,
@@ -581,6 +606,7 @@ export class EditorToolbar extends React.Component {
       isDeleting,
       isNewEntry,
       isModification,
+      // isDeleteWorkflow,
       currentStatus,
       collection,
       t,
@@ -616,7 +642,7 @@ export class EditorToolbar extends React.Component {
         ]
         : !isNewEntry &&
         this.renderExistingEntryWorkflowPublishControls({ canCreate, canPublish, canDelete }),
-      (!showDelete || useOpenAuthoring) && !hasUnpublishedChanges && !isModification ? null : (
+      !hasUnpublishedChanges && !isModification ? null : (
         <DeleteButton
           key="delete-button"
           onClick={hasUnpublishedChanges ? onDeleteUnpublishedChanges : onDelete}

@@ -1,6 +1,6 @@
 import { get } from 'lodash';
 import { actions as notifActions } from 'redux-notifications';
-import { Map, List } from 'immutable';
+import { Map } from 'immutable';
 import { EDITORIAL_WORKFLOW_ERROR } from 'netlify-cms-lib-util';
 
 import { currentBackend, slugFromCustomPath } from '../backend';
@@ -24,9 +24,10 @@ import { createAssetProxy } from '../valueObjects/AssetProxy';
 import { addAssets } from './media';
 import { loadMedia } from './mediaLibrary';
 import ValidationErrorTypes from '../constants/validationErrorTypes';
-import { navigateToEntry } from '../routing/history';
+import { navigateToCollection, navigateToEntry } from '../routing/history';
 import { checkStackStatus } from './stack';
 
+import type { List } from 'immutable';
 import type {
   Collection,
   EntryMap,
@@ -492,6 +493,7 @@ export function publishUnpublishedEntry(
     const collections = state.collections;
     const backend = currentBackend(state.config);
     const entry = selectUnpublishedEntry(state, collectionName, slug);
+    const isDeleteWorkflow = entry.get('isDeleteWorkflow');
     dispatch(unpublishedEntryPublishRequest(collectionName, slug));
     try {
       if (!publishStack && state.stack.status.status) {
@@ -512,7 +514,7 @@ export function publishUnpublishedEntry(
       dispatch(loadMedia());
       dispatch(
         notifSend({
-          message: { key: 'ui.toast.entryPublished' },
+          message: { key: isDeleteWorkflow ? 'ui.toast.entryUnpublished' : 'ui.toast.entryPublished' },
           kind: 'success',
           dismissAfter: 4000,
         }),
@@ -526,6 +528,9 @@ export function publishUnpublishedEntry(
         if (slug !== newSlug && selectEditingDraft(state.entryDraft)) {
           navigateToEntry(collection.get('name'), newSlug);
         }
+      } else if (isDeleteWorkflow) {
+        dispatch(unpublishedEntryDeleted(collectionName, slug));
+        return navigateToCollection(collectionName);
       } else {
         return dispatch(loadEntry(collection, slug));
       }
@@ -547,27 +552,16 @@ export function unpublishPublishedEntry(collection: Collection, slug: string) {
     const state = getState();
     const backend = currentBackend(state.config);
     const entry = selectEntry(state, collection.get('name'), slug);
-    const entryDraft = Map().set('entry', entry) as unknown as EntryDraft;
     dispatch(unpublishedEntryPersisting(collection, slug));
     return backend
       .deleteEntry(state, collection, slug)
-      .then(() =>
-        backend.persistEntry({
-          config: state.config,
-          collection,
-          entryDraft,
-          assetProxies: [],
-          usedSlugs: List(),
-          status: status.get('PENDING_PUBLISH'),
-        }),
-      )
       .then(() => {
         dispatch(unpublishedEntryPersisted(collection, entry));
         dispatch(entryDeleted(collection, slug));
         dispatch(loadUnpublishedEntry(collection, slug));
         dispatch(
           notifSend({
-            message: { key: 'ui.toast.entryUnpublished' },
+            message: { key: 'ui.toast.entryBeingUnpublished' },
             kind: 'success',
             dismissAfter: 4000,
           }),

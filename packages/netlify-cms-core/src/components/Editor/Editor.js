@@ -60,6 +60,7 @@ export class Editor extends React.Component {
     useOpenAuthoring: PropTypes.bool,
     unpublishedEntry: PropTypes.bool,
     isModification: PropTypes.bool,
+    isDeleteWorkflow: PropTypes.bool,
     collectionEntriesLoaded: PropTypes.bool,
     updateUnpublishedEntryStatus: PropTypes.func.isRequired,
     publishUnpublishedEntry: PropTypes.func.isRequired,
@@ -257,6 +258,7 @@ export class Editor extends React.Component {
       collection,
       slug,
       currentStatus,
+      isDeleteWorkflow,
       t,
     } = this.props;
     if (currentStatus !== status.get('PENDING_PUBLISH')) {
@@ -265,7 +267,7 @@ export class Editor extends React.Component {
     } else if (entryDraft.get('hasChanged')) {
       window.alert(t('editor.editor.onPublishingWithUnsavedChanges'));
       return;
-    } else if (!window.confirm(t('editor.editor.onPublishing'))) {
+    } else if (!window.confirm(t(isDeleteWorkflow ? 'editor.editor.onDeleteUnpublishedChanges' : 'editor.editor.onPublishing'))) {
       return;
     }
 
@@ -277,8 +279,6 @@ export class Editor extends React.Component {
     if (!window.confirm(t('editor.editor.onUnpublishing'))) return;
 
     await unpublishPublishedEntry(collection, slug);
-
-    return navigateToCollection(collection.get('name'));
   };
 
   handleDuplicateEntry = () => {
@@ -289,7 +289,7 @@ export class Editor extends React.Component {
   };
 
   handleDeleteEntry = () => {
-    const { entryDraft, newEntry, collection, deleteEntry, slug, t } = this.props;
+    const { entryDraft, newEntry, collection, deleteEntry, slug, t, } = this.props;
     if (entryDraft.get('hasChanged')) {
       if (!window.confirm(t('editor.editor.onDeleteWithUnsavedChanges'))) {
         return;
@@ -303,17 +303,16 @@ export class Editor extends React.Component {
 
     setTimeout(async () => {
       await deleteEntry(collection, slug);
-      // this.deleteBackup();
-      return navigateToCollection(collection.get('name'));
     }, 0);
   };
 
   handleDeleteUnpublishedChanges = async () => {
-    const { entryDraft, collection, slug, removeAssets, removeDraftEntryMediaFiles, deleteUnpublishedEntry, loadEntry, isModification, t } =
+    const { entryDraft, collection, slug, removeAssets, removeDraftEntryMediaFiles, deleteUnpublishedEntry, loadEntry, isModification, isDeleteWorkflow, t } =
       this.props;
     if (
       entryDraft.get('hasChanged') &&
-      !window.confirm(t('editor.editor.onDeleteUnpublishedChangesWithUnsavedChanges'))
+      !window.confirm(t('editor.editor.onDeleteUnpublishedChangesWithUnsavedChanges') ||
+      isDeleteWorkflow)
     ) {
       return;
     } else if (!window.confirm(t('editor.editor.onDeleteUnpublishedChanges'))) {
@@ -349,6 +348,7 @@ export class Editor extends React.Component {
       unpublishedEntry,
       newEntry,
       isModification,
+      isDeleteWorkflow,
       currentStatus,
       logoutUser,
       deployPreview,
@@ -402,6 +402,7 @@ export class Editor extends React.Component {
         hasUnpublishedChanges={unpublishedEntry}
         isNewEntry={newEntry}
         isModification={isModification}
+        isDeleteWorkflow={isDeleteWorkflow}
         currentStatus={currentStatus}
         onLogoutClick={logoutUser}
         deployPreview={deployPreview}
@@ -428,6 +429,7 @@ function mapStateToProps(state, ownProps) {
   const hasWorkflow = config.publish_mode === EDITORIAL_WORKFLOW;
   const useOpenAuthoring = globalUI.useOpenAuthoring;
   const isModification = entryDraft.getIn(['entry', 'isModification']);
+  const isDeleteWorkflow = entryDraft.getIn(['entry', 'isDeleteWorkflow']);
   const collectionEntriesLoaded = !!entries.getIn(['pages', collectionName]);
   const unPublishedEntry = selectUnpublishedEntry(state, collectionName, slug);
   const publishedEntry = selectEntry(state, collectionName, slug);
@@ -463,6 +465,7 @@ function mapStateToProps(state, ownProps) {
     hasWorkflow,
     useOpenAuthoring,
     isModification,
+    isDeleteWorkflow,
     collectionEntriesLoaded,
     currentStatus,
     deployPreview,

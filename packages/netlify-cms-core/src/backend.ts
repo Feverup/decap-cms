@@ -883,10 +883,11 @@ export class Backend {
       f => f.path.length,
     );
 
-    const formatData = (data: string, path: string, newFile: boolean) => {
+    const formatData = (data: string, path: string, newFile: boolean, deletedFile: boolean) => {
       const entry = createEntry(collection.get('name'), slug, path, {
         raw: data,
         isModification: !newFile,
+        isDeleteWorkflow: deletedFile,
         label: collection && selectFileEntryLabel(collection, slug),
         mediaFiles,
         updatedOn: entryData.updatedAt,
@@ -906,7 +907,7 @@ export class Backend {
         dataFile.path,
         dataFile.id,
       );
-      const entryWithFormat = formatData(data, dataFile.path, dataFile.newFile);
+      const entryWithFormat = formatData(data, dataFile.path, dataFile.newFile, dataFile.deletedFile);
       return entryWithFormat;
     };
 
@@ -915,7 +916,7 @@ export class Backend {
       const loadedEntry = await this.implementation.getEntry(
         selectEntryPath(collection, slug) as string,
       );
-      return formatData(loadedEntry.data, loadedEntry.file.path, false);
+      return formatData(loadedEntry.data, loadedEntry.file.path, false, false);
     } else if (hasI18n(collection)) {
       // we need to read all locales files and not just the changes
       const path = selectEntryPath(collection, slug) as string;
@@ -1241,7 +1242,7 @@ export class Backend {
     if (hasI18n(collection)) {
       paths = getFilePaths(collection, extension, path, slug);
     }
-    await this.implementation.deleteFiles(paths, commitMessage);
+    await this.implementation.deleteCollectionFiles(paths, commitMessage, collection.get('name'), slug);
 
     await this.invokePostUnpublishEvent(entry);
   }
