@@ -247,21 +247,6 @@ export default class API {
     return this._userPromise;
   }
 
-  getGoogleUser(googleAuth: GoogleCredentials) {
-    return new Promise(resolve => {
-      resolve({
-        name: googleAuth.name,
-        login: googleAuth.email,
-      });
-    });
-  }
-
-  getUser() {
-    return (
-      this.googleAuth ? this.getGoogleUser(this.googleAuth) : this.request('/user')
-    ) as Promise<GitHubUser>;
-  }
-
   async hasWriteAccess() {
     try {
       const result: Octokit.ReposGetResponse = await this.request(this.repoURL);

@@ -248,8 +248,17 @@ export default class GitHub implements Implementation {
   }
 
   async currentUser({ token }: { token: string }) {
+    async function getGoogleUser(googleAuth: GoogleCredentials) {
+      return new Promise(resolve => {
+        resolve({
+          name: googleAuth.name,
+          login: googleAuth.email,
+        });
+      });
+    }
+
     if (!this._currentUserPromise) {
-      this._currentUserPromise = fetch(`${this.apiRoot}/user`, {
+      this._currentUserPromise = this.googleAuth ? getGoogleUser(this.googleAuth) : fetch(`${this.apiRoot}/user`, {
         headers: {
           Authorization: `${this.tokenKeyword} ${token}`,
         },
