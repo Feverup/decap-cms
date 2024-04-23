@@ -1033,7 +1033,7 @@ export default class API {
     } else {
       // Entry is already on editorial review workflow - commit to existing branch
       const { files: diffFiles } = await this.getDifferences(
-        this.branch,
+        this.getCurrentBranch(),
         await this.getHeadReference(branch),
       );
 
@@ -1133,7 +1133,7 @@ export default class API {
     try {
       // Get the diff between the default branch the published branch
       const { base_commit: baseCommit, commits } = await this.getDifferences(
-        this.branch,
+        this.getCurrentBranch(),
         await this.getHeadReference(branch),
       );
       // Rebase the branch based on the diff
@@ -1178,7 +1178,7 @@ export default class API {
       } else if (newStatus === 'pending_review') {
         const branch = branchFromContentKey(contentKey);
         // get the first commit message as the pr title
-        const diff = await this.getDifferences(this.branch, await this.getHeadReference(branch));
+        const diff = await this.getDifferences(this.getCurrentBranch(), await this.getHeadReference(branch));
         const title = diff.commits[0]?.commit?.message || API.DEFAULT_COMMIT_MESSAGE;
         await this.createPR(title, branch);
       }
@@ -1450,7 +1450,7 @@ export default class API {
     return this.getDefaultBranch()
       .then(branchData => this.updateTree(branchData.commit.sha, files))
       .then(changeTree => this.commit(commitMessage, changeTree))
-      .then(response => this.patchBranch(this.branch, response.sha));
+      .then(response => this.patchBranch(this.getCurrentBranch(), response.sha));
   }
 
   async mergeAndCleanPR(pullRequest: GitHubPull, options: { force?: boolean } = {}) {
