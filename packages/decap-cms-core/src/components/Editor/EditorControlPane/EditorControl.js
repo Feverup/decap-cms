@@ -343,10 +343,7 @@ class EditorControl extends React.Component {
                 onChange(field, newValue, newMetadata);
                 clearFieldErrors(this.uniqueFieldId); // Видаляємо помилки лише для цього поля
               }}
-              onChangeObject={(newValue, newMetadata) => {
-                onChange(field, newValue, newMetadata);
-                clearFieldErrors(this.uniqueFieldId); // Видаляємо помилки лише для цього поля
-              }}
+              onChangeObject={onChange}
               onValidate={onValidate && partial(onValidate, this.uniqueFieldId)}
               onOpenMediaLibrary={openMediaLibrary}
               onClearMediaControl={clearMediaControl}
