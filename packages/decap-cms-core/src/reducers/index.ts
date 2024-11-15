@@ -13,6 +13,7 @@ import medias from './medias';
 import mediaLibrary from './mediaLibrary';
 import deploys, * as fromDeploys from './deploys';
 import globalUI from './globalUI';
+import stack from './stack';
 import status from './status';
 import notifications from './notifications';
 
@@ -33,6 +34,7 @@ const reducers = {
   mediaLibrary,
   deploys,
   globalUI,
+  stack,
   status,
   notifications,
 };

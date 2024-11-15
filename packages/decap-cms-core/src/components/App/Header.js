@@ -20,6 +20,8 @@ import { connect } from 'react-redux';
 
 import { SettingsDropdown } from '../UI';
 import { checkBackendStatus } from '../../actions/status';
+import { checkStackStatus } from '../../actions/stack';
+import StackToolbar from './StackToolbar.js';
 
 const styles = {
   buttonActive: css`
@@ -126,6 +128,7 @@ class Header extends React.Component {
     isTestRepo: PropTypes.bool,
     t: PropTypes.func.isRequired,
     checkBackendStatus: PropTypes.func.isRequired,
+    checkStackStatus: PropTypes.func.isRequired,
   };
 
   intervalId;
@@ -133,6 +136,7 @@ class Header extends React.Component {
   componentDidMount() {
     this.intervalId = setInterval(() => {
       this.props.checkBackendStatus();
+      this.props.checkStackStatus();
     }, 5 * 60 * 1000);
   }
 
@@ -198,6 +202,14 @@ class Header extends React.Component {
             </AppHeaderNavList>
           </nav>
           <AppHeaderActions>
+            {hasWorkflow && (
+              <StackToolbar
+                hasWorkflow={hasWorkflow}
+                collection={new Map()}
+                loadDeployPreview={() => { }}
+              >
+              </StackToolbar>
+            )}
             {creatableCollections.size > 0 && (
               <Dropdown
                 renderButton={() => (
@@ -231,6 +243,7 @@ class Header extends React.Component {
 
 const mapDispatchToProps = {
   checkBackendStatus,
+  checkStackStatus
 };
 
 export default connect(null, mapDispatchToProps)(translate()(Header));

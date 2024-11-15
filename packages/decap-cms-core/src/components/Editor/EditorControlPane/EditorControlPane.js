@@ -91,6 +91,13 @@ function getFieldValue({ field, entry, isTranslatable, locale }) {
     return entry.getIn([...dataPath, field.get('name')]);
   }
 
+  const wrapper = field.has('wrapper');
+  if (wrapper) {
+    const wrapper = field.get('wrapper');
+    const isRootWrapper = wrapper === '';
+    return isRootWrapper ? entry.get('data') : entry.getIn(['data', ...wrapper.split('.')]);
+  }
+
   return entry.getIn(['data', field.get('name')]);
 }
 
@@ -103,9 +110,12 @@ export default class ControlPane extends React.Component {
 
   controlRef(field, wrappedControl) {
     if (!wrappedControl) return;
+    const parentName = field.get('parentName');
     const name = field.get('name');
 
-    this.componentValidate[name] =
+    const validateName = parentName ? `${parentName}.${name}` : name;
+
+    this.componentValidate[validateName] =
       wrappedControl.innerWrappedControl?.validate || wrappedControl.validate;
   }
 
@@ -116,43 +126,49 @@ export default class ControlPane extends React.Component {
 
   copyFromOtherLocale =
     ({ targetLocale, t }) =>
-    sourceLocale => {
-      if (
-        !window.confirm(
-          t('editor.editorControlPane.i18n.copyFromLocaleConfirm', {
-            locale: sourceLocale.toUpperCase(),
-          }),
-        )
-      ) {
-        return;
-      }
-      const { entry, collection } = this.props;
-      const { locales, defaultLocale } = getI18nInfo(collection);
-
-      const locale = this.state.selectedLocale;
-      const i18n = locales && {
-        currentLocale: locale,
-        locales,
-        defaultLocale,
-      };
-
-      this.props.fields.forEach(field => {
-        if (isFieldTranslatable(field, targetLocale, sourceLocale)) {
-          const copyValue = getFieldValue({
-            field,
-            entry,
-            locale: sourceLocale,
-            isTranslatable: sourceLocale !== defaultLocale,
-          });
-          if (copyValue) this.props.onChange(field, copyValue, undefined, i18n);
+      sourceLocale => {
+        if (
+          !window.confirm(
+            t('editor.editorControlPane.i18n.copyFromLocaleConfirm', {
+              locale: sourceLocale.toUpperCase(),
+            }),
+          )
+        ) {
+          return;
         }
-      });
-    };
+        const { entry, collection } = this.props;
+        const { locales, defaultLocale } = getI18nInfo(collection);
+
+        const locale = this.state.selectedLocale;
+        const i18n = locales && {
+          currentLocale: locale,
+          locales,
+          defaultLocale,
+        };
+
+        this.props.fields.forEach(field => {
+          if (isFieldTranslatable(field, targetLocale, sourceLocale)) {
+            const copyValue = getFieldValue({
+              field,
+              entry,
+              locale: sourceLocale,
+              isTranslatable: sourceLocale !== defaultLocale,
+            });
+            this.props.onChange(field, copyValue, undefined, i18n);
+          }
+        });
+      };
 
   validate = async () => {
     this.props.fields.forEach(field => {
-      if (field.get('widget') === 'hidden') return;
-      this.componentValidate[field.get('name')]();
+      const widget = field.get('widget');
+      if (widget === 'hidden' || widget === 'object' && field.has('flat')) return;
+
+      const parentName = field.get('parentName');
+      const name = field.get('name');
+
+      const validateName = parentName ? `${parentName}.${name}` : name;
+      this.componentValidate[validateName]();
     });
   };
 

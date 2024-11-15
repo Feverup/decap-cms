@@ -114,6 +114,7 @@ declare module 'decap-cms-core' {
     default?: string;
 
     media_library?: CmsMediaLibrary;
+    media_validation?: CmsMediaValidation;
     allow_multiple?: boolean;
     choose_url?: boolean;
     config?: any;
@@ -491,6 +492,23 @@ declare module 'decap-cms-core' {
     name: string;
     config?: CmsMediaLibraryOptions;
   }
+
+export interface CmsMediaImageValidation {
+  aspect_ratio: string
+  keep_aspect_ratio: boolean;
+  max_width: number
+  max_height: number
+  min_width: number
+  min_height: number
+}
+
+export interface CmsMediaValidation {
+  file_extensions: Array<string>
+  keep_file_name: boolean
+  max_file_size: number
+  file_name_pattern: string
+  images?: CmsMediaImageValidation;
+}
 
   export interface CmsEventListener {
     name: 'prePublish' | 'postPublish' | 'preUnpublish' | 'postUnpublish' | 'preSave' | 'postSave';

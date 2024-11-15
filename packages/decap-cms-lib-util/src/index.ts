@@ -40,6 +40,7 @@ import {
 import {
   CMS_BRANCH_PREFIX,
   generateContentKey,
+  isCmsRefSuffix,
   isCMSLabel,
   labelToStatus,
   statusToLabel,
@@ -68,6 +69,7 @@ import type {
   ImplementationFile as IF,
   DisplayURLObject as DUO,
   DisplayURL as DU,
+  GoogleCredentials as GoogleCred,
   Credentials as Cred,
   User as U,
   Entry as E,
@@ -88,6 +90,7 @@ export type ImplementationMediaFile = IMF;
 export type ImplementationFile = IF;
 export type DisplayURL = DU;
 export type DisplayURLObject = DUO;
+export type GoogleCredentials = GoogleCred;
 export type Credentials = Cred;
 export type User = U;
 export type Entry = E;
@@ -130,6 +133,7 @@ export const DecapCmsLibUtil = {
   readFileMetadata,
   CMS_BRANCH_PREFIX,
   generateContentKey,
+  isCmsRefSuffix,
   isCMSLabel,
   labelToStatus,
   statusToLabel,
@@ -187,6 +191,7 @@ export {
   readFileMetadata,
   CMS_BRANCH_PREFIX,
   generateContentKey,
+  isCmsRefSuffix,
   isCMSLabel,
   labelToStatus,
   statusToLabel,

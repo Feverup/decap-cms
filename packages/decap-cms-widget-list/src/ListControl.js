@@ -195,6 +195,8 @@ export default class ListControl extends React.Component {
     resolveWidget: PropTypes.func.isRequired,
     clearFieldErrors: PropTypes.func.isRequired,
     fieldsErrors: ImmutablePropTypes.map.isRequired,
+    isFieldUnused: PropTypes.func,
+    setFieldUnused: PropTypes.func,
     entry: ImmutablePropTypes.map.isRequired,
     t: PropTypes.func,
   };
@@ -418,9 +420,11 @@ export default class ListControl extends React.Component {
       const withNameKey =
         this.getValueType() !== valueTypes.SINGLE ||
         (this.getValueType() === valueTypes.SINGLE && listFieldObjectWidget);
-      const newObjectValue = withNameKey
-        ? this.getObjectValue(index).set(f.get('name'), newValue)
-        : newValue;
+      const parentName = f.get('parentName');
+      const newObjectValue = withNameKey ? (parentName ?
+        this.getObjectValue(index).setIn([...parentName.split('.'), f.get('name')], newValue) :
+        this.getObjectValue(index).set(f.get('name'), newValue)) :
+        newValue;
       const parsedMetadata = {
         [collectionName]: Object.assign(metadata ? metadata.toJS() : {}, newMetadata || {}),
       };
@@ -578,6 +582,8 @@ export default class ListControl extends React.Component {
       parentIds,
       forID,
       t,
+      isFieldUnused,
+      setFieldUnused,
     } = this.props;
 
     const { itemsCollapsed, keys } = this.state;
@@ -647,6 +653,8 @@ export default class ListControl extends React.Component {
               data-testid={`object-control-${key}`}
               hasError={hasError}
               parentIds={[...parentIds, forID, key]}
+              isFieldUnused={isFieldUnused}
+              setFieldUnused={setFieldUnused}
             />
           )}
         </ClassNames>

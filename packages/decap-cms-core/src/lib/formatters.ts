@@ -24,6 +24,7 @@ const {
 } = stringTemplate;
 
 const commitMessageTemplates = {
+  stack: 'Batch update to {{stack}}',
   create: 'Create {{collection}} “{{slug}}”',
   update: 'Update {{collection}} “{{slug}}”',
   delete: 'Delete {{collection}} “{{slug}}”',
@@ -35,6 +36,7 @@ const commitMessageTemplates = {
 const variableRegex = /\{\{([^}]+)\}\}/g;
 
 type Options = {
+  stack?: string;
   slug?: string;
   path?: string;
   collection?: Collection;
@@ -45,13 +47,15 @@ type Options = {
 export function commitMessageFormatter(
   type: keyof typeof commitMessageTemplates,
   config: CmsConfig,
-  { slug, path, collection, authorLogin, authorName }: Options,
+  { stack, slug, path, collection, authorLogin, authorName }: Options,
   isOpenAuthoring?: boolean,
 ) {
   const templates = { ...commitMessageTemplates, ...(config.backend.commit_messages || {}) };
 
   const commitMessage = templates[type].replace(variableRegex, (_, variable) => {
     switch (variable) {
+      case 'stack':
+        return stack || '';
       case 'slug':
         return slug || '';
       case 'path':

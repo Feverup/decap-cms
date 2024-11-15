@@ -15,7 +15,7 @@ import { selectEntryCollectionTitle } from '../../reducers/collections';
 const WorkflowListContainer = styled.div`
   min-height: 60%;
   display: grid;
-  grid-template-columns: 33.3% 33.3% 33.3%;
+  grid-template-columns: 25% 25% 25% 25%;
 `;
 
 const WorkflowListContainerOpenAuthoring = styled.div`
@@ -104,6 +104,13 @@ const ColumnHeader = styled.h2`
       background-color: ${colors.statusReadyBackground};
       color: ${colors.statusReadyText};
     `}
+
+  ${props =>
+    props.name === 'stale' &&
+    css`
+      background-color: ${colors.staleBackground};
+      color: ${colors.staleText};
+    `}
 `;
 
 const ColumnCount = styled.p`
@@ -121,6 +128,8 @@ function getColumnHeaderText(columnName, t) {
   switch (columnName) {
     case 'draft':
       return t('workflow.workflowList.draftHeader');
+    case 'stale':
+      return t('workflow.workflowList.inStaleHeader');
     case 'pending_review':
       return t('workflow.workflowList.inReviewHeader');
     case 'pending_publish':
@@ -143,6 +152,10 @@ class WorkflowList extends React.Component {
     const slug = dragProps.slug;
     const collection = dragProps.collection;
     const oldStatus = dragProps.ownStatus;
+    if (newStatus === 'stale') {
+      window.alert(this.props.t('workflow.workflowList.onStaleUpdate'));
+      return;
+    }
     this.props.handleChangeStatus(collection, slug, oldStatus, newStatus);
   };
 
@@ -153,7 +166,7 @@ class WorkflowList extends React.Component {
   };
 
   requestPublish = (collection, slug, ownStatus) => {
-    if (ownStatus !== status.last()) {
+    if (ownStatus !== status.get('PENDING_PUBLISH')) {
       window.alert(this.props.t('workflow.workflowList.onPublishingNotReadyEntry'));
       return;
     } else if (!window.confirm(this.props.t('workflow.workflowList.onPublishEntry'))) {
@@ -215,9 +228,10 @@ class WorkflowList extends React.Component {
           );
           const collectionLabel = collection?.get('label');
           const isModification = entry.get('isModification');
+          const isDeleteWorkflow = entry.get('isDeleteWorkflow');
 
           const allowPublish = collection?.get('publish');
-          const canPublish = ownStatus === status.last() && !entry.get('isPersisting', false);
+          const canPublish = ownStatus === status.get('PENDING_PUBLISH') && !entry.get('isPersisting', false);
           const postAuthor = entry.get('author');
 
           return (
@@ -237,6 +251,7 @@ class WorkflowList extends React.Component {
                       authorLastChange={entry.getIn(['metaData', 'user'])}
                       body={entry.getIn(['data', 'body'])}
                       isModification={isModification}
+                      isDeleteWorkflow={isDeleteWorkflow}
                       editLink={editLink}
                       timestamp={timestamp}
                       onDelete={this.requestDelete.bind(this, collectionName, slug, ownStatus)}

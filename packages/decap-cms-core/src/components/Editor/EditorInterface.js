@@ -178,10 +178,10 @@ class EditorInterface extends Component {
   };
 
   handleOnPublish = async (opts = {}) => {
-    const { createNew = false, duplicate = false } = opts;
+    const { createNew = false, duplicate = false, publishStack = false } = opts;
     await this.controlPaneRef.switchToDefaultLocale();
     this.controlPaneRef.validate();
-    this.props.onPublish({ createNew, duplicate });
+    this.props.onPublish({ createNew, duplicate, publishStack });
   };
 
   handleTogglePreview = () => {
@@ -230,12 +230,14 @@ class EditorInterface extends Component {
       hasUnpublishedChanges,
       isNewEntry,
       isModification,
+      isDeleteWorkflow,
       currentStatus,
       onLogoutClick,
       loadDeployPreview,
       deployPreview,
       draftKey,
       editorBackLink,
+      canStack,
       t,
     } = this.props;
 
@@ -340,6 +342,7 @@ class EditorInterface extends Component {
           onDeleteUnpublishedChanges={onDeleteUnpublishedChanges}
           onChangeStatus={onChangeStatus}
           showDelete={showDelete}
+          onPublishStack={() => this.handleOnPublish({ publishStack: true })}
           onPublish={onPublish}
           unPublish={unPublish}
           onDuplicate={onDuplicate}
@@ -354,11 +357,13 @@ class EditorInterface extends Component {
           hasUnpublishedChanges={hasUnpublishedChanges}
           isNewEntry={isNewEntry}
           isModification={isModification}
+          isDeleteWorkflow={isDeleteWorkflow}
           currentStatus={currentStatus}
           onLogoutClick={onLogoutClick}
           loadDeployPreview={loadDeployPreview}
           deployPreview={deployPreview}
           editorBackLink={editorBackLink}
+          canStack={canStack}
         />
         <Editor key={draftKey}>
           <ViewControls>
@@ -428,11 +433,13 @@ EditorInterface.propTypes = {
   hasUnpublishedChanges: PropTypes.bool,
   isNewEntry: PropTypes.bool,
   isModification: PropTypes.bool,
+  isDeleteWorkflow: PropTypes.bool,
   currentStatus: PropTypes.string,
   onLogoutClick: PropTypes.func.isRequired,
   deployPreview: PropTypes.object,
   loadDeployPreview: PropTypes.func.isRequired,
   draftKey: PropTypes.string.isRequired,
+  canStack: PropTypes.string.isRequired,
   t: PropTypes.func.isRequired,
 };
 

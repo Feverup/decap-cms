@@ -59,6 +59,8 @@ const colors = {
   statusReviewBackground: colorsRaw.yellow,
   statusReadyText: colorsRaw.green,
   statusReadyBackground: colorsRaw.greenLight,
+  staleBackground: colorsRaw.redDark,
+  staleText: colorsRaw.redLight,
   text: colorsRaw.gray,
   textLight: colorsRaw.white,
   textLead: colorsRaw.grayDark,

@@ -23,6 +23,8 @@ import type {
   DisplayURLState,
   MediaLibraryInstance,
   EntryField,
+  EntryMap,
+  CmsMediaValidation,
 } from '../types/redux';
 import type { AnyAction } from 'redux';
 import type { ThunkDispatch } from 'redux-thunk';
@@ -32,6 +34,7 @@ import type { ImplementationMediaFile } from 'decap-cms-lib-util';
 export const MEDIA_LIBRARY_OPEN = 'MEDIA_LIBRARY_OPEN';
 export const MEDIA_LIBRARY_CLOSE = 'MEDIA_LIBRARY_CLOSE';
 export const MEDIA_LIBRARY_CREATE = 'MEDIA_LIBRARY_CREATE';
+export const MEDIA_LIBRARY_VALIDATION = 'MEDIA_LIBRARY_VALIDATION';
 export const MEDIA_INSERT = 'MEDIA_INSERT';
 export const MEDIA_REMOVE_INSERTED = 'MEDIA_REMOVE_INSERTED';
 export const MEDIA_LOAD_REQUEST = 'MEDIA_LOAD_REQUEST';
@@ -56,6 +59,10 @@ export function createMediaLibrary(instance: MediaLibraryInstance) {
     enableStandalone: instance.enableStandalone || (() => undefined),
   };
   return { type: MEDIA_LIBRARY_CREATE, payload: api } as const;
+}
+
+export function createMediaLibraryValidation(validation: CmsMediaValidation) {
+  return { type: MEDIA_LIBRARY_VALIDATION, payload: validation } as const;
 }
 
 export function clearMediaControl(id: string) {
@@ -86,6 +93,7 @@ export function openMediaLibrary(
     value?: string;
     allowMultiple?: boolean;
     config?: Map<string, unknown>;
+    validation?: Map<string, unknown>;
     field?: EntryField;
   } = {},
 ) {
@@ -222,19 +230,19 @@ export function persistMedia(file: File, opts: MediaOptions = {}) {
 
     const editingDraft = selectEditingDraft(state.entryDraft);
 
-    /**
-     * Check for existing files of the same name before persisting. If no asset
-     * store integration is used, files are being stored in Git, so we can
-     * expect file names to be unique. If an asset store is in use, file names
-     * may not be unique, so we forego this check.
-     */
-    if (!integration && existingFile) {
-      if (!window.confirm(`${existingFile.name} already exists. Do you want to replace it?`)) {
-        return;
-      } else {
-        await dispatch(deleteMedia(existingFile, { privateUpload }));
-      }
-    }
+    // /**
+    //  * Check for existing files of the same name before persisting. If no asset
+    //  * store integration is used, files are being stored in Git, so we can
+    //  * expect file names to be unique. If an asset store is in use, file names
+    //  * may not be unique, so we forego this check.
+    //  */
+    // if (!integration && existingFile) {
+    //   if (!window.confirm(`${existingFile.name} already exists. Do you want to replace it?`)) {
+    //     return;
+    //   } else {
+    //     await dispatch(deleteMedia(existingFile, { privateUpload }));
+    //   }
+    // }
 
     if (integration || !editingDraft) {
       dispatch(mediaPersisting());
@@ -262,18 +270,23 @@ export function persistMedia(file: File, opts: MediaOptions = {}) {
         }
       } else if (privateUpload) {
         throw new Error('The Private Upload option is only available for Asset Store Integration');
-      } else {
-        const entry = state.entryDraft.get('entry');
-        const collection = state.collections.get(entry?.get('collection'));
-        const path = selectMediaFilePath(state.config, collection, entry, fileName, field);
-        assetProxy = createAssetProxy({
-          file,
-          path,
-          field,
-        });
       }
 
-      dispatch(addAsset(assetProxy));
+      const entry = state.entryDraft.get('entry');
+      const collection = state.collections.get(entry?.get('collection'));
+
+      if (existingFile) {
+        await dispatch(removeDraftEntryMediaFile({ id: existingFile.id }));
+      }
+
+      const path = selectMediaFilePath(state.config, collection, entry, fileName, field);
+      assetProxy = createAssetProxy({
+        file,
+        path,
+        field,
+      });
+
+      dispatch(addAsset(entry, assetProxy));
 
       let mediaFile: ImplementationMediaFile;
       if (integration) {
@@ -308,7 +321,7 @@ export function persistMedia(file: File, opts: MediaOptions = {}) {
   };
 }
 
-export function deleteMedia(file: MediaFile, opts: MediaOptions = {}) {
+export function deleteMedia(file: MediaFile, opts: MediaOptions = {}, entry?: EntryMap) {
   const { privateUpload } = opts;
   return async (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
     const state = getState();
@@ -336,13 +349,13 @@ export function deleteMedia(file: MediaFile, opts: MediaOptions = {}) {
 
     try {
       if (file.draft) {
-        dispatch(removeAsset(file.path));
+        dispatch(removeAsset(entry?.get('path'), file.path));
         dispatch(removeDraftEntryMediaFile({ id: file.id }));
       } else {
         const editingDraft = selectEditingDraft(state.entryDraft);
 
         dispatch(mediaDeleting());
-        dispatch(removeAsset(file.path));
+        dispatch(removeAsset(entry?.get('path'), file.path));
 
         await backend.deleteMedia(state.config, file.path);
 
@@ -414,6 +427,7 @@ function mediaLibraryOpened(payload: {
   replaceIndex?: number;
   allowMultiple?: boolean;
   config?: Map<string, unknown>;
+  validation?: Map<string, unknown>;
   field?: EntryField;
 }) {
   return { type: MEDIA_LIBRARY_OPEN, payload } as const;
@@ -441,6 +455,8 @@ interface MediaOptions {
   canPaginate?: boolean;
   dynamicSearch?: boolean;
   dynamicSearchQuery?: string;
+  forImage?: boolean;
+  validation?: Map<string, unknown>;
 }
 
 export function mediaLoaded(files: ImplementationMediaFile[], opts: MediaOptions = {}) {
@@ -555,6 +571,7 @@ export async function getMediaDisplayURL(
 
 export type MediaLibraryAction = ReturnType<
   | typeof createMediaLibrary
+  | typeof createMediaLibraryValidation
   | typeof mediaLibraryOpened
   | typeof mediaLibraryClosed
   | typeof mediaInserted

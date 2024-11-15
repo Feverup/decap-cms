@@ -60,8 +60,18 @@ export default class ObjectControl extends React.Component {
    * which only updates if the value changes, but every widget must be allowed
    * to override this.
    */
-  shouldComponentUpdate() {
-    return true;
+  shouldComponentUpdate(nextProps, nextState = {}) {
+    if (!this.props.parentIds.length) return true;
+
+    if (this.props.forList) {
+      if (nextProps.collapsed !== this.props.collapsed) return true;
+      return !nextProps.collapsed;
+    }
+    if (nextState.collapsed !== undefined) {
+      if (nextState.collapsed !== this.state.collapsed) return true;
+      return !nextState.collapsed;
+    }
+    return !this.state.collapsed;
   }
 
   validate = () => {
@@ -69,14 +79,66 @@ export default class ObjectControl extends React.Component {
     let fields = field.get('field') || field.get('fields');
     fields = List.isList(fields) ? fields : List([fields]);
     fields.forEach(field => {
-      if (field.get('widget') === 'hidden') return;
-      this.componentValidate[field.get('name')]();
+      const widget = field.get('widget');
+      if (widget === 'hidden' || widget === 'object' && field.has('flat')) return;
+      const parentName = field.get('parentName');
+      const name = field.get('name');
+
+      const validateName = parentName ? `${parentName}.${name}` : name;
+      this.componentValidate[validateName]();
     });
   };
 
+  isFieldUnused(field, value) {
+    const { isFieldUnused, setFieldUnused } = this.props;
+    const isObjectField = field.get('widget') === 'object';
+    const fieldValue = value ?
+      this.getFieldValue.bind({ props: { value } })(field) :
+      this.getFieldValue(field);
+    const isUnused = isFieldUnused(fieldValue);
+    if (!isUnused) {
+      if (!isObjectField) setFieldUnused(false);
+      return false;
+    }
+    if (isObjectField) {
+      const singleField = field.get('field');
+      const multiFields = field.get('fields');
+      const fields = singleField ? [singleField] : multiFields;
+      const isWrapper = field.has('wrapper');
+      const isAnyFieldUsed = fields.some(f => {
+        if (isWrapper) return !this.isFieldUnused(f)
+        return !this.isFieldUnused(f, fieldValue);
+      });
+      if (isAnyFieldUsed) return false;
+    }
+    return true;
+  }
+
+  getFieldValue(field) {
+    const { value } = this.props;
+
+    const isWrapper = field.has('wrapper');
+    if (isWrapper) {
+      const wrapper = field.get('wrapper');
+      const isRootWrapper = wrapper === '';
+
+      return isRootWrapper ? value : value.getIn([...wrapper.split('.')]);
+    }
+
+    const isMap = value && Map.isMap(value);
+
+    if (isMap) {
+      const parentName = field.get('parentName');
+      const name = field.get('name');
+      if (parentName) return value.getIn([...(parentName.split('.')), name]);
+      return value.get(name);
+    }
+
+    return value;
+  }
+
   controlFor(field, key) {
     const {
-      value,
       onChangeObject,
       onValidateObject,
       clearFieldErrors,
@@ -94,8 +156,8 @@ export default class ObjectControl extends React.Component {
     if (field.get('widget') === 'hidden') {
       return null;
     }
-    const fieldName = field.get('name');
-    const fieldValue = value && Map.isMap(value) ? value.get(fieldName) : value;
+
+    const fieldValue = this.getFieldValue(field);
 
     const isDuplicate = isFieldDuplicate && isFieldDuplicate(field);
     const isHidden = isFieldHidden && isFieldHidden(field);
@@ -127,9 +189,49 @@ export default class ObjectControl extends React.Component {
     this.setState({ collapsed: !this.state.collapsed });
   };
 
-  renderFields = (multiFields, singleField) => {
+  orderRenderedFields = (renderedFields, field) => {
+    const order = field.get('order').toJS();
+    if (!order.length) return renderedFields;
+
+    const orderMap = {};
+    order.forEach(key => {
+      orderMap[key] = [];
+    });
+
+    const notordered = [];
+    renderedFields.forEach(render => {
+      const { field } = render.props;
+      const parentName = field.get('parentName');
+      const name = field.get('name');
+      const orderKey = parentName ? `${parentName}.${name}` : name;
+      if (orderMap[orderKey]) {
+        return orderMap[orderKey].push(render);
+      }
+      return notordered.push(render);
+    });
+
+    return [...Object.values(orderMap), ...notordered];
+  }
+
+  renderFields = (multiFields, singleField, field) => {
     if (multiFields) {
-      return multiFields.map((f, idx) => this.controlFor(f, idx));
+      const mappedMultiFields = [];
+      multiFields.forEach((f, idx) => {
+        const isFlat = f.has('flat');
+        if (isFlat) {
+          const parentName = f.get('parentName');
+          const name = f.get('name');
+
+          const fieldParentName = parentName ? `${parentName}.${name}` : name;
+          const multiFields = f.get('fields')?.map(field => field.set('parentName', fieldParentName));
+          const singleField = f.get('field')?.set('parentName', fieldParentName);
+
+          return mappedMultiFields.push(...this.renderFields(multiFields, singleField, f));
+        }
+        return mappedMultiFields.push(this.controlFor(f, idx));
+      });
+
+      return field.has('order') ? this.orderRenderedFields(mappedMultiFields, field) : mappedMultiFields;
     }
     return this.controlFor(singleField);
   };
@@ -146,11 +248,20 @@ export default class ObjectControl extends React.Component {
     const collapsed = forList ? this.props.collapsed : this.state.collapsed;
     const multiFields = field.get('fields');
     const singleField = field.get('field');
+    const isFlat = field.has('flat');
+    const lazy = field.get('lazy');
+    const render = lazy ? !collapsed : true;
+    const opacity = field.get('opacity');
+    if (opacity) this.isFieldUnused(field);
 
     if (multiFields || singleField) {
       return (
         <ClassNames>
-          {({ css, cx }) => (
+          {({ css, cx }) => isFlat ? (
+            <div id={forID}>
+              {render && this.renderFields(multiFields, singleField, field)}
+            </div>
+          ) : (
             <div
               id={forID}
               className={cx(
@@ -185,7 +296,7 @@ export default class ObjectControl extends React.Component {
                   `]: collapsed,
                 })}
               >
-                {this.renderFields(multiFields, singleField)}
+                {render && this.renderFields(multiFields, singleField, field)}
               </div>
             </div>
           )}

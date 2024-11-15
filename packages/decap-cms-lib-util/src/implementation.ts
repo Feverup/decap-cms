@@ -37,6 +37,7 @@ export interface UnpublishedEntryDiff {
   id: string;
   path: string;
   newFile: boolean;
+  deletedFile: boolean;
 }
 
 export interface UnpublishedEntry {
@@ -78,13 +79,20 @@ export type PersistOptions = {
   commitMessage: string;
   collectionName?: string;
   useWorkflow?: boolean;
+  publishStack?: boolean;
   unpublished?: boolean;
   status?: string;
 };
 
 export type DeleteOptions = {};
 
-export type Credentials = { token: string | {}; refresh_token?: string };
+export type GoogleCredentials = { name: string; email: string; picture: string; token: string };
+
+export type Credentials = {
+  token: string | {};
+  refresh_token?: string;
+  google_auth?: GoogleCredentials;
+};
 
 export type User = Credentials & {
   backendName?: string;
@@ -98,11 +106,15 @@ export type Config = {
     repo?: string | null;
     open_authoring?: boolean;
     always_fork?: boolean;
+    stack?: string;
     branch?: string;
     api_root?: string;
     squash_merges?: boolean;
     use_graphql?: boolean;
     graphql_api_root?: string;
+    apps_api_root?: string;
+    apps_login_path?: string;
+    apps_token_path?: string;
     preview_context?: string;
     identity_url?: string;
     gateway_url?: string;
@@ -143,6 +155,12 @@ export interface Implementation {
   persistEntry: (entry: Entry, opts: PersistOptions) => Promise<void>;
   persistMedia: (file: AssetProxy, opts: PersistOptions) => Promise<ImplementationMediaFile>;
   deleteFiles: (paths: string[], commitMessage: string) => Promise<void>;
+  deleteCollectionFiles: (
+    paths: string[],
+    commitMessage: string,
+    collection: string,
+    slug: string,
+  ) => void;
 
   unpublishedEntries: () => Promise<string[]>;
   unpublishedEntry: (args: {
@@ -167,6 +185,11 @@ export interface Implementation {
     slug: string,
     newStatus: string,
   ) => Promise<void>;
+  publishUnpublishedEntryStack: (
+    collection: string,
+    slug: string,
+    options: { stackCommitMessage: string; publishStack?: boolean },
+  ) => Promise<void>;
   publishUnpublishedEntry: (collection: string, slug: string) => Promise<void>;
   deleteUnpublishedEntry: (collection: string, slug: string) => Promise<void>;
   getDeployPreview: (
@@ -190,6 +213,17 @@ export interface Implementation {
     auth: { status: boolean };
     api: { status: boolean; statusPage: string };
   }>;
+  stackStatus: () => Promise<
+    | {
+        status?: string;
+        updatedAt?: string;
+      }
+    | undefined
+  >;
+  updateStackStatus: (newStatus: string) => Promise<void>;
+  publishStack: () => Promise<void>;
+  closeStack: () => Promise<void>;
+  createStackPR: (title?: string) => Promise<void>;
 }
 
 const MAX_CONCURRENT_DOWNLOADS = 10;

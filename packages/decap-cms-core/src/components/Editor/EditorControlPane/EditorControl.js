@@ -10,6 +10,7 @@ import { connect } from 'react-redux';
 import { FieldLabel, colors, transitions, lengths, borders } from 'decap-cms-ui-default';
 import ReactMarkdown from 'react-markdown';
 import gfm from 'remark-gfm';
+import { List, Map } from 'immutable';
 
 import { resolveWidget, getEditorComponents } from '../../../lib/registry';
 import { clearFieldErrors, tryLoadEntry, validateMetaField } from '../../../actions/entries';
@@ -66,6 +67,9 @@ const styleStrings = {
   hidden: `
     visibility: hidden;
   `,
+  unused: `
+    opacity: 0.5;
+  `
 };
 
 const ControlContainer = styled.div`
@@ -157,6 +161,8 @@ class EditorControl extends React.Component {
     isHidden: PropTypes.bool,
     isFieldDuplicate: PropTypes.func,
     isFieldHidden: PropTypes.func,
+    isFieldUnused: PropTypes.func,
+    setFieldUnused: PropTypes.func,
     locale: PropTypes.string,
     isParentListCollapsed: PropTypes.bool,
   };
@@ -167,7 +173,19 @@ class EditorControl extends React.Component {
 
   state = {
     activeLabel: false,
+    unused: true
   };
+
+  setFieldUnused = (unused) => {
+    if (unused === this.state.unused) return
+    return this.setState({ unused })
+  }
+
+  isFieldUnused = (value) => {
+    if (value === undefined) return true;
+    if (List.isList(value) && value.size === 0) return true;
+    return Map.isMap(value) ? this.state.unused : false;
+  }
 
   uniqueFieldId = uniqueId(`${this.props.field.get('name')}-field-`);
 
@@ -225,6 +243,7 @@ class EditorControl extends React.Component {
       isParentListCollapsed,
     } = this.props;
 
+    const widgetTitle = field.get('title');
     const widgetName = field.get('widget');
     const widget = resolveWidget(widgetName);
     const fieldName = field.get('name');
@@ -235,26 +254,35 @@ class EditorControl extends React.Component {
     const errors = fieldsErrors && fieldsErrors.get(this.uniqueFieldId);
     const childErrors = this.isAncestorOfFieldError();
     const hasErrors = !!errors || childErrors;
+    const isFlat = widgetName === 'object' && field.has('flat');
+    const styleActive = isSelected || this.state.styleActive;
+    const unused = field.get('opacity') && (!styleActive && this.isFieldUnused(value));
 
     return (
       <ClassNames>
         {({ css, cx }) => (
           <ControlContainer
             className={className}
+            {...(unused && {
+              onClick: () => !this.state.use && this.setState({ use: true }),
+              onMouseLeave: () => this.state.use && this.setState({ use: false })
+            })}
             css={css`
+              ${(!this.state.use && unused) && styleStrings.unused}
               ${isHidden && styleStrings.hidden};
             `}
           >
+            {widgetTitle && <h1>{widgetTitle}</h1>}
             <ControlTopbar>
-              {widget.globalStyles && <Global styles={coreCss`${widget.globalStyles}`} />}
-              <LabelComponent
+              {!isFlat && widget.globalStyles && <Global styles={coreCss`${widget.globalStyles}`} />}
+              {!isFlat && <LabelComponent
                 field={field}
                 isActive={isSelected || this.state.styleActive}
                 hasErrors={hasErrors}
                 uniqueFieldId={this.uniqueFieldId}
                 isFieldOptional={isFieldOptional}
                 t={t}
-              />
+              />}
               {errors && (
                 <ControlErrorsList>
                   {errors.map(
@@ -315,6 +343,7 @@ class EditorControl extends React.Component {
                 onChange(field, newValue, newMetadata);
                 clearFieldErrors(this.uniqueFieldId); // Видаляємо помилки лише для цього поля
               }}
+              onChangeObject={onChange}
               onValidate={onValidate && partial(onValidate, this.uniqueFieldId)}
               onOpenMediaLibrary={openMediaLibrary}
               onClearMediaControl={clearMediaControl}
@@ -348,6 +377,8 @@ class EditorControl extends React.Component {
               isDisabled={isDisabled}
               isFieldDuplicate={isFieldDuplicate}
               isFieldHidden={isFieldHidden}
+              isFieldUnused={this.isFieldUnused}
+              setFieldUnused={this.setFieldUnused}
               isLoadingAsset={isLoadingAsset}
               locale={locale}
               isParentListCollapsed={isParentListCollapsed}

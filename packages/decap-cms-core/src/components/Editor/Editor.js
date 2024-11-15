@@ -4,7 +4,7 @@ import ImmutablePropTypes from 'react-immutable-proptypes';
 import { connect } from 'react-redux';
 import { Loader } from 'decap-cms-ui-default';
 import { translate } from 'react-polyglot';
-import { debounce } from 'lodash';
+// import { debounce } from 'lodash';
 
 import { history, navigateToCollection, navigateToNewEntry } from '../../routing/history';
 import { logoutUser } from '../../actions/auth';
@@ -18,10 +18,11 @@ import {
   changeDraftFieldValidation,
   persistEntry,
   deleteEntry,
-  persistLocalBackup,
-  loadLocalBackup,
-  retrieveLocalBackup,
-  deleteLocalBackup,
+  // persistLocalBackup,
+  // loadLocalBackup,
+  // retrieveLocalBackup,
+  // deleteLocalBackup,
+  removeDraftEntryMediaFiles,
 } from '../../actions/entries';
 import {
   updateUnpublishedEntryStatus,
@@ -29,6 +30,7 @@ import {
   unpublishPublishedEntry,
   deleteUnpublishedEntry,
 } from '../../actions/editorialWorkflow';
+import { removeAssets } from '../../actions/media';
 import { loadDeployPreview } from '../../actions/deploys';
 import { selectEntry, selectUnpublishedEntry, selectDeployPreview } from '../../reducers';
 import { selectFields } from '../../reducers/collections';
@@ -58,6 +60,7 @@ export class Editor extends React.Component {
     useOpenAuthoring: PropTypes.bool,
     unpublishedEntry: PropTypes.bool,
     isModification: PropTypes.bool,
+    isDeleteWorkflow: PropTypes.bool,
     collectionEntriesLoaded: PropTypes.bool,
     updateUnpublishedEntryStatus: PropTypes.func.isRequired,
     publishUnpublishedEntry: PropTypes.func.isRequired,
@@ -74,11 +77,11 @@ export class Editor extends React.Component {
     }),
     hasChanged: PropTypes.bool,
     t: PropTypes.func.isRequired,
-    retrieveLocalBackup: PropTypes.func.isRequired,
-    localBackup: ImmutablePropTypes.map,
-    loadLocalBackup: PropTypes.func,
-    persistLocalBackup: PropTypes.func.isRequired,
-    deleteLocalBackup: PropTypes.func,
+    // retrieveLocalBackup: PropTypes.func.isRequired,
+    // localBackup: ImmutablePropTypes.map,
+    // loadLocalBackup: PropTypes.func,
+    // persistLocalBackup: PropTypes.func.isRequired,
+    // deleteLocalBackup: PropTypes.func,
   };
 
   componentDidMount() {
@@ -89,12 +92,12 @@ export class Editor extends React.Component {
       loadEntry,
       createEmptyDraft,
       loadEntries,
-      retrieveLocalBackup,
+      // retrieveLocalBackup,
       collectionEntriesLoaded,
       t,
     } = this.props;
 
-    retrieveLocalBackup(collection, slug);
+    // retrieveLocalBackup(collection, slug);
 
     if (newEntry) {
       createEmptyDraft(collection, this.props.location.search);
@@ -152,7 +155,7 @@ export class Editor extends React.Component {
         return;
       }
 
-      this.deleteBackup();
+      // this.deleteBackup();
 
       unblock();
       this.unlisten();
@@ -164,18 +167,18 @@ export class Editor extends React.Component {
   }
 
   componentDidUpdate(prevProps) {
-    if (!prevProps.localBackup && this.props.localBackup) {
-      const confirmLoadBackup = window.confirm(this.props.t('editor.editor.confirmLoadBackup'));
-      if (confirmLoadBackup) {
-        this.props.loadLocalBackup();
-      } else {
-        this.deleteBackup();
-      }
-    }
+    // if (!prevProps.localBackup && this.props.localBackup) {
+    //   const confirmLoadBackup = window.confirm(this.props.t('editor.editor.confirmLoadBackup'));
+    //   if (confirmLoadBackup) {
+    //     this.props.loadLocalBackup();
+    //   } else {
+    //     this.deleteBackup();
+    //   }
+    // }
 
-    if (this.props.hasChanged) {
-      this.createBackup(this.props.entryDraft.get('entry'), this.props.collection);
-    }
+    // if (this.props.hasChanged) {
+    //   this.createBackup(this.props.entryDraft.get('entry'), this.props.collection);
+    // }
 
     if (prevProps.entry === this.props.entry) return;
 
@@ -187,14 +190,17 @@ export class Editor extends React.Component {
   }
 
   componentWillUnmount() {
-    this.createBackup.flush();
+    // this.createBackup.flush();
     this.props.discardDraft();
+    if (this.props.hasChanged) {
+      this.props.removeAssets();
+    }
     window.removeEventListener('beforeunload', this.exitBlocker);
   }
 
-  createBackup = debounce(function (entry, collection) {
-    this.props.persistLocalBackup(entry, collection);
-  }, 2000);
+  // createBackup = debounce(function (entry, collection) {
+  //   this.props.persistLocalBackup(entry, collection);
+  // }, 2000);
 
   handleChangeDraftField = (field, value, metadata, i18n) => {
     const entries = [this.props.unPublishedEntry, this.props.publishedEntry].filter(Boolean);
@@ -212,14 +218,14 @@ export class Editor extends React.Component {
     updateUnpublishedEntryStatus(collection.get('name'), slug, currentStatus, newStatus);
   };
 
-  deleteBackup() {
-    const { deleteLocalBackup, collection, slug, newEntry } = this.props;
-    this.createBackup.cancel();
-    deleteLocalBackup(collection, !newEntry && slug);
-  }
+  // deleteBackup() {
+  //   const { deleteLocalBackup, collection, slug, newEntry } = this.props;
+  //   this.createBackup.cancel();
+  //   deleteLocalBackup(collection, !newEntry && slug);
+  // }
 
   handlePersistEntry = async (opts = {}) => {
-    const { createNew = false, duplicate = false } = opts;
+    const { createNew = false, duplicate = false, publishStack = false } = opts;
     const {
       persistEntry,
       collection,
@@ -231,9 +237,9 @@ export class Editor extends React.Component {
       entryDraft,
     } = this.props;
 
-    await persistEntry(collection);
+    await persistEntry(collection, publishStack);
 
-    this.deleteBackup();
+    // this.deleteBackup();
 
     if (createNew) {
       navigateToNewEntry(collection.get('name'));
@@ -244,35 +250,36 @@ export class Editor extends React.Component {
   };
 
   handlePublishEntry = async (opts = {}) => {
-    const { createNew = false, duplicate = false } = opts;
+    const { publishStack = false } = opts;
+
     const {
       publishUnpublishedEntry,
-      createDraftDuplicateFromEntry,
       entryDraft,
       collection,
       slug,
       currentStatus,
+      isDeleteWorkflow,
       t,
     } = this.props;
-    if (currentStatus !== status.last()) {
+    if (currentStatus !== status.get('PENDING_PUBLISH')) {
       window.alert(t('editor.editor.onPublishingNotReady'));
       return;
     } else if (entryDraft.get('hasChanged')) {
       window.alert(t('editor.editor.onPublishingWithUnsavedChanges'));
       return;
-    } else if (!window.confirm(t('editor.editor.onPublishing'))) {
+    } else if (!window.confirm(t(isDeleteWorkflow ? 'editor.editor.onDeleteUnpublishedChanges' : 'editor.editor.onPublishing'))) {
       return;
     }
 
-    await publishUnpublishedEntry(collection.get('name'), slug);
+    await publishUnpublishedEntry(collection.get('name'), slug, publishStack);
 
-    this.deleteBackup();
+    // this.deleteBackup();
 
-    if (createNew) {
-      navigateToNewEntry(collection.get('name'));
-    }
+    // if (createNew) {
+    //   navigateToNewEntry(collection.get('name'));
+    // }
 
-    duplicate && createDraftDuplicateFromEntry(entryDraft.get('entry'));
+    // duplicate && createDraftDuplicateFromEntry(entryDraft.get('entry'));
   };
 
   handleUnpublishEntry = async () => {
@@ -281,7 +288,7 @@ export class Editor extends React.Component {
 
     await unpublishPublishedEntry(collection, slug);
 
-    return navigateToCollection(collection.get('name'));
+    // return navigateToCollection(collection.get('name'));
   };
 
   handleDuplicateEntry = () => {
@@ -292,7 +299,7 @@ export class Editor extends React.Component {
   };
 
   handleDeleteEntry = () => {
-    const { entryDraft, newEntry, collection, deleteEntry, slug, t } = this.props;
+    const { entryDraft, newEntry, collection, deleteEntry, slug, t, } = this.props;
     if (entryDraft.get('hasChanged')) {
       if (!window.confirm(t('editor.editor.onDeleteWithUnsavedChanges'))) {
         return;
@@ -306,25 +313,29 @@ export class Editor extends React.Component {
 
     setTimeout(async () => {
       await deleteEntry(collection, slug);
-      this.deleteBackup();
-      return navigateToCollection(collection.get('name'));
+      // this.deleteBackup();
+      // return navigateToCollection(collection.get('name'));
     }, 0);
   };
 
   handleDeleteUnpublishedChanges = async () => {
-    const { entryDraft, collection, slug, deleteUnpublishedEntry, loadEntry, isModification, t } =
+    const { entryDraft, collection, slug, removeAssets, removeDraftEntryMediaFiles, deleteUnpublishedEntry, loadEntry, isModification, isDeleteWorkflow, t } =
       this.props;
     if (
       entryDraft.get('hasChanged') &&
-      !window.confirm(t('editor.editor.onDeleteUnpublishedChangesWithUnsavedChanges'))
+      !window.confirm(t('editor.editor.onDeleteUnpublishedChangesWithUnsavedChanges') || isDeleteWorkflow)
     ) {
       return;
     } else if (!window.confirm(t('editor.editor.onDeleteUnpublishedChanges'))) {
       return;
     }
+
     await deleteUnpublishedEntry(collection.get('name'), slug);
 
-    this.deleteBackup();
+    // this.deleteBackup();
+
+    removeAssets();
+    removeDraftEntryMediaFiles();
 
     if (isModification) {
       loadEntry(collection, slug);
@@ -348,6 +359,7 @@ export class Editor extends React.Component {
       unpublishedEntry,
       newEntry,
       isModification,
+      isDeleteWorkflow,
       currentStatus,
       logoutUser,
       deployPreview,
@@ -356,6 +368,7 @@ export class Editor extends React.Component {
       slug,
       t,
       editorBackLink,
+      canStack,
     } = this.props;
 
     const isPublished = !newEntry && !unpublishedEntry;
@@ -400,11 +413,13 @@ export class Editor extends React.Component {
         hasUnpublishedChanges={unpublishedEntry}
         isNewEntry={newEntry}
         isModification={isModification}
+        isDeleteWorkflow={isDeleteWorkflow}
         currentStatus={currentStatus}
         onLogoutClick={logoutUser}
         deployPreview={deployPreview}
         loadDeployPreview={opts => loadDeployPreview(collection, slug, entry, isPublished, opts)}
         editorBackLink={editorBackLink}
+        canStack={canStack}
         t={t}
       />
     );
@@ -412,7 +427,7 @@ export class Editor extends React.Component {
 }
 
 function mapStateToProps(state, ownProps) {
-  const { collections, entryDraft, auth, config, entries, globalUI } = state;
+  const { collections, entryDraft, auth, config, entries, globalUI, stack } = state;
   const slug = ownProps.match.params[0];
   const collection = collections.get(ownProps.match.params.name);
   const collectionName = collection.get('name');
@@ -425,12 +440,13 @@ function mapStateToProps(state, ownProps) {
   const hasWorkflow = config.publish_mode === EDITORIAL_WORKFLOW;
   const useOpenAuthoring = globalUI.useOpenAuthoring;
   const isModification = entryDraft.getIn(['entry', 'isModification']);
+  const isDeleteWorkflow = entryDraft.getIn(['entry', 'isDeleteWorkflow']);
   const collectionEntriesLoaded = !!entries.getIn(['pages', collectionName]);
   const unPublishedEntry = selectUnpublishedEntry(state, collectionName, slug);
   const publishedEntry = selectEntry(state, collectionName, slug);
   const currentStatus = unPublishedEntry && unPublishedEntry.get('status');
   const deployPreview = selectDeployPreview(state, collectionName, slug);
-  const localBackup = entryDraft.get('localBackup');
+  // const localBackup = entryDraft.get('localBackup');
   const draftKey = entryDraft.get('key');
   let editorBackLink = `/collections/${collectionName}`;
   if (new URLSearchParams(ownProps.location.search).get('ref') === 'workflow') {
@@ -443,6 +459,8 @@ function mapStateToProps(state, ownProps) {
       editorBackLink = `${editorBackLink}/filter/${pathParts.slice(0, -2).join('/')}`;
     }
   }
+
+  const canStack = stack.canStack;
 
   return {
     collection,
@@ -458,14 +476,16 @@ function mapStateToProps(state, ownProps) {
     hasWorkflow,
     useOpenAuthoring,
     isModification,
+    isDeleteWorkflow,
     collectionEntriesLoaded,
     currentStatus,
     deployPreview,
-    localBackup,
+    // localBackup,
     draftKey,
     publishedEntry,
     unPublishedEntry,
     editorBackLink,
+    canStack,
   };
 }
 
@@ -475,10 +495,10 @@ const mapDispatchToProps = {
   loadEntry,
   loadEntries,
   loadDeployPreview,
-  loadLocalBackup,
-  retrieveLocalBackup,
-  persistLocalBackup,
-  deleteLocalBackup,
+  // loadLocalBackup,
+  // retrieveLocalBackup,
+  // persistLocalBackup,
+  // deleteLocalBackup,
   createDraftDuplicateFromEntry,
   createEmptyDraft,
   discardDraft,
@@ -488,6 +508,8 @@ const mapDispatchToProps = {
   publishUnpublishedEntry,
   unpublishPublishedEntry,
   deleteUnpublishedEntry,
+  removeAssets,
+  removeDraftEntryMediaFiles,
   logoutUser,
 };
 

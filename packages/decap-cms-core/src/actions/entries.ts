@@ -20,6 +20,7 @@ import { selectCustomPath } from '../reducers/entryDraft';
 import { navigateToEntry } from '../routing/history';
 import { getProcessSegment } from '../lib/formatters';
 import { hasI18n, duplicateDefaultI18nFields, serializeI18n, I18N, I18N_FIELD } from '../lib/i18n';
+import { loadUnpublishedEntry } from './editorialWorkflow';
 import { addNotification } from './notifications';
 
 import type { ImplementationMediaFile } from 'decap-cms-lib-util';
@@ -82,6 +83,7 @@ export const ENTRY_DELETE_SUCCESS = 'ENTRY_DELETE_SUCCESS';
 export const ENTRY_DELETE_FAILURE = 'ENTRY_DELETE_FAILURE';
 
 export const ADD_DRAFT_ENTRY_MEDIA_FILE = 'ADD_DRAFT_ENTRY_MEDIA_FILE';
+export const REMOVE_DRAFT_ENTRY_MEDIA_FILES = 'REMOVE_DRAFT_ENTRY_MEDIA_FILES';
 export const REMOVE_DRAFT_ENTRY_MEDIA_FILE = 'REMOVE_DRAFT_ENTRY_MEDIA_FILE';
 
 export const CHANGE_VIEW_STYLE = 'CHANGE_VIEW_STYLE';
@@ -455,6 +457,10 @@ export function addDraftEntryMediaFile(file: ImplementationMediaFile) {
   return { type: ADD_DRAFT_ENTRY_MEDIA_FILE, payload: file };
 }
 
+export function removeDraftEntryMediaFiles() {
+  return { type: REMOVE_DRAFT_ENTRY_MEDIA_FILES };
+}
+
 export function removeDraftEntryMediaFile({ id }: { id: string }) {
   return { type: REMOVE_DRAFT_ENTRY_MEDIA_FILE, payload: { id } };
 }
@@ -507,7 +513,7 @@ export function retrieveLocalBackup(collection: Collection, slug: string) {
           }
         }),
       );
-      dispatch(addAssets(assetProxies));
+      dispatch(addAssets(entry, assetProxies));
 
       return dispatch(localBackupRetrieved(entry));
     }
@@ -879,7 +885,7 @@ export function getSerializedEntry(collection: Collection, entry: Entry) {
   return serializedEntry;
 }
 
-export function persistEntry(collection: Collection) {
+export function persistEntry(collection: Collection, publishStack?: boolean) {
   return async (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
     const state = getState();
     const entryDraft = state.entryDraft;
@@ -923,6 +929,7 @@ export function persistEntry(collection: Collection) {
         entryDraft: serializedEntryDraft,
         assetProxies,
         usedSlugs,
+        publishStack,
       })
       .then(async (newSlug: string) => {
         dispatch(
@@ -973,8 +980,18 @@ export function deleteEntry(collection: Collection, slug: string) {
     dispatch(entryDeleting(collection, slug));
     return backend
       .deleteEntry(state, collection, slug)
-      .then(() => {
-        return dispatch(entryDeleted(collection, slug));
+      .then(async () => {
+        dispatch(entryDeleted(collection, slug));
+        dispatch(loadUnpublishedEntry(collection, slug));
+        dispatch(
+          addNotification({
+            message: {
+              key: 'ui.toast.entryBeingUnpublished',
+            },
+            type: 'success',
+            dismissAfter: 4000,
+          }),
+        );
       })
       .catch((error: Error) => {
         dispatch(

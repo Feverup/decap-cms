@@ -1,4 +1,5 @@
 import { currentBackend } from '../backend';
+import { checkStackStatus } from './stack';
 import { addNotification, clearNotifications } from './notifications';
 
 import type { Credentials, User } from 'decap-cms-lib-util';
@@ -64,7 +65,9 @@ export function authenticateUser() {
           if (user.useOpenAuthoring) {
             dispatch(useOpenAuthoring());
           }
-          dispatch(authenticate(user));
+          dispatch(checkStackStatus()).then(() => {
+            dispatch(authenticate(user));
+          });
         } else {
           dispatch(doneAuthenticating());
         }
@@ -88,7 +91,9 @@ export function loginUser(credentials: Credentials) {
         if (user.useOpenAuthoring) {
           dispatch(useOpenAuthoring());
         }
-        dispatch(authenticate(user));
+        dispatch(checkStackStatus()).then(() => {
+          dispatch(authenticate(user));
+        });
       })
       .catch((error: Error) => {
         console.error(error);

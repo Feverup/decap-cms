@@ -23,7 +23,8 @@ import { createAssetProxy } from '../valueObjects/AssetProxy';
 import { addAssets } from './media';
 import { loadMedia } from './mediaLibrary';
 import ValidationErrorTypes from '../constants/validationErrorTypes';
-import { navigateToEntry } from '../routing/history';
+import { checkStackStatus } from './stack';
+import { navigateToCollection, navigateToEntry } from '../routing/history';
 import { addNotification } from './notifications';
 
 import type {
@@ -248,7 +249,7 @@ export function loadUnpublishedEntry(collection: Collection, slug: string) {
         const { entries, pagination } = await backend.unpublishedEntries(state.collections);
         dispatch(unpublishedEntriesLoaded(entries, pagination));
         // eslint-disable-next-line no-empty
-      } catch (e) {}
+      } catch (e) { }
     }
 
     dispatch(unpublishedEntryLoading(collection, slug));
@@ -266,7 +267,7 @@ export function loadUnpublishedEntry(collection: Collection, slug: string) {
             }),
           ),
       );
-      dispatch(addAssets(assetProxies));
+      dispatch(addAssets(entry, assetProxies));
       dispatch(unpublishedEntryLoaded(collection, entry));
       dispatch(createDraftFromEntry(entry));
     } catch (error) {
@@ -479,20 +480,38 @@ export function deleteUnpublishedEntry(collection: string, slug: string) {
   };
 }
 
-export function publishUnpublishedEntry(collectionName: string, slug: string) {
+export function publishUnpublishedEntry(
+  collectionName: string,
+  slug: string,
+  publishStack: boolean,
+) {
   return async (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
     const state = getState();
     const collections = state.collections;
     const backend = currentBackend(state.config);
     const entry = selectUnpublishedEntry(state, collectionName, slug);
+    const isDeleteWorkflow = entry.get('isDeleteWorkflow');
     dispatch(unpublishedEntryPublishRequest(collectionName, slug));
     try {
-      await backend.publishUnpublishedEntry(entry);
-      // re-load media after entry was published
+      if (!publishStack && state.stack.status.status) {
+        dispatch(
+          addNotification({
+            message: { key: 'ui.toast.onFailToPublishEntry', details: "\nCan't publish having stack changes.\n\n You must stack them!" },
+            type: 'error',
+            dismissAfter: 8000,
+          }),
+        );
+        return dispatch(unpublishedEntryPublishError(collectionName, slug));
+      }
+
+      await backend.publishUnpublishedEntry(entry, publishStack);
+
+      await dispatch(checkStackStatus());
+
       dispatch(loadMedia());
       dispatch(
         addNotification({
-          message: { key: 'ui.toast.entryPublished' },
+          message: { key: isDeleteWorkflow ? 'ui.toast.entryUnpublished' : 'ui.toast.entryPublished' },
           type: 'success',
           dismissAfter: 4000,
         }),
@@ -506,6 +525,9 @@ export function publishUnpublishedEntry(collectionName: string, slug: string) {
         if (slug !== newSlug && selectEditingDraft(state.entryDraft)) {
           navigateToEntry(collection.get('name'), newSlug);
         }
+      } else if (isDeleteWorkflow) {
+        dispatch(unpublishedEntryDeleted(collectionName, slug));
+        return navigateToCollection(collectionName);
       } else {
         return dispatch(loadEntry(collection, slug));
       }

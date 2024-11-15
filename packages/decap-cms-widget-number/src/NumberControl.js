@@ -1,6 +1,8 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import ImmutablePropTypes from 'react-immutable-proptypes';
+import { debounce } from 'lodash';
+
 const ValidationErrorTypes = {
   PRESENCE: 'PRESENCE',
   PATTERN: 'PATTERN',
@@ -49,6 +51,13 @@ export function validateMinMax(value, min, max, field, t) {
 }
 
 export default class NumberControl extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      value: this.props.value || '',
+    };
+  }
+
   static propTypes = {
     field: ImmutablePropTypes.map.isRequired,
     onChange: PropTypes.func.isRequired,
@@ -68,17 +77,25 @@ export default class NumberControl extends React.Component {
     value: '',
   };
 
+  componentDidUpdate(prevProps) {
+    if (prevProps.value !== this.props.value) {
+      this.setState({ value: this.props.value });
+    }
+  }
+
   handleChange = e => {
     const valueType = this.props.field.get('value_type');
-    const { onChange } = this.props;
     const value = valueType === 'float' ? parseFloat(e.target.value) : parseInt(e.target.value, 10);
-
-    if (!isNaN(value)) {
-      onChange(value);
-    } else {
-      onChange('');
+    if (this.state.value !== value) {
+      this.handleNumberChange(value);
     }
+    this.setState({ value });
   };
+
+  handleNumberChange = debounce(value => {
+    const { onChange } = this.props;
+    onChange(!isNaN(value) ? value : '');
+  }, 250);
 
   isValid = () => {
     const { field, value, t } = this.props;
@@ -96,7 +113,7 @@ export default class NumberControl extends React.Component {
   };
 
   render() {
-    const { field, value, classNameWrapper, forID, setActiveStyle, setInactiveStyle } = this.props;
+    const { field, classNameWrapper, forID, setActiveStyle, setInactiveStyle } = this.props;
     const min = field.get('min', '');
     const max = field.get('max', '');
     const step = field.get('step', field.get('value_type') === 'int' ? 1 : '');
@@ -107,7 +124,7 @@ export default class NumberControl extends React.Component {
         className={classNameWrapper}
         onFocus={setActiveStyle}
         onBlur={setInactiveStyle}
-        value={value || (value === 0 ? value : '')}
+        value={this.state.value || (this.state.value === 0 ? this.state.value : '')}
         step={step}
         min={min}
         max={max}

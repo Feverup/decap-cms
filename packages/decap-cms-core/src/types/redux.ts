@@ -1,9 +1,11 @@
 import type { Action } from 'redux';
+import type { Options as PrettierOptions } from 'prettier';
 import type { StaticallyTypedRecord } from './immutable';
 import type { Map, List, OrderedMap, Set } from 'immutable';
 import type { FILES, FOLDER } from '../constants/collectionTypes';
 import type { MediaFile as BackendMediaFile } from '../backend';
 import type { Auth } from '../reducers/auth';
+import type { StackStatus } from '../reducers/stack';
 import type { Status } from '../reducers/status';
 import type { Medias } from '../reducers/medias';
 import type { Deploys } from '../reducers/deploys';
@@ -130,6 +132,7 @@ export interface CmsFieldFileOrImage {
   default?: string;
 
   media_library?: CmsMediaLibrary;
+  media_validation?: CmsMediaValidation;
   allow_multiple?: boolean;
   config?: unknown;
 }
@@ -361,6 +364,7 @@ export interface CmsBackend {
   open_authoring?: boolean;
   repo?: string;
   branch?: string;
+  stack?: string;
   api_root?: string;
   site_domain?: string;
   base_url?: string;
@@ -369,6 +373,7 @@ export interface CmsBackend {
   squash_merges?: boolean;
   proxy_url?: string;
   commit_messages?: {
+    stack?: string;
     create?: string;
     update?: string;
     delete?: string;
@@ -401,6 +406,7 @@ export interface CmsConfig {
   public_folder?: string;
   media_folder_relative?: boolean;
   media_library?: CmsMediaLibrary;
+  media_validation?: CmsMediaValidation;
   publish_mode?: CmsPublishMode;
   load_config_file?: boolean;
   integrations?: {
@@ -426,6 +432,23 @@ export type CmsMediaLibraryOptions = unknown; // TODO: type properly
 export interface CmsMediaLibrary {
   name: string;
   config?: CmsMediaLibraryOptions;
+}
+
+export interface CmsMediaImageValidation {
+  aspect_ratio: string
+  keep_aspect_ratio: boolean;
+  max_width: number
+  max_height: number
+  min_width: number
+  min_height: number
+}
+
+export interface CmsMediaValidation {
+  file_extensions: Array<string>
+  keep_file_name: boolean
+  max_file_size: number
+  file_name_pattern: string
+  images?: CmsMediaImageValidation;
 }
 
 export type SlugConfig = StaticallyTypedRecord<{
@@ -530,6 +553,7 @@ export type EntryObject = {
   collection: string;
   mediaFiles: List<MediaFileMap>;
   newRecord: boolean;
+  isDeleteWorkflow: boolean;
   author?: string;
   updatedOn?: string;
   status: string;
@@ -602,6 +626,8 @@ type i18n = StaticallyTypedRecord<{
 
 export type Format = keyof typeof formatExtensions | string;
 
+export type PrettierMapOptions = Map<keyof PrettierOptions, PrettierOptions[keyof PrettierOptions]>
+
 type CollectionObject = {
   name: string;
   folder?: string;
@@ -617,6 +643,7 @@ type CollectionObject = {
   type: 'file_based_collection' | 'folder_based_collection';
   extension?: string;
   format?: Format;
+  prettier?: PrettierMapOptions;
   frontmatter_delimiter?: List<string> | string | [string, string];
   create?: boolean;
   delete?: boolean;
@@ -699,6 +726,8 @@ export interface State {
   medias: Medias;
   mediaLibrary: MediaLibrary;
   search: Search;
+  notifs: { message: { key: string }; kind: string; id: number }[];
+  stack: StackStatus;
   status: Status;
   notifications: NotificationsState;
 }

@@ -180,6 +180,14 @@ const DeleteButton = styled(ToolbarButton)`
   ${buttons.lightRed};
 `;
 
+const DropdownDiscardItem = styled(DropdownItem)`
+  background-color: ${colorsRaw.redLight} !important;
+  color: ${colorsRaw.redDark} !important;
+  ${Icon} {
+    color: ${colorsRaw.redDark} !important;
+  }
+`;
+
 const SaveButton = styled(ToolbarButton)`
   ${buttons.lightBlue};
   &[disabled] {
@@ -199,9 +207,24 @@ const PublishButton = styled(DropdownButton)`
   background-color: ${colorsRaw.teal};
 `;
 
+const PublishDeleteDropDownItem = styled(DropdownItem)`
+  background-color: ${colorsRaw.redLight} !important;
+  color: ${colorsRaw.redDark} !important;
+  ${Icon} {
+    color: ${colorsRaw.redDark} !important;
+  }
+`;
+
 const StatusButton = styled(DropdownButton)`
   background-color: ${colorsRaw.tealLight};
   color: ${colorsRaw.teal};
+
+  ${props =>
+    props.label === 'stale' &&
+    css`
+      background-color: ${colors.staleBackground};
+      color: ${colors.staleText};
+    `}
 `;
 
 const PreviewButtonContainer = styled.div`
@@ -257,6 +280,7 @@ export class EditorToolbar extends React.Component {
     onDelete: PropTypes.func.isRequired,
     onDeleteUnpublishedChanges: PropTypes.func.isRequired,
     onChangeStatus: PropTypes.func.isRequired,
+    onPublishStack: PropTypes.func.isRequired,
     onPublish: PropTypes.func.isRequired,
     unPublish: PropTypes.func.isRequired,
     onDuplicate: PropTypes.func.isRequired,
@@ -271,6 +295,7 @@ export class EditorToolbar extends React.Component {
     hasUnpublishedChanges: PropTypes.bool,
     isNewEntry: PropTypes.bool,
     isModification: PropTypes.bool,
+    isDeleteWorkflow: PropTypes.bool,
     currentStatus: PropTypes.string,
     onLogoutClick: PropTypes.func.isRequired,
     deployPreview: PropTypes.object,
@@ -365,6 +390,7 @@ export class EditorToolbar extends React.Component {
       [status.get('DRAFT')]: t('editor.editorToolbar.draft'),
       [status.get('PENDING_REVIEW')]: t('editor.editorToolbar.inReview'),
       [status.get('PENDING_PUBLISH')]: t('editor.editorToolbar.ready'),
+      [status.get('STALE')]: t('editor.editorToolbar.inStale'),
     };
 
     const buttonText = isUpdatingStatus
@@ -376,7 +402,7 @@ export class EditorToolbar extends React.Component {
         <ToolbarDropdown
           dropdownTopOverlap="40px"
           dropdownWidth="120px"
-          renderButton={() => <StatusButton>{buttonText}</StatusButton>}
+          renderButton={() => <StatusButton label={currentStatus}>{buttonText}</StatusButton>}
         >
           <StatusDropdownItem
             label={t('editor.editorToolbar.draft')}
@@ -403,8 +429,22 @@ export class EditorToolbar extends React.Component {
     );
   };
 
-  renderNewEntryWorkflowPublishControls = ({ canCreate, canPublish }) => {
-    const { isPublishing, onPublish, onPublishAndNew, onPublishAndDuplicate, t } = this.props;
+  renderNewEntryWorkflowPublishControls = ({ canPublish }) => {
+    const { isPublishing, onPublish, onPublishStack, canStack, t } = this.props;
+
+    const renderPublishDropDownItem = () => {
+      const { isDeleteWorkflow, t } = this.props;
+      const Component = isDeleteWorkflow ? PublishDeleteDropDownItem : PublishDropDownItem;
+
+      return (
+        <Component
+          label={t('editor.editorToolbar.publishNow')}
+          icon="arrow"
+          iconDirection="right"
+          onClick={onPublish}
+        />
+      );
+    }
 
     return canPublish ? (
       <ToolbarDropdown
@@ -418,13 +458,15 @@ export class EditorToolbar extends React.Component {
           </PublishButton>
         )}
       >
-        <PublishDropDownItem
-          label={t('editor.editorToolbar.publishNow')}
-          icon="arrow"
-          iconDirection="right"
-          onClick={onPublish}
-        />
-        {canCreate ? (
+        {renderPublishDropDownItem()}
+        {canStack && (
+          <DropdownItem
+            label={t('editor.editorToolbar.stackChange')}
+            icon="add"
+            onClick={onPublishStack}
+          />
+        )}
+        {/* {canCreate ? (
           <>
             <PublishDropDownItem
               label={t('editor.editorToolbar.publishAndCreateNew')}
@@ -437,7 +479,7 @@ export class EditorToolbar extends React.Component {
               onClick={onPublishAndDuplicate}
             />
           </>
-        ) : null}
+        ) : null} */}
       </ToolbarDropdown>
     ) : (
       ''
@@ -460,19 +502,18 @@ export class EditorToolbar extends React.Component {
           </PublishedToolbarButton>
         )}
       >
-        {canDelete && canPublish && (
-          <DropdownItem
-            label={t('editor.editorToolbar.unpublish')}
-            icon="arrow"
-            iconDirection="right"
-            onClick={unPublish}
-          />
-        )}
         {canCreate && (
           <DropdownItem
             label={t('editor.editorToolbar.duplicate')}
             icon="add"
             onClick={onDuplicate}
+          />
+        )}
+        {canDelete && canPublish && (
+          <DropdownDiscardItem
+            label={t('editor.editorToolbar.deleteEntry')}
+            icon="close"
+            onClick={unPublish}
           />
         )}
       </ToolbarDropdown>
@@ -558,7 +599,7 @@ export class EditorToolbar extends React.Component {
       onPersist,
       onDelete,
       onDeleteUnpublishedChanges,
-      showDelete,
+      // showDelete,
       hasChanged,
       hasUnpublishedChanges,
       useOpenAuthoring,
@@ -566,6 +607,7 @@ export class EditorToolbar extends React.Component {
       isDeleting,
       isNewEntry,
       isModification,
+      // isDeleteWorkflow,
       currentStatus,
       collection,
       t,
@@ -575,14 +617,15 @@ export class EditorToolbar extends React.Component {
     const canPublish = collection.get('publish') && !useOpenAuthoring;
     const canDelete = collection.get('delete', true);
 
-    const deleteLabel =
-      (hasUnpublishedChanges &&
-        isModification &&
-        t('editor.editorToolbar.deleteUnpublishedChanges')) ||
-      (hasUnpublishedChanges &&
-        (isNewEntry || !isModification) &&
-        t('editor.editorToolbar.deleteUnpublishedEntry')) ||
-      (!hasUnpublishedChanges && !isModification && t('editor.editorToolbar.deletePublishedEntry'));
+    const deleteLabel = t('editor.editorToolbar.discardChanges');
+    // const deleteLabel =
+    //   (hasUnpublishedChanges &&
+    //     isModification &&
+    //     t('editor.editorToolbar.deleteUnpublishedChanges')) ||
+    //   (hasUnpublishedChanges &&
+    //     (isNewEntry || !isModification) &&
+    //     t('editor.editorToolbar.deleteUnpublishedEntry')) ||
+    //   (!hasUnpublishedChanges && !isModification && t('editor.editorToolbar.deletePublishedEntry'));
 
     return [
       <SaveButton
@@ -594,26 +637,26 @@ export class EditorToolbar extends React.Component {
       </SaveButton>,
       currentStatus
         ? [
-            <React.Fragment key="workflow-status-controls">
-              {this.renderWorkflowStatusControls()}
-              {!hasChanged && this.renderNewEntryWorkflowPublishControls({ canCreate, canPublish })}
-            </React.Fragment>,
-          ]
+          <React.Fragment key="workflow-status-controls">
+            {this.renderWorkflowStatusControls()}
+            {currentStatus === status.get('PENDING_PUBLISH') && this.renderNewEntryWorkflowPublishControls({ canCreate, canPublish })}
+          </React.Fragment>,
+        ]
         : !isNewEntry && (
-            <React.Fragment key="existing-entry-workflow-publish-controls">
-              {this.renderExistingEntryWorkflowPublishControls({
-                canCreate,
-                canPublish,
-                canDelete,
-              })}
-            </React.Fragment>
-          ),
-      (!showDelete || useOpenAuthoring) && !hasUnpublishedChanges && !isModification ? null : (
+          <React.Fragment key="existing-entry-workflow-publish-controls">
+            {this.renderExistingEntryWorkflowPublishControls({
+              canCreate,
+              canPublish,
+              canDelete,
+            })}
+          </React.Fragment>
+        ),
+      !hasUnpublishedChanges && !isModification ? null : (
         <DeleteButton
           key="delete-button"
           onClick={hasUnpublishedChanges ? onDeleteUnpublishedChanges : onDelete}
         >
-          {isDeleting ? t('editor.editorToolbar.deleting') : deleteLabel}
+          {isDeleting ? t('editor.editorToolbar.discarding') : deleteLabel}
         </DeleteButton>
       ),
     ];
@@ -668,9 +711,9 @@ export class EditorToolbar extends React.Component {
             {hasWorkflow ? this.renderWorkflowControls() : this.renderSimpleControls()}
           </ToolbarSubSectionFirst>
           <ToolbarSubSectionLast>
-            {hasWorkflow
+            {/* {hasWorkflow
               ? this.renderWorkflowDeployPreviewControls()
-              : this.renderSimpleDeployPreviewControls()}
+              : this.renderSimpleDeployPreviewControls()} */}
           </ToolbarSubSectionLast>
         </ToolbarSectionMain>
         <ToolbarSectionMeta>

@@ -6,6 +6,7 @@ import {
   MEDIA_LIBRARY_OPEN,
   MEDIA_LIBRARY_CLOSE,
   MEDIA_LIBRARY_CREATE,
+  MEDIA_LIBRARY_VALIDATION,
   MEDIA_INSERT,
   MEDIA_REMOVE_INSERTED,
   MEDIA_LOAD_REQUEST,
@@ -44,6 +45,7 @@ const defaultState: {
   page?: number;
   files?: MediaFile[];
   config: Map<string, unknown>;
+  validation?: Map<string, unknown>;
   field?: EntryField;
   value?: string | string[];
   replaceIndex?: number | boolean;
@@ -53,6 +55,7 @@ const defaultState: {
   controlMedia: Map(),
   displayURLs: Map(),
   config: Map(),
+  validation: Map(),
 };
 
 function mediaLibrary(state = Map(defaultState), action: MediaLibraryAction) {
@@ -63,10 +66,22 @@ function mediaLibrary(state = Map(defaultState), action: MediaLibraryAction) {
         map.set('showMediaButton', action.payload.enableStandalone());
       });
 
+    case MEDIA_LIBRARY_VALIDATION:
+      return state.withMutations(map => {
+        const { payload } = action;
+        const { images = {} } = action.payload;
+
+        map.set('validation', Map({
+          ...payload,
+          images: Map(images)
+        }));
+      });
+
     case MEDIA_LIBRARY_OPEN: {
-      const { controlID, forImage, privateUpload, config, field, value, replaceIndex } =
-        action.payload;
+      const { controlID, forImage, privateUpload, config, validation = Map(), field, value, replaceIndex } = action.payload;
       const libConfig = config || Map();
+      const mediaLibraryValidation = state.get('validation');
+      const mediaValidation = mediaLibraryValidation ? mediaLibraryValidation.mergeDeep(validation) : validation;
       const privateUploadChanged = state.get('privateUpload') !== privateUpload;
       if (privateUploadChanged) {
         return Map({
@@ -76,6 +91,7 @@ function mediaLibrary(state = Map(defaultState), action: MediaLibraryAction) {
           canInsert: !!controlID,
           privateUpload,
           config: libConfig,
+          validation: mediaValidation,
           controlMedia: Map(),
           displayURLs: Map(),
           field,
@@ -90,6 +106,7 @@ function mediaLibrary(state = Map(defaultState), action: MediaLibraryAction) {
         map.set('canInsert', !!controlID);
         map.set('privateUpload', privateUpload);
         map.set('config', libConfig);
+        map.set('validation', mediaValidation);
         map.set('field', field ?? '');
         map.set('value', value == '' && libConfig.get('multiple') ? [] : value ?? '');
         map.set('replaceIndex', replaceIndex ?? false);

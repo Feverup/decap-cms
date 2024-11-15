@@ -276,6 +276,7 @@ interface PersistArgs {
   entryDraft: EntryDraft;
   assetProxies: AssetProxy[];
   usedSlugs: List<string>;
+  publishStack?: boolean;
   unpublished?: boolean;
   status?: string;
 }
@@ -908,14 +909,15 @@ export class Backend {
     }
 
     const dataFiles = sortBy(
-      entryData.diffs.filter(d => d.path.endsWith(extension)),
+      entryData.diffs.filter(d => d.path.endsWith(extension) && d.path.includes(slug)),
       f => f.path.length,
     );
 
-    const formatData = (data: string, path: string, newFile: boolean) => {
+    const formatData = (data: string, path: string, newFile: boolean, deletedFile: boolean) => {
       const entry = createEntry(collection.get('name'), slug, path, {
         raw: data,
         isModification: !newFile,
+        isDeleteWorkflow: deletedFile,
         label: collection && selectFileEntryLabel(collection, slug),
         mediaFiles,
         updatedOn: entryData.updatedAt,
@@ -935,7 +937,12 @@ export class Backend {
         dataFile.path,
         dataFile.id,
       );
-      const entryWithFormat = formatData(data, dataFile.path, dataFile.newFile);
+      const entryWithFormat = formatData(
+        data,
+        dataFile.path,
+        dataFile.newFile,
+        dataFile.deletedFile,
+      );
       return entryWithFormat;
     };
 
@@ -944,7 +951,7 @@ export class Backend {
       const loadedEntry = await this.implementation.getEntry(
         selectEntryPath(collection, slug) as string,
       );
-      return formatData(loadedEntry.data, loadedEntry.file.path, false);
+      return formatData(loadedEntry.data, loadedEntry.file.path, false, false);
     } else if (hasI18n(collection)) {
       // we need to read all locales files and not just the changes
       const path = selectEntryPath(collection, slug) as string;
@@ -1088,6 +1095,7 @@ export class Backend {
     entryDraft: draft,
     assetProxies,
     usedSlugs,
+    publishStack = false,
     unpublished = false,
     status,
   }: PersistArgs) {
@@ -1175,6 +1183,7 @@ export class Backend {
       commitMessage,
       collectionName,
       useWorkflow,
+      publishStack,
       ...updatedOptions,
     };
 
@@ -1274,7 +1283,12 @@ export class Backend {
     if (hasI18n(collection)) {
       paths = getFilePaths(collection, extension, path, slug);
     }
-    await this.implementation.deleteFiles(paths, commitMessage);
+    await this.implementation.deleteCollectionFiles(
+      paths,
+      commitMessage,
+      collection.get('name'),
+      slug,
+    );
 
     await this.invokePostUnpublishEvent(entry);
   }
@@ -1302,12 +1316,33 @@ export class Backend {
     return this.implementation.updateUnpublishedEntryStatus!(collection, slug, newStatus);
   }
 
-  async publishUnpublishedEntry(entry: EntryMap) {
+  async publishUnpublishedEntry(entry: EntryMap, publishStack?: boolean) {
     const collection = entry.get('collection');
     const slug = entry.get('slug');
 
     await this.invokePrePublishEvent(entry);
-    await this.implementation.publishUnpublishedEntry!(collection, slug);
+
+    const config = this.config;
+    if (config.backend.stack) {
+      const user = (await this.currentUser()) as User;
+      const stackCommitMessage = commitMessageFormatter(
+        'stack',
+        config,
+        {
+          stack: config.backend.stack,
+          authorLogin: user.login,
+          authorName: user.name,
+        },
+        user.useOpenAuthoring,
+      );
+      await this.implementation.publishUnpublishedEntryStack!(collection, slug, {
+        stackCommitMessage,
+        publishStack,
+      });
+    } else {
+      await this.implementation.publishUnpublishedEntry!(collection, slug);
+    }
+
     await this.invokePostPublishEvent(entry);
   }
 
@@ -1358,6 +1393,26 @@ export class Backend {
       }
       return fieldValue === filterRule.get('value');
     });
+  }
+
+  stackStatus() {
+    return this.implementation.stackStatus();
+  }
+
+  updateStackStatus(newStatus: string) {
+    return this.implementation.updateStackStatus(newStatus);
+  }
+
+  publishStack() {
+    return this.implementation.publishStack();
+  }
+
+  closeStack() {
+    return this.implementation.closeStack();
+  }
+
+  createStackPR() {
+    return this.implementation.createStackPR(this.config.backend.commit_messages?.stack);
   }
 }
 

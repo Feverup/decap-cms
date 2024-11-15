@@ -67,7 +67,9 @@ function MediaLibraryModal({
   files,
   dynamicSearch,
   dynamicSearchActive,
+  fileExtensions,
   forImage,
+  value,
   isLoading,
   isPersisting,
   isDeleting,
@@ -77,6 +79,7 @@ function MediaLibraryModal({
   query,
   selectedFile,
   handleFilter,
+  handleImageFilter,
   handleQuery,
   toTableData,
   handleClose,
@@ -93,7 +96,7 @@ function MediaLibraryModal({
   displayURLs,
   t,
 }) {
-  const filteredFiles = forImage ? handleFilter(files) : files;
+  const filteredFiles = fileExtensions ? handleFilter(files, fileExtensions) : (forImage ? handleImageFilter(files) : files);
   const queriedFiles = !dynamicSearch && query ? handleQuery(query, filteredFiles) : filteredFiles;
   const tableData = toTableData(queriedFiles);
   const hasFiles = files && !!files.length;
@@ -117,6 +120,7 @@ function MediaLibraryModal({
         onClose={handleClose}
         privateUpload={privateUpload}
         forImage={forImage}
+        value={value}
         onDownload={handleDownload}
         onUpload={handlePersist}
         query={query}
@@ -130,6 +134,7 @@ function MediaLibraryModal({
         isPersisting={isPersisting}
         isDeleting={isDeleting}
         selectedFile={selectedFile}
+        fileExtensions={fileExtensions}
       />
       {!shouldShowEmptyMessage ? null : (
         <EmptyMessage content={emptyMessage} isPrivate={privateUpload} />
@@ -172,6 +177,7 @@ MediaLibraryModal.propTypes = {
   dynamicSearch: PropTypes.bool,
   dynamicSearchActive: PropTypes.bool,
   forImage: PropTypes.bool,
+  value: PropTypes.string,
   isLoading: PropTypes.bool,
   isPersisting: PropTypes.bool,
   isDeleting: PropTypes.bool,
@@ -181,6 +187,7 @@ MediaLibraryModal.propTypes = {
   query: PropTypes.string,
   selectedFile: PropTypes.oneOfType([PropTypes.shape(fileShape), PropTypes.shape({})]),
   handleFilter: PropTypes.func.isRequired,
+  handleImageFilter: PropTypes.func.isRequired,
   handleQuery: PropTypes.func.isRequired,
   toTableData: PropTypes.func.isRequired,
   handleClose: PropTypes.func.isRequired,
@@ -193,8 +200,9 @@ MediaLibraryModal.propTypes = {
   handleAssetClick: PropTypes.func.isRequired,
   handleLoadMore: PropTypes.func.isRequired,
   loadDisplayURL: PropTypes.func.isRequired,
-  t: PropTypes.func.isRequired,
   displayURLs: PropTypes.instanceOf(Map).isRequired,
+  fileExtensions: PropTypes.arrayOf(PropTypes.string),
+  t: PropTypes.func.isRequired,
 };
 
 export default translate()(MediaLibraryModal);
