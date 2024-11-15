@@ -188,6 +188,7 @@ export interface Implementation {
     folder: string,
     extension: string,
     depth: number,
+    indexFile: string,
     pathRegex?: RegExp,
   ) => Promise<ImplementationEntry[]>;
   traverseCursor?: (

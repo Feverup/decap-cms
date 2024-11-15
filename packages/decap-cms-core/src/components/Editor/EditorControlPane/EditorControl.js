@@ -272,17 +272,17 @@ class EditorControl extends React.Component {
               ${isHidden && styleStrings.hidden};
             `}
           >
+            {widgetTitle && <h1>{widgetTitle}</h1>}
             <ControlTopbar>
-              {widgetTitle && <h1>{widgetTitle}</h1>}
-              {widget.globalStyles && <Global styles={coreCss`${widget.globalStyles}`} />}
-              <LabelComponent
+              {!isFlat && widget.globalStyles && <Global styles={coreCss`${widget.globalStyles}`} />}
+              {!isFlat && <LabelComponent
                 field={field}
                 isActive={isSelected || this.state.styleActive}
                 hasErrors={hasErrors}
                 uniqueFieldId={this.uniqueFieldId}
                 isFieldOptional={isFieldOptional}
                 t={t}
-              />
+              />}
               {errors && (
                 <ControlErrorsList>
                   {errors.map(
@@ -297,14 +297,6 @@ class EditorControl extends React.Component {
                 </ControlErrorsList>
               )}
             </ControlTopbar>
-            {!isFlat && <LabelComponent
-              field={field}
-              isActive={isSelected || this.state.styleActive}
-              hasErrors={hasErrors}
-              uniqueFieldId={this.uniqueFieldId}
-              isFieldOptional={isFieldOptional}
-              t={t}
-            />}
             <Widget
               classNameWrapper={cx(
                 css`

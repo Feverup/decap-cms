@@ -323,6 +323,10 @@ function i18nRulestring(ruleString: string, { defaultLocale, structure }: I18nIn
   return ruleString;
 }
 
+function collectionIndexFile(collection: Collection) {
+  return collection.get('meta')?.get('path')?.get('index_file') as string;
+}
+
 function collectionRegex(collection: Collection): RegExp | undefined {
   let ruleString = '';
 
@@ -592,6 +596,7 @@ export class Backend {
           collection.get('folder') as string,
           extension,
           depth,
+          indexFile,
           collectionRegex(collection),
         )
         .then(entries => this.processEntries(entries, collection));
@@ -940,7 +945,12 @@ export class Backend {
         dataFile.path,
         dataFile.id,
       );
-      const entryWithFormat = formatData(data, dataFile.path, dataFile.newFile, dataFile.deletedFile);
+      const entryWithFormat = formatData(
+        data,
+        dataFile.path,
+        dataFile.newFile,
+        dataFile.deletedFile,
+      );
       return entryWithFormat;
     };
 
@@ -1281,7 +1291,12 @@ export class Backend {
     if (hasI18n(collection)) {
       paths = getFilePaths(collection, extension, path, slug);
     }
-    await this.implementation.deleteCollectionFiles(paths, commitMessage, collection.get('name'), slug);
+    await this.implementation.deleteCollectionFiles(
+      paths,
+      commitMessage,
+      collection.get('name'),
+      slug,
+    );
 
     await this.invokePostUnpublishEvent(entry);
   }
