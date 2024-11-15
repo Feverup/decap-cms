@@ -493,22 +493,22 @@ declare module 'decap-cms-core' {
     config?: CmsMediaLibraryOptions;
   }
 
-export interface CmsMediaImageValidation {
-  aspect_ratio: string
-  keep_aspect_ratio: boolean;
-  max_width: number
-  max_height: number
-  min_width: number
-  min_height: number
-}
+  export interface CmsMediaImageValidation {
+    aspect_ratio: string;
+    keep_aspect_ratio: boolean;
+    max_width: number;
+    max_height: number;
+    min_width: number;
+    min_height: number;
+  }
 
-export interface CmsMediaValidation {
-  file_extensions: Array<string>
-  keep_file_name: boolean
-  max_file_size: number
-  file_name_pattern: string
-  images?: CmsMediaImageValidation;
-}
+  export interface CmsMediaValidation {
+    file_extensions: Array<string>;
+    keep_file_name: boolean;
+    max_file_size: number;
+    file_name_pattern: string;
+    images?: CmsMediaImageValidation;
+  }
 
   export interface CmsEventListener {
     name: 'prePublish' | 'postPublish' | 'preUnpublish' | 'postUnpublish' | 'preSave' | 'postSave';
@@ -527,7 +527,11 @@ export interface CmsMediaValidation {
 
   export type Formatter = {
     fromFile(content: string): unknown;
-    toFile(data: object, sortedKeys?: string[], comments?: Record<string, string>): string;
+    toFile(
+      data: object,
+      sortedKeys?: string[],
+      comments?: Record<string, string>,
+    ): Promise<string> | string;
   };
 
   export interface CmsRegistry {

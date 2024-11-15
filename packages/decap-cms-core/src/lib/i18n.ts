@@ -3,6 +3,7 @@ import { set, groupBy, escapeRegExp } from 'lodash';
 
 import { selectEntrySlug } from '../reducers/collections';
 
+import type { DataFile } from 'decap-cms-lib-util';
 import type { Collection, Entry, EntryDraft, EntryField, EntryMap } from '../types/redux';
 import type { EntryValue } from '../valueObjects/Entry';
 
@@ -138,15 +139,15 @@ export function normalizeFilePath(structure: I18N_STRUCTURE, path: string, local
   }
 }
 
-export function getI18nFiles(
+export async function getI18nFiles(
   collection: Collection,
   extension: string,
   entryDraft: EntryMap,
-  entryToRaw: (entryDraft: EntryMap) => string,
+  entryToRaw: (entryDraft: EntryMap) => Promise<string>,
   path: string,
   slug: string,
   newPath?: string,
-) {
+): Promise<DataFile[]> {
   const { structure, defaultLocale, locales } = getI18nInfo(collection) as I18nInfo;
 
   if (structure === I18N_STRUCTURE.SINGLE_FILE) {
@@ -160,7 +161,7 @@ export function getI18nFiles(
       {
         path: getFilePath(structure, extension, path, slug, locales[0]),
         slug,
-        raw: entryToRaw(draft),
+        raw: await entryToRaw(draft),
         ...(newPath && {
           newPath: getFilePath(structure, extension, newPath, slug, locales[0]),
         }),
@@ -168,41 +169,45 @@ export function getI18nFiles(
     ];
   }
 
-  const dataFiles = locales
-    .map(locale => {
-      const dataPath = getDataPath(locale, defaultLocale);
-      const draft = entryDraft.set('data', entryDraft.getIn(dataPath));
-      return {
-        path: getFilePath(structure, extension, path, slug, locale),
-        slug,
-        raw: draft.get('data') ? entryToRaw(draft) : '',
-        ...(newPath && {
-          newPath: getFilePath(structure, extension, newPath, slug, locale),
-        }),
-      };
-    })
-    .filter(dataFile => dataFile.raw);
+  const dataFiles = (await Promise.all(
+    locales
+      .map(async locale => {
+        const dataPath = getDataPath(locale, defaultLocale);
+        const draft = entryDraft.set('data', entryDraft.getIn(dataPath));
+        return {
+          path: getFilePath(structure, extension, path, slug, locale),
+          slug,
+          raw: draft.get('data') ? await entryToRaw(draft) : '',
+          ...(newPath && {
+            newPath: getFilePath(structure, extension, newPath, slug, locale),
+          }),
+        };
+      })
+      .filter(dataFile => dataFile !== null),
+  )) as DataFile[];
+
   return dataFiles;
 }
 
-export function getI18nBackup(
+export async function getI18nBackup(
   collection: Collection,
   entry: EntryMap,
-  entryToRaw: (entry: EntryMap) => string,
+  entryToRaw: (entry: EntryMap) => Promise<string>,
 ) {
   const { locales, defaultLocale } = getI18nInfo(collection) as I18nInfo;
 
-  const i18nBackup = locales
+  const i18nBackup = await locales
     .filter(l => l !== defaultLocale)
-    .reduce((acc, locale) => {
+    .reduce(async (accPromise, locale) => {
+      const acc = await accPromise;
       const dataPath = getDataPath(locale, defaultLocale);
       const data = entry.getIn(dataPath);
       if (!data) {
         return acc;
       }
       const draft = entry.set('data', data);
-      return { ...acc, [locale]: { raw: entryToRaw(draft) } };
-    }, {} as Record<string, { raw: string }>);
+      return { ...acc, [locale]: { raw: await entryToRaw(draft) } };
+    }, Promise.resolve({} as Record<string, { raw: string }>));
 
   return i18nBackup;
 }
@@ -333,7 +338,7 @@ export function getI18nDataFiles(
   extension: string,
   path: string,
   slug: string,
-  diffFiles: { path: string; id: string; newFile: boolean, deletedFile: boolean }[],
+  diffFiles: { path: string; id: string; newFile: boolean; deletedFile: boolean }[],
 ) {
   const { structure } = getI18nInfo(collection) as I18nInfo;
   if (structure === I18N_STRUCTURE.SINGLE_FILE) {
@@ -347,7 +352,7 @@ export function getI18nDataFiles(
     } else {
       return [...acc, { path, id: '', newFile: false, deletedFile: false }];
     }
-  }, [] as { path: string; id: string; newFile: boolean, deletedFile: boolean }[]);
+  }, [] as { path: string; id: string; newFile: boolean; deletedFile: boolean }[]);
 
   return dataFiles;
 }

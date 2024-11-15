@@ -1,7 +1,7 @@
 import { Base64 } from 'js-base64';
 import semaphore from 'semaphore';
 import { initial, last, partial, result, trimStart, trim } from 'lodash';
-import { oneLine } from 'common-tags';
+// import { oneLine } from 'common-tags';
 import {
   getAllResponses,
   APIError,
@@ -149,9 +149,9 @@ function withCmsLabel(pr: GitHubPull, cmsLabelPrefix: string) {
   return withCmsRefSuffix(pr) && pr.labels.some(l => isCMSLabel(l.name, cmsLabelPrefix));
 }
 
-function withoutCmsLabel(pr: GitHubPull, cmsLabelPrefix: string) {
-  return pr.labels.every(l => !isCMSLabel(l.name, cmsLabelPrefix));
-}
+// function withoutCmsLabel(pr: GitHubPull, cmsLabelPrefix: string) {
+//   return pr.labels.every(l => !isCMSLabel(l.name, cmsLabelPrefix));
+// }
 
 function getTreeFiles(files: GitHubCompareFiles) {
   const treeFiles = files.reduce((arr, file) => {
@@ -181,7 +181,7 @@ export type Diff = {
   binary: boolean;
 };
 
-const migrationNotified = false;
+// const migrationNotified = false;
 
 export default class API {
   apiRoot: string;

@@ -5,10 +5,8 @@ import yamlFormatter from './yaml';
 import tomlFormatter from './toml';
 import jsonFormatter from './json';
 import { FrontmatterInfer, frontmatterJSON, frontmatterTOML, frontmatterYAML } from './frontmatter';
-import { prettierJSON, prettierTOML, prettierYAML } from './prettier';
 import { getCustomFormatsExtensions, getCustomFormatsFormatters } from '../lib/registry';
 
-import type { Options as PrettierOptions } from 'prettier';
 import type { Delimiter } from './frontmatter';
 import type { Collection, EntryObject, Format } from '../types/redux';
 import type { EntryValue } from '../valueObjects/Entry';
@@ -22,12 +20,9 @@ export const formatExtensions = {
   toml: 'toml',
   json: 'json',
   frontmatter: 'md',
-  'yaml-frontmatter': 'md',
-  'toml-frontmatter': 'md',
   'json-frontmatter': 'md',
-  'yaml-prettier': 'yml',
-  'toml-prettier': 'toml',
-  'json-prettier': 'json',
+  'toml-frontmatter': 'md',
+  'yaml-frontmatter': 'md',
 };
 
 export function getFormatExtensions() {
@@ -41,30 +36,21 @@ export const extensionFormatters = {
   json: jsonFormatter,
   md: FrontmatterInfer,
   markdown: FrontmatterInfer,
+  html: FrontmatterInfer,
 };
 
-function formatByName(
-  name: Format,
-  {
-    customDelimiter,
-    prettierOptions,
-  }: { customDelimiter?: Delimiter; prettierOptions?: PrettierOptions },
-) {
+function formatByName(name: Format, customDelimiter?: Delimiter): Formatter {
   const formatters: Record<string, Formatter> = {
     yml: yamlFormatter,
     yaml: yamlFormatter,
     toml: tomlFormatter,
     json: jsonFormatter,
     frontmatter: FrontmatterInfer,
-    'yaml-frontmatter': frontmatterYAML(customDelimiter),
-    'toml-frontmatter': frontmatterTOML(customDelimiter),
     'json-frontmatter': frontmatterJSON(customDelimiter),
-    'yaml-prettier': prettierYAML(prettierOptions),
-    'toml-prettier': prettierTOML(prettierOptions),
-    'json-prettier': prettierJSON(prettierOptions),
+    'toml-frontmatter': frontmatterTOML(customDelimiter),
+    'yaml-frontmatter': frontmatterYAML(customDelimiter),
     ...getCustomFormatsFormatters(),
   };
-
   if (name in formatters) {
     return formatters[name];
   }
@@ -83,12 +69,11 @@ export function resolveFormat(collection: Collection, entry: EntryObject | Entry
   const customDelimiter = frontmatterDelimiterIsList(frontmatter_delimiter)
     ? (frontmatter_delimiter.toArray() as [string, string])
     : frontmatter_delimiter;
-  const prettierOptions = collection.get('prettier')?.toJS();
 
   // If the format is specified in the collection, use that format.
   const formatSpecification = collection.get('format');
   if (formatSpecification) {
-    return formatByName(formatSpecification, { customDelimiter, prettierOptions });
+    return formatByName(formatSpecification, customDelimiter);
   }
 
   // If a file already exists, infer the format from its file extension.
@@ -108,5 +93,5 @@ export function resolveFormat(collection: Collection, entry: EntryObject | Entry
   }
 
   // If no format is specified and it cannot be inferred, return the default.
-  return formatByName('frontmatter', { customDelimiter, prettierOptions });
+  return formatByName('frontmatter', customDelimiter);
 }

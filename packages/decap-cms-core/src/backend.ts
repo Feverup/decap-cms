@@ -756,7 +756,7 @@ export class Backend {
     try {
       await this.backupSync.acquire();
       const key = getEntryBackupKey(collection.get('name'), entry.get('slug'));
-      const raw = this.entryToRaw(collection, entry);
+      const raw = await this.entryToRaw(collection, entry);
 
       if (!raw.trim()) {
         return;
@@ -778,7 +778,7 @@ export class Backend {
 
       let i18n;
       if (hasI18n(collection)) {
-        i18n = getI18nBackup(collection, entry, entry => this.entryToRaw(collection, entry));
+        i18n = await getI18nBackup(collection, entry, entry => this.entryToRaw(collection, entry));
       }
 
       await localForage.setItem<BackupEntry>(key, {
@@ -1130,7 +1130,7 @@ export class Backend {
       dataFile = {
         path,
         slug,
-        raw: this.entryToRaw(collection, entryDraft.get('entry')),
+        raw: await this.entryToRaw(collection, entryDraft.get('entry')),
       };
 
       updateAssetProxies(assetProxies, config, collection, entryDraft, path);
@@ -1140,7 +1140,7 @@ export class Backend {
         path: entryDraft.getIn(['entry', 'path']),
         // for workflow entries we refresh the slug on publish
         slug: customPath && !useWorkflow ? slugFromCustomPath(collection, customPath) : slug,
-        raw: this.entryToRaw(collection, entryDraft.get('entry')),
+        raw: await this.entryToRaw(collection, entryDraft.get('entry')),
         newPath: customPath,
       };
     }
@@ -1150,7 +1150,7 @@ export class Backend {
     let dataFiles = [dataFile];
     if (hasI18n(collection)) {
       const extension = selectFolderEntryExtension(collection);
-      dataFiles = getI18nFiles(
+      dataFiles = await getI18nFiles(
         collection,
         extension,
         entryDraft.get('entry'),
@@ -1350,11 +1350,11 @@ export class Backend {
     return this.implementation.deleteUnpublishedEntry!(collection, slug);
   }
 
-  entryToRaw(collection: Collection, entry: EntryMap): string {
+  async entryToRaw(collection: Collection, entry: EntryMap): Promise<string> {
     const format = resolveFormat(collection, entry.toJS());
     const fieldsOrder = this.fieldsOrder(collection, entry);
     const fieldsComments = selectFieldsComments(collection, entry);
-    let content = format.toFile(entry.get('data').toJS(), fieldsOrder, fieldsComments);
+    let content = await format.toFile(entry.get('data').toJS(), fieldsOrder, fieldsComments);
     if (content.slice(-1) != '\n') {
       // add the EOL if it does not exist.
       content += '\n';
