@@ -239,16 +239,16 @@ export function addFileTemplateFields(entryPath: string, fields: Map<string, str
   const filename = basename(entryPath, extension);
   const dirnameExcludingFolder = dirname(entryPath).replace(new RegExp(`^(/?)${folder}/?`), '$1');
 
-  // const dirnameExcludingFolderParent = dirnameExcludingFolder.replace(new RegExp(`^[^/]*/`), '');
-  // const route = dirname(dirnameExcludingFolderParent).replace(new RegExp(`^(/?)__root/?`), '$1');
-  // const lang = basename(dirnameExcludingFolderParent);
+  const dirnameExcludingFolderParent = dirnameExcludingFolder.replace(new RegExp(`^[^/]*/`), '');
+  const route = dirname(dirnameExcludingFolderParent).replace(new RegExp(`^(/?)__root/?`), '$1');
+  const lang = basename(dirnameExcludingFolderParent);
 
   fields = fields.withMutations(map => {
     map.set('dirname', dirnameExcludingFolder);
     map.set('filename', filename);
     map.set('extension', extension === '' ? extension : extension.slice(1));
-    // map.set('route', route === '.' ? '' : route);
-    // map.set('lang', lang);
+    map.set('route', route === '.' ? '' : route);
+    map.set('lang', lang);
   });
 
   return fields;
