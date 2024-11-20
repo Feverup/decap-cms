@@ -7,6 +7,7 @@ import { isAbsolutePath, basename, fileExtensionWithSeparator, fileExtension } f
 import { onlySuccessfulPromises, flowAsync, then } from './promise';
 import unsentRequest from './unsentRequest';
 import {
+  filterByIndexFile,
   filterByExtension,
   getAllResponses,
   parseLinkHeader,
@@ -117,6 +118,7 @@ export const DecapCmsLibUtil = {
   flowAsync,
   then,
   unsentRequest,
+  filterByIndexFile,
   filterByExtension,
   parseLinkHeader,
   parseResponse,
@@ -172,6 +174,7 @@ export {
   flowAsync,
   then,
   unsentRequest,
+  filterByIndexFile,
   filterByExtension,
   parseLinkHeader,
   getAllResponses,

@@ -67,8 +67,8 @@ function MediaLibraryTop({
         <MediaLibraryHeader
           onClose={onClose}
           title={`${privateUpload ? t('mediaLibrary.mediaLibraryModal.private') : ''}${forImage
-              ? t('mediaLibrary.mediaLibraryModal.images')
-              : t('mediaLibrary.mediaLibraryModal.mediaAssets')
+            ? t('mediaLibrary.mediaLibraryModal.images')
+            : t('mediaLibrary.mediaLibraryModal.mediaAssets')
             }`}
           isPrivate={privateUpload}
         />

@@ -10,6 +10,7 @@ import {
   runWithLock,
   unpublishedEntries,
   entriesByFiles,
+  filterByIndexFile,
   filterByExtension,
   branchFromContentKey,
   entriesByFolder,
@@ -155,10 +156,14 @@ export default class Azure implements Implementation {
     return Promise.resolve(this.token);
   }
 
-  async entriesByFolder(folder: string, extension: string, depth: number) {
+  async entriesByFolder(folder: string, extension: string, depth: number, indexFile: string) {
     const listFiles = async () => {
       const files = await this.api!.listFiles(folder, depth > 1);
-      const filtered = files.filter(file => filterByExtension({ path: file.path }, extension));
+      const filtered = files.filter(
+        file =>
+          filterByIndexFile({ path: file.path }, indexFile) &&
+          filterByExtension({ path: file.path }, extension),
+      );
       return filtered.map(file => ({
         id: file.id,
         path: file.path,

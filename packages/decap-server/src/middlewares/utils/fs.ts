@@ -1,7 +1,12 @@
 import path from 'path';
 import { promises as fs } from 'fs';
 
-async function listFiles(dir: string, extension: string, depth: number): Promise<string[]> {
+async function listFiles(
+  dir: string,
+  extension: string,
+  depth: number,
+  indexFile: string,
+): Promise<string[]> {
   if (depth <= 0) {
     return [];
   }
@@ -12,7 +17,7 @@ async function listFiles(dir: string, extension: string, depth: number): Promise
       dirents.map(dirent => {
         const res = path.join(dir, dirent.name);
         return dirent.isDirectory()
-          ? listFiles(res, extension, depth - 1)
+          ? listFiles(res, extension, depth - 1, indexFile)
           : [res].filter(f => f.endsWith(extension));
       }),
     );
@@ -27,8 +32,9 @@ export async function listRepoFiles(
   folder: string,
   extension: string,
   depth: number,
+  indexFile: string,
 ) {
-  const files = await listFiles(path.join(repoPath, folder), extension, depth);
+  const files = await listFiles(path.join(repoPath, folder), extension, depth, indexFile);
   return files.map(f => f.slice(repoPath.length + 1));
 }
 
@@ -53,7 +59,7 @@ export async function move(from: string, to: string) {
   // move children
   const sourceDir = path.dirname(from);
   const destDir = path.dirname(to);
-  const allFiles = await listFiles(sourceDir, '', 100);
+  const allFiles = await listFiles(sourceDir, '', 100, '');
   await Promise.all(allFiles.map(file => moveFile(file, file.replace(sourceDir, destDir))));
 }
 

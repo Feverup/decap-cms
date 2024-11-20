@@ -41,12 +41,13 @@ export function localFsMiddleware({ repoPath, logger }: FsOptions) {
         }
         case 'entriesByFolder': {
           const payload = body.params as EntriesByFolderParams;
-          const { folder, extension, depth } = payload;
-          const entries = await listRepoFiles(repoPath, folder, extension, depth).then(files =>
-            entriesFromFiles(
-              repoPath,
-              files.map(file => ({ path: file })),
-            ),
+          const { folder, extension, depth, indexFile } = payload;
+          const entries = await listRepoFiles(repoPath, folder, extension, depth, indexFile).then(
+            files =>
+              entriesFromFiles(
+                repoPath,
+                files.map(file => ({ path: file })),
+              ),
           );
           res.json(entries);
           break;
@@ -91,7 +92,7 @@ export function localFsMiddleware({ repoPath, logger }: FsOptions) {
         }
         case 'getMedia': {
           const { mediaFolder } = body.params as GetMediaParams;
-          const files = await listRepoFiles(repoPath, mediaFolder, '', 1);
+          const files = await listRepoFiles(repoPath, mediaFolder, '', 1, '');
           const mediaFiles = await Promise.all(files.map(file => readMediaFile(repoPath, file)));
           res.json(mediaFiles);
           break;

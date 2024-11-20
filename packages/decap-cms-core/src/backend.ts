@@ -323,6 +323,10 @@ function i18nRulestring(ruleString: string, { defaultLocale, structure }: I18nIn
   return ruleString;
 }
 
+function collectionIndexFile(collection: Collection) {
+  return collection.get('meta')?.get('path')?.get('index_file') as string;
+}
+
 function collectionRegex(collection: Collection): RegExp | undefined {
   let ruleString = '';
 
@@ -538,10 +542,12 @@ export class Backend {
     if (collectionType === FOLDER) {
       listMethod = () => {
         const depth = collectionDepth(collection);
+        const indexFile = collectionIndexFile(collection);
         return this.implementation.entriesByFolder(
           collection.get('folder') as string,
           extension,
           depth,
+          indexFile,
         );
       };
     } else if (collectionType === FILES) {
@@ -583,12 +589,14 @@ export class Backend {
   async listAllEntries(collection: Collection) {
     if (collection.get('folder') && this.implementation.allEntriesByFolder) {
       const depth = collectionDepth(collection);
+      const indexFile = collectionIndexFile(collection);
       const extension = selectFolderEntryExtension(collection);
       return this.implementation
         .allEntriesByFolder(
           collection.get('folder') as string,
           extension,
           depth,
+          indexFile,
           collectionRegex(collection),
         )
         .then(entries => this.processEntries(entries, collection));
@@ -1354,7 +1362,7 @@ export class Backend {
     const format = resolveFormat(collection, entry.toJS());
     const fieldsOrder = this.fieldsOrder(collection, entry);
     const fieldsComments = selectFieldsComments(collection, entry);
-    let content = await format.toFile(entry.get('data').toJS(), fieldsOrder, fieldsComments);
+    let content = format.toFile(entry.get('data').toJS(), fieldsOrder, fieldsComments);
     if (content.slice(-1) != '\n') {
       // add the EOL if it does not exist.
       content += '\n';

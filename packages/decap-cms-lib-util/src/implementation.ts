@@ -37,7 +37,7 @@ export interface UnpublishedEntryDiff {
   id: string;
   path: string;
   newFile: boolean;
-  deletedFile: boolean;
+  deleteFile: boolean;
 }
 
 export interface UnpublishedEntry {
@@ -145,6 +145,7 @@ export interface Implementation {
     folder: string,
     extension: string,
     depth: number,
+    indexFile: string,
   ) => Promise<ImplementationEntry[]>;
   entriesByFiles: (files: ImplementationFile[]) => Promise<ImplementationEntry[]>;
 
@@ -201,6 +202,7 @@ export interface Implementation {
     folder: string,
     extension: string,
     depth: number,
+    indexFile: string,
     pathRegex?: RegExp,
   ) => Promise<ImplementationEntry[]>;
   traverseCursor?: (
@@ -493,9 +495,11 @@ type AllEntriesByFolderArgs = GetKeyArgs &
       folder: string,
       extension: string,
       depth: number,
+      indexFile: string,
     ) => Promise<ImplementationFile[]>;
     readFile: ReadFile;
     readFileMetadata: ReadFileMetadata;
+    indexFile: string;
     getDefaultBranch: () => Promise<{ name: string; sha: string }>;
     isShaExistsInBranch: (branch: string, sha: string) => Promise<boolean>;
     apiName: string;
@@ -513,6 +517,7 @@ export async function allEntriesByFolder({
   folder,
   extension,
   depth,
+  indexFile,
   getDefaultBranch,
   isShaExistsInBranch,
   getDifferences,
@@ -521,7 +526,7 @@ export async function allEntriesByFolder({
   customFetch,
 }: AllEntriesByFolderArgs) {
   async function listAllFilesAndPersist() {
-    const files = await listAllFiles(folder, extension, depth);
+    const files = await listAllFiles(folder, extension, depth, indexFile);
     const branch = await getDefaultBranch();
     await persistLocalTree({
       localForage,

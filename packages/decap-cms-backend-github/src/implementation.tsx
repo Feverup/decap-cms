@@ -13,6 +13,7 @@ import {
   unpublishedEntries,
   getMediaDisplayURL,
   getMediaAsBlob,
+  filterByIndexFile,
   filterByExtension,
   getPreviewStatus,
   runWithLock,
@@ -472,7 +473,7 @@ export default class GitHub implements Implementation {
     return { cursor, files: pageFiles };
   };
 
-  async entriesByFolder(folder: string, extension: string, depth: number) {
+  async entriesByFolder(folder: string, extension: string, depth: number, indexFile: string) {
     const repoURL = this.api!.originRepoURL;
 
     let cursor: Cursor;
@@ -483,7 +484,7 @@ export default class GitHub implements Implementation {
         depth,
       }).then(files => {
         const filtered = files.filter(
-          file => filterByExtension(file, extension),
+          file => filterByIndexFile(file, indexFile) && filterByExtension(file, extension),
         );
         const result = this.getCursorAndFiles(filtered, 1);
         cursor = result.cursor;
@@ -505,7 +506,7 @@ export default class GitHub implements Implementation {
     return files;
   }
 
-  async allEntriesByFolder(folder: string, extension: string, depth: number, pathRegex?: RegExp) {
+  async allEntriesByFolder(folder: string, extension: string, depth: number, indexFile: string, pathRegex?: RegExp) {
     const repoURL = this.api!.originRepoURL;
 
     const listFiles = () =>
@@ -514,7 +515,7 @@ export default class GitHub implements Implementation {
         depth,
       }).then(files =>
         files.filter(
-          file => (!pathRegex || pathRegex.test(file.path)) && filterByExtension(file, extension),
+          file => filterByIndexFile(file, indexFile) && (!pathRegex || pathRegex.test(file.path)) && filterByExtension(file, extension),
         ),
       );
 
