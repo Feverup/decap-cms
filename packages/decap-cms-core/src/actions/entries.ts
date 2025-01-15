@@ -17,7 +17,7 @@ import { waitForMediaLibraryToLoad, loadMedia } from './mediaLibrary';
 import { waitUntil } from './waitUntil';
 import { selectIsFetching, selectEntriesSortFields, selectEntryByPath } from '../reducers/entries';
 import { selectCustomPath } from '../reducers/entryDraft';
-import { navigateToEntry } from '../routing/history';
+import { navigateToCollection, navigateToEntry } from '../routing/history';
 import { getProcessSegment } from '../lib/formatters';
 import { hasI18n, duplicateDefaultI18nFields, serializeI18n, I18N, I18N_FIELD } from '../lib/i18n';
 import { loadUnpublishedEntry } from './editorialWorkflow';
@@ -982,16 +982,22 @@ export function deleteEntry(collection: Collection, slug: string) {
       .deleteEntry(state, collection, slug)
       .then(async () => {
         dispatch(entryDeleted(collection, slug));
-        dispatch(loadUnpublishedEntry(collection, slug));
         dispatch(
           addNotification({
             message: {
-              key: 'ui.toast.entryBeingUnpublished',
+              key: backend.implementation.deleteCollectionFiles
+                ? 'ui.toast.entryBeingUnpublished'
+                : 'ui.toast.entryUnpublished',
             },
             type: 'success',
             dismissAfter: 4000,
           }),
         );
+        if (backend.implementation.deleteCollectionFiles) {
+          dispatch(loadUnpublishedEntry(collection, slug));
+        } else {
+          navigateToCollection(collection.get('name'));
+        }
       })
       .catch((error: Error) => {
         dispatch(
