@@ -156,7 +156,7 @@ export interface Implementation {
   persistEntry: (entry: Entry, opts: PersistOptions) => Promise<void>;
   persistMedia: (file: AssetProxy, opts: PersistOptions) => Promise<ImplementationMediaFile>;
   deleteFiles: (paths: string[], commitMessage: string) => Promise<void>;
-  deleteCollectionFiles: (
+  deleteCollectionFiles?: (
     paths: string[],
     commitMessage: string,
     collection: string,

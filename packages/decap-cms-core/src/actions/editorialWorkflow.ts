@@ -249,7 +249,7 @@ export function loadUnpublishedEntry(collection: Collection, slug: string) {
         const { entries, pagination } = await backend.unpublishedEntries(state.collections);
         dispatch(unpublishedEntriesLoaded(entries, pagination));
         // eslint-disable-next-line no-empty
-      } catch (e) { }
+      } catch (e) {}
     }
 
     dispatch(unpublishedEntryLoading(collection, slug));
@@ -496,7 +496,10 @@ export function publishUnpublishedEntry(
       if (!publishStack && state.stack.status.status) {
         dispatch(
           addNotification({
-            message: { key: 'ui.toast.onFailToPublishEntry', details: "\nCan't publish having stack changes.\n\n You must stack them!" },
+            message: {
+              key: 'ui.toast.onFailToPublishEntry',
+              details: "\nCan't publish having stack changes.\n\n You must stack them!",
+            },
             type: 'error',
             dismissAfter: 8000,
           }),
@@ -511,7 +514,9 @@ export function publishUnpublishedEntry(
       dispatch(loadMedia());
       dispatch(
         addNotification({
-          message: { key: isDeleteWorkflow ? 'ui.toast.entryUnpublished' : 'ui.toast.entryPublished' },
+          message: {
+            key: isDeleteWorkflow ? 'ui.toast.entryUnpublished' : 'ui.toast.entryPublished',
+          },
           type: 'success',
           dismissAfter: 4000,
         }),
@@ -553,23 +558,29 @@ export function unpublishPublishedEntry(collection: Collection, slug: string) {
     dispatch(unpublishedEntryPersisting(collection, slug));
     return backend
       .deleteEntry(state, collection, slug)
-      .then(() =>
-        backend.persistEntry({
-          config: state.config,
-          collection,
-          entryDraft,
-          assetProxies: [],
-          usedSlugs: List(),
-          status: status.get('PENDING_PUBLISH'),
-        }),
-      )
+      .then(() => {
+        if (!backend.implementation.deleteCollectionFiles) {
+          backend.persistEntry({
+            config: state.config,
+            collection,
+            entryDraft,
+            assetProxies: [],
+            usedSlugs: List(),
+            status: status.get('PENDING_PUBLISH'),
+          });
+        }
+      })
       .then(() => {
         dispatch(unpublishedEntryPersisted(collection, entry));
         dispatch(entryDeleted(collection, slug));
         dispatch(loadUnpublishedEntry(collection, slug));
         dispatch(
           addNotification({
-            message: { key: 'ui.toast.entryUnpublished' },
+            message: {
+              key: backend.implementation.deleteCollectionFiles
+                ? 'ui.toast.entryBeingUnpublished'
+                : 'ui.toast.entryUnpublished',
+            },
             type: 'success',
             dismissAfter: 4000,
           }),
