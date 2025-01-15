@@ -444,7 +444,7 @@ export class EditorToolbar extends React.Component {
           onClick={onPublish}
         />
       );
-    }
+    };
 
     return canPublish ? (
       <ToolbarDropdown
@@ -637,20 +637,21 @@ export class EditorToolbar extends React.Component {
       </SaveButton>,
       currentStatus
         ? [
-          <React.Fragment key="workflow-status-controls">
-            {this.renderWorkflowStatusControls()}
-            {currentStatus === status.get('PENDING_PUBLISH') && this.renderNewEntryWorkflowPublishControls({ canCreate, canPublish })}
-          </React.Fragment>,
-        ]
+            <React.Fragment key="workflow-status-controls">
+              {this.renderWorkflowStatusControls()}
+              {currentStatus === status.get('PENDING_PUBLISH') &&
+                this.renderNewEntryWorkflowPublishControls({ canCreate, canPublish })}
+            </React.Fragment>,
+          ]
         : !isNewEntry && (
-          <React.Fragment key="existing-entry-workflow-publish-controls">
-            {this.renderExistingEntryWorkflowPublishControls({
-              canCreate,
-              canPublish,
-              canDelete,
-            })}
-          </React.Fragment>
-        ),
+            <React.Fragment key="existing-entry-workflow-publish-controls">
+              {this.renderExistingEntryWorkflowPublishControls({
+                canCreate,
+                canPublish,
+                canDelete,
+              })}
+            </React.Fragment>
+          ),
       !hasUnpublishedChanges && !isModification ? null : (
         <DeleteButton
           key="delete-button"

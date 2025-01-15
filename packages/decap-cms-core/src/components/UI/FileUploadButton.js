@@ -1,7 +1,14 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 
-export function FileUploadButton({ label, acceptFiles, imagesOnly, onChange, disabled, className }) {
+export function FileUploadButton({
+  label,
+  acceptFiles,
+  imagesOnly,
+  onChange,
+  disabled,
+  className,
+}) {
   return (
     <label tabIndex={'0'} className={`nc-fileUploadButton ${className || ''}`}>
       <span>{label}</span>

@@ -69,7 +69,7 @@ const styleStrings = {
   `,
   unused: `
     opacity: 0.5;
-  `
+  `,
 };
 
 const ControlContainer = styled.div`
@@ -173,19 +173,19 @@ class EditorControl extends React.Component {
 
   state = {
     activeLabel: false,
-    unused: true
+    unused: true,
   };
 
-  setFieldUnused = (unused) => {
-    if (unused === this.state.unused) return
-    return this.setState({ unused })
-  }
+  setFieldUnused = unused => {
+    if (unused === this.state.unused) return;
+    return this.setState({ unused });
+  };
 
-  isFieldUnused = (value) => {
+  isFieldUnused = value => {
     if (value === undefined) return true;
     if (List.isList(value) && value.size === 0) return true;
     return Map.isMap(value) ? this.state.unused : false;
-  }
+  };
 
   uniqueFieldId = uniqueId(`${this.props.field.get('name')}-field-`);
 
@@ -256,7 +256,7 @@ class EditorControl extends React.Component {
     const hasErrors = !!errors || childErrors;
     const isFlat = widgetName === 'object' && field.has('flat');
     const styleActive = isSelected || this.state.styleActive;
-    const unused = field.get('opacity') && (!styleActive && this.isFieldUnused(value));
+    const unused = field.get('opacity') && !styleActive && this.isFieldUnused(value);
 
     return (
       <ClassNames>
@@ -265,24 +265,28 @@ class EditorControl extends React.Component {
             className={className}
             {...(unused && {
               onClick: () => !this.state.use && this.setState({ use: true }),
-              onMouseLeave: () => this.state.use && this.setState({ use: false })
+              onMouseLeave: () => this.state.use && this.setState({ use: false }),
             })}
             css={css`
-              ${(!this.state.use && unused) && styleStrings.unused}
+              ${!this.state.use && unused && styleStrings.unused}
               ${isHidden && styleStrings.hidden};
             `}
           >
             {widgetTitle && <h1>{widgetTitle}</h1>}
             <ControlTopbar>
-              {!isFlat && widget.globalStyles && <Global styles={coreCss`${widget.globalStyles}`} />}
-              {!isFlat && <LabelComponent
-                field={field}
-                isActive={isSelected || this.state.styleActive}
-                hasErrors={hasErrors}
-                uniqueFieldId={this.uniqueFieldId}
-                isFieldOptional={isFieldOptional}
-                t={t}
-              />}
+              {!isFlat && widget.globalStyles && (
+                <Global styles={coreCss`${widget.globalStyles}`} />
+              )}
+              {!isFlat && (
+                <LabelComponent
+                  field={field}
+                  isActive={isSelected || this.state.styleActive}
+                  hasErrors={hasErrors}
+                  uniqueFieldId={this.uniqueFieldId}
+                  isFieldOptional={isFieldOptional}
+                  t={t}
+                />
+              )}
               {errors && (
                 <ControlErrorsList>
                   {errors.map(

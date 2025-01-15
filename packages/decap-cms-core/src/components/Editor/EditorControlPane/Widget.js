@@ -242,9 +242,9 @@ export default class Widget extends Component {
   onChangeObject = (field, newValue, newMetadata) => {
     const isWrapper = this.props.field.has('wrapper');
     const parentName = field.get('parentName');
-    const newObjectValue = parentName ?
-      this.getObjectValue().setIn([...parentName.split('.'), field.get('name')], newValue) :
-      this.getObjectValue().set(field.get('name'), newValue);
+    const newObjectValue = parentName
+      ? this.getObjectValue().setIn([...parentName.split('.'), field.get('name')], newValue)
+      : this.getObjectValue().set(field.get('name'), newValue);
 
     return this.props.onChangeObject(
       isWrapper ? field : this.props.field,

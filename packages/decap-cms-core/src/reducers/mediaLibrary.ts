@@ -71,17 +71,31 @@ function mediaLibrary(state = Map(defaultState), action: MediaLibraryAction) {
         const { payload } = action;
         const { images = {} } = action.payload;
 
-        map.set('validation', Map({
-          ...payload,
-          images: Map(images)
-        }));
+        map.set(
+          'validation',
+          Map({
+            ...payload,
+            images: Map(images),
+          }),
+        );
       });
 
     case MEDIA_LIBRARY_OPEN: {
-      const { controlID, forImage, privateUpload, config, validation = Map(), field, value, replaceIndex } = action.payload;
+      const {
+        controlID,
+        forImage,
+        privateUpload,
+        config,
+        validation = Map(),
+        field,
+        value,
+        replaceIndex,
+      } = action.payload;
       const libConfig = config || Map();
       const mediaLibraryValidation = state.get('validation');
-      const mediaValidation = mediaLibraryValidation ? mediaLibraryValidation.mergeDeep(validation) : validation;
+      const mediaValidation = mediaLibraryValidation
+        ? mediaLibraryValidation.mergeDeep(validation)
+        : validation;
       const privateUploadChanged = state.get('privateUpload') !== privateUpload;
       if (privateUploadChanged) {
         return Map({

@@ -421,10 +421,11 @@ export default class ListControl extends React.Component {
         this.getValueType() !== valueTypes.SINGLE ||
         (this.getValueType() === valueTypes.SINGLE && listFieldObjectWidget);
       const parentName = f.get('parentName');
-      const newObjectValue = withNameKey ? (parentName ?
-        this.getObjectValue(index).setIn([...parentName.split('.'), f.get('name')], newValue) :
-        this.getObjectValue(index).set(f.get('name'), newValue)) :
-        newValue;
+      const newObjectValue = withNameKey
+        ? parentName
+          ? this.getObjectValue(index).setIn([...parentName.split('.'), f.get('name')], newValue)
+          : this.getObjectValue(index).set(f.get('name'), newValue)
+        : newValue;
       const parsedMetadata = {
         [collectionName]: Object.assign(metadata ? metadata.toJS() : {}, newMetadata || {}),
       };

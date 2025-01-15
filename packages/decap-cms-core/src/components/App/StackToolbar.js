@@ -122,7 +122,7 @@ export class EditorToolbar extends React.Component {
   };
 
   handleChangeStatus = newStatusName => {
-    const { updateStackStatus, currentStatus, } = this.props;
+    const { updateStackStatus, currentStatus } = this.props;
     const newStatus = status.get(newStatusName);
     updateStackStatus(currentStatus, newStatus);
   };
@@ -140,7 +140,7 @@ export class EditorToolbar extends React.Component {
     if (!window.confirm(t('editor.editor.onStackPublishing'))) {
       return;
     }
-    publishStack()
+    publishStack();
   };
 
   componentDidMount() {
@@ -158,7 +158,7 @@ export class EditorToolbar extends React.Component {
   }
 
   renderWorkflowStatusControls = () => {
-    const { isUpdatingStatus, currentStatus, t, } = this.props;
+    const { isUpdatingStatus, currentStatus, t } = this.props;
 
     const statusToTranslation = {
       [status.get('DRAFT')]: t('editor.editorToolbar.draft'),
@@ -220,17 +220,11 @@ export class EditorToolbar extends React.Component {
           onClick={this.handlePublish}
         />
       </ToolbarDropdown>
-    )
+    );
   };
 
   renderWorkflowControls = () => {
-    const {
-      useOpenAuthoring,
-      isDeleting,
-      currentStatus,
-      collection,
-      t,
-    } = this.props;
+    const { useOpenAuthoring, isDeleting, currentStatus, collection, t } = this.props;
 
     const canCreate = collection.get('create');
     const canPublish = collection.get('publish') && !useOpenAuthoring;
@@ -239,15 +233,12 @@ export class EditorToolbar extends React.Component {
       currentStatus && [
         this.renderWorkflowStatusControls(),
         currentStatus === status.get('PENDING_PUBLISH') &&
-        this.renderNewEntryWorkflowPublishControls({ canCreate, canPublish }),
-        (
-          <DeleteButton
-            key="delete-button"
-            onClick={this.handleDelete}
-          >
-            {isDeleting ? t('editor.editorToolbar.discarding') : t('editor.editorToolbar.discardChanges')}
-          </DeleteButton>
-        ),
+          this.renderNewEntryWorkflowPublishControls({ canCreate, canPublish }),
+        <DeleteButton key="delete-button" onClick={this.handleDelete}>
+          {isDeleting
+            ? t('editor.editorToolbar.discarding')
+            : t('editor.editorToolbar.discardChanges')}
+        </DeleteButton>,
       ],
     ];
   };
@@ -255,9 +246,7 @@ export class EditorToolbar extends React.Component {
   render() {
     return (
       <ToolbarSectionMain>
-        <ToolbarSubSectionFirst>
-          {this.renderWorkflowControls()}
-        </ToolbarSubSectionFirst>
+        <ToolbarSubSectionFirst>{this.renderWorkflowControls()}</ToolbarSubSectionFirst>
       </ToolbarSectionMain>
     );
   }
@@ -267,14 +256,14 @@ function mapStateToProps(state) {
   const { status } = state.stack;
   return {
     currentStatus: status.status,
-    ...status
-  }
+    ...status,
+  };
 }
 
 const mapDispatchToProps = {
   updateStackStatus,
   publishStack,
-  closeStack
+  closeStack,
 };
 
 export default connect(mapStateToProps, mapDispatchToProps)(translate()(EditorToolbar));

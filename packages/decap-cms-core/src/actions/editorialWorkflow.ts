@@ -249,7 +249,7 @@ export function loadUnpublishedEntry(collection: Collection, slug: string) {
         const { entries, pagination } = await backend.unpublishedEntries(state.collections);
         dispatch(unpublishedEntriesLoaded(entries, pagination));
         // eslint-disable-next-line no-empty
-      } catch (e) { }
+      } catch (e) {}
     }
 
     dispatch(unpublishedEntryLoading(collection, slug));
@@ -496,7 +496,10 @@ export function publishUnpublishedEntry(
       if (!publishStack && state.stack.status.status) {
         dispatch(
           addNotification({
-            message: { key: 'ui.toast.onFailToPublishEntry', details: "\nCan't publish having stack changes.\n\n You must stack them!" },
+            message: {
+              key: 'ui.toast.onFailToPublishEntry',
+              details: "\nCan't publish having stack changes.\n\n You must stack them!",
+            },
             type: 'error',
             dismissAfter: 8000,
           }),
@@ -511,7 +514,9 @@ export function publishUnpublishedEntry(
       dispatch(loadMedia());
       dispatch(
         addNotification({
-          message: { key: isDeleteWorkflow ? 'ui.toast.entryUnpublished' : 'ui.toast.entryPublished' },
+          message: {
+            key: isDeleteWorkflow ? 'ui.toast.entryUnpublished' : 'ui.toast.entryPublished',
+          },
           type: 'success',
           dismissAfter: 4000,
         }),

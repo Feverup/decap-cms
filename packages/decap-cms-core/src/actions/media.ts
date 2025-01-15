@@ -120,7 +120,8 @@ export function getAsset({ collection, entry, path, field }: GetAssetArgs) {
     const resolvedPath = selectMediaFilePath(state.config, collection, entry, path, field);
     const entryAssetPath = getEntryMapMediaFilePath(entry, resolvedPath);
 
-    let { asset, isLoading, error } = state.medias[entryAssetPath] || state.medias[resolvedPath] || {};
+    let { asset, isLoading, error } =
+      state.medias[entryAssetPath] || state.medias[resolvedPath] || {};
     if (isLoading) {
       return emptyAsset;
     }

@@ -206,9 +206,8 @@ class Header extends React.Component {
               <StackToolbar
                 hasWorkflow={hasWorkflow}
                 collection={new Map()}
-                loadDeployPreview={() => { }}
-              >
-              </StackToolbar>
+                loadDeployPreview={() => {}}
+              ></StackToolbar>
             )}
             {creatableCollections.size > 0 && (
               <Dropdown
@@ -243,7 +242,7 @@ class Header extends React.Component {
 
 const mapDispatchToProps = {
   checkBackendStatus,
-  checkStackStatus
+  checkStackStatus,
 };
 
 export default connect(null, mapDispatchToProps)(translate()(Header));

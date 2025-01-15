@@ -171,30 +171,30 @@ class MediaLibrary extends React.Component {
     return orderBy(tableData, fieldNames, directions);
   };
 
-  loadImage = (src) => {
+  loadImage = src => {
     return new Promise((resolve, reject) => {
       const img = new Image();
       img.onload = () => resolve(img);
       img.onerror = reject;
       img.src = src;
     });
-  }
+  };
 
   getAspectRatio = (width, height) => {
     function gcd(width, height) {
-      return (height == 0) ? width : gcd(height, width % height);
+      return height == 0 ? width : gcd(height, width % height);
     }
     const gcdValue = gcd(width, height);
-    return `${width / gcdValue}:${height / gcdValue}`
-  }
+    return `${width / gcdValue}:${height / gcdValue}`;
+  };
 
   getRoundAspectRatio = (width, height) => {
     const ratio = width / height;
     return Math.round(ratio * 10) / 10;
-  }
+  };
 
-  getDisplayURL = (file) => {
-    if (!file) return
+  getDisplayURL = file => {
+    if (!file) return;
 
     const { displayURL } = file;
 
@@ -205,15 +205,18 @@ class MediaLibrary extends React.Component {
     const { displayURLs } = this.props;
     const loadedDisplayURLs = displayURLs.toJS();
     return loadedDisplayURLs[displayURL.id]?.url;
-  }
+  };
 
-  validateFile = async (file) => {
-    const { files: currentFiles, forImage, t, validation, value, } = this.props;
+  validateFile = async file => {
+    const { files: currentFiles, forImage, t, validation, value } = this.props;
 
     if (!validation) return file;
 
     const fileExtensions = validation.get('file_extensions')?.toJS();
-    if (fileExtensions && !fileExtensions.find(extension => new RegExp(`.*${extension}$`).test(file.name))) {
+    if (
+      fileExtensions &&
+      !fileExtensions.find(extension => new RegExp(`.*${extension}$`).test(file.name))
+    ) {
       return window.alert(
         t('mediaLibrary.mediaLibrary.fileNamePatternError', {
           pattern: fileExtensions.join(),
@@ -222,7 +225,7 @@ class MediaLibrary extends React.Component {
     }
 
     const fileNamePattern = validation.get('file_name_pattern');
-    if (fileNamePattern && !(new RegExp(fileNamePattern).test(file.name))) {
+    if (fileNamePattern && !new RegExp(fileNamePattern).test(file.name)) {
       return window.alert(
         t('mediaLibrary.mediaLibrary.fileNamePatternError', {
           pattern: fileNamePattern,
@@ -235,15 +238,14 @@ class MediaLibrary extends React.Component {
       const isFile = file instanceof File;
       if (isFile) {
         const valueName = basename(value);
-        const fileModuleName = valueName.replace(/^([^_]*).*/, "$1_");
+        const fileModuleName = valueName.replace(/^([^_]*).*/, '$1_');
         const fileNameRegex = new RegExp(`^${fileModuleName}`);
         if (!fileNameRegex.test(file.name)) {
           return window.alert(
             t('mediaLibrary.mediaLibrary.fileNamePatternError', {
               pattern: `${fileModuleName}name`,
-            })
+            }),
           );
-
         }
       }
     }
@@ -268,7 +270,6 @@ class MediaLibrary extends React.Component {
         min_height: minHeight,
       } = imageValidation;
 
-
       const displayURL = this.getDisplayURL(file);
       const fileImage = await this.loadImage(displayURL);
 
@@ -282,38 +283,44 @@ class MediaLibrary extends React.Component {
 
       if (keepAspectRatio && value) {
         const valueName = basename(value);
-        const currentFile = currentFiles && currentFiles.find(findFile => findFile.name === valueName);
+        const currentFile =
+          currentFiles && currentFiles.find(findFile => findFile.name === valueName);
         if (currentFile) {
           const displayURL = this.getDisplayURL(currentFile);
           const existingImage = await this.loadImage(displayURL);
 
-          const currentRoundAspectRatio = this.getRoundAspectRatio(existingImage.width, existingImage.height);
+          const currentRoundAspectRatio = this.getRoundAspectRatio(
+            existingImage.width,
+            existingImage.height,
+          );
           const fileRoundAspectRatio = this.getRoundAspectRatio(fileImage.width, fileImage.height);
           if (currentRoundAspectRatio !== fileRoundAspectRatio) {
-            return window.alert(`${file.name} should have a size of ${existingImage.width}x${existingImage.height} the current size is ${fileImage.width}x${fileImage.height}.`);
+            return window.alert(
+              `${file.name} should have a size of ${existingImage.width}x${existingImage.height} the current size is ${fileImage.width}x${fileImage.height}.`,
+            );
           }
         }
       }
 
       if (maxWidth && fileImage.width > maxWidth) {
-        return window.alert(`${file.name} must have a max width of ${maxWidth}.`)
+        return window.alert(`${file.name} must have a max width of ${maxWidth}.`);
       }
 
       if (maxHeight && fileImage.height > maxHeight) {
-        return window.alert(`${file.name} must have a max height of ${maxHeight}.`)
+        return window.alert(`${file.name} must have a max height of ${maxHeight}.`);
       }
 
       if (minWidth && fileImage.width < minWidth) {
-        return window.alert(`${file.name} must have a min width of ${minWidth}.`)
+        return window.alert(`${file.name} must have a min width of ${minWidth}.`);
       }
 
       if (minHeight && fileImage.height < minHeight) {
-        return window.alert(`${file.name} must have a min height of ${minHeight}.`)
+        return window.alert(`${file.name} must have a min height of ${minHeight}.`);
       }
     }
 
     return file;
-  }
+  };
 
   handleClose = () => {
     this.props.closeMediaLibrary();
@@ -344,7 +351,7 @@ class MediaLibrary extends React.Component {
     event.persist();
     event.stopPropagation();
     event.preventDefault();
-    const { forImage, persistMedia, privateUpload, field, validation, } = this.props;
+    const { forImage, persistMedia, privateUpload, field, validation } = this.props;
     const { files: fileList } = event.dataTransfer || event.target;
     const files = [...fileList];
     const file = await this.validateFile(files[0]);

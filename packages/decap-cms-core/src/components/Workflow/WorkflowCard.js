@@ -121,25 +121,19 @@ const CardDate = translate()(({ t, date, author }) => {
   }
 });
 
-const PublishButtonWorkflow = translate()(({
-  canPublish,
-  onPublish,
-  isModification,
-  isDeleteWorkflow,
-  t
-}) => {
-  const Component = isDeleteWorkflow ? PublishDeleteButton : PublishButton;
+const PublishButtonWorkflow = translate()(
+  ({ canPublish, onPublish, isModification, isDeleteWorkflow, t }) => {
+    const Component = isDeleteWorkflow ? PublishDeleteButton : PublishButton;
 
-  return (
-    <Component
-      disabled={!canPublish} onClick={onPublish}>
-      {isModification
-        ? t('workflow.workflowCard.publishChanges')
-        : t('workflow.workflowCard.publishNewEntry')}
-    </Component>
-  );
-});
-
+    return (
+      <Component disabled={!canPublish} onClick={onPublish}>
+        {isModification
+          ? t('workflow.workflowCard.publishChanges')
+          : t('workflow.workflowCard.publishNewEntry')}
+      </Component>
+    );
+  },
+);
 
 function WorkflowCard({
   collectionLabel,
@@ -172,7 +166,13 @@ function WorkflowCard({
             ? t('workflow.workflowCard.deleteChanges')
             : t('workflow.workflowCard.deleteNewEntry')}
         </DeleteButton>
-        {allowPublish && <PublishButtonWorkflow canPublish={canPublish} onPublish={onPublish} isDeleteWorkflow={isDeleteWorkflow} />}
+        {allowPublish && (
+          <PublishButtonWorkflow
+            canPublish={canPublish}
+            onPublish={onPublish}
+            isDeleteWorkflow={isDeleteWorkflow}
+          />
+        )}
       </CardButtonContainer>
     </WorkflowCardContainer>
   );

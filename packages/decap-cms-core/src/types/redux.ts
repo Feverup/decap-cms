@@ -435,19 +435,19 @@ export interface CmsMediaLibrary {
 }
 
 export interface CmsMediaImageValidation {
-  aspect_ratio: string
+  aspect_ratio: string;
   keep_aspect_ratio: boolean;
-  max_width: number
-  max_height: number
-  min_width: number
-  min_height: number
+  max_width: number;
+  max_height: number;
+  min_width: number;
+  min_height: number;
 }
 
 export interface CmsMediaValidation {
-  file_extensions: Array<string>
-  keep_file_name: boolean
-  max_file_size: number
-  file_name_pattern: string
+  file_extensions: Array<string>;
+  keep_file_name: boolean;
+  max_file_size: number;
+  file_name_pattern: string;
   images?: CmsMediaImageValidation;
 }
 
@@ -626,7 +626,7 @@ type i18n = StaticallyTypedRecord<{
 
 export type Format = keyof typeof formatExtensions | string;
 
-export type PrettierMapOptions = Map<keyof PrettierOptions, PrettierOptions[keyof PrettierOptions]>
+export type PrettierMapOptions = Map<keyof PrettierOptions, PrettierOptions[keyof PrettierOptions]>;
 
 type CollectionObject = {
   name: string;

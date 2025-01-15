@@ -7,7 +7,11 @@ import { once } from 'lodash';
 import { getMediaLibrary } from './lib/registry';
 import { store } from './redux';
 import { configFailed } from './actions/config';
-import { createMediaLibrary, createMediaLibraryValidation, insertMedia } from './actions/mediaLibrary';
+import {
+  createMediaLibrary,
+  createMediaLibraryValidation,
+  insertMedia,
+} from './actions/mediaLibrary';
 
 import type { MediaLibraryInstance, CmsMediaValidation } from './types/redux';
 
@@ -39,7 +43,9 @@ const initializeMediaLibrary = once(async function initializeMediaLibrary(name, 
   }
 });
 
-const initializeMediaValidation = once(async function initializeMediaValidation(validation: CmsMediaValidation) {
+const initializeMediaValidation = once(async function initializeMediaValidation(
+  validation: CmsMediaValidation,
+) {
   if (validation) return store.dispatch(createMediaLibraryValidation(validation));
 });
 
