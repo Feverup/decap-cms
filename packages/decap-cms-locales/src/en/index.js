@@ -232,7 +232,8 @@ const en = {
     mediaLibrary: {
       onDelete: 'Are you sure you want to delete selected media?',
       fileTooLarge: 'File too large.\nConfigured to not allow files greater than %{size} kB.',
-      fileNamePatternError: 'The name of the file must be with this pattern:\n\n%{pattern}\n\nPlease rename the file with a correct file name in order to continue.',
+      fileNamePatternError:
+        'The name of the file must be with this pattern:\n\n%{pattern}\n\nPlease rename the file with a correct file name in order to continue.',
     },
     mediaLibraryModal: {
       loading: 'Loading...',
@@ -322,7 +323,8 @@ const en = {
       inReviewHeader: 'In Review',
       readyHeader: 'Ready',
       inStaleHeader: 'Stale',
-      onStaleUpdate: 'Entry can\'t be manually updated to stale status! Please discard changes insted of using stale status.',
+      onStaleUpdate:
+        "Entry can't be manually updated to stale status! Please discard changes insted of using stale status.",
       currentEntries: '%{smart_count} entry |||| %{smart_count} entries',
     },
   },

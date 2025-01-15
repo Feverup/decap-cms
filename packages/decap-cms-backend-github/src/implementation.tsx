@@ -41,7 +41,7 @@ import type {
   UnpublishedEntryMediaFile,
   Entry,
   ApiRequest,
-  GoogleCredentials
+  GoogleCredentials,
 } from 'decap-cms-lib-util';
 import type { Semaphore } from 'semaphore';
 
@@ -93,7 +93,7 @@ export default class GitHub implements Implementation {
   appsApiRoot?: string;
   appsApiLogin?: string;
   appsAPIToken?: string;
-  googleAuth?: GoogleCredentials | null
+  googleAuth?: GoogleCredentials | null;
   baseUrl?: string;
   bypassWriteAccessCheckForAppTokens = false;
   _currentUserPromise?: Promise<GitHubUser>;
@@ -216,8 +216,8 @@ export default class GitHub implements Implementation {
   restoreUser(user: User) {
     return this.openAuthoringEnabled
       ? this.authenticateWithFork({ userData: user, getPermissionToFork: () => true }).then(() =>
-        this.authenticate(user),
-      )
+          this.authenticate(user),
+        )
       : this.authenticate(user);
   }
 
@@ -388,8 +388,10 @@ export default class GitHub implements Implementation {
       getUser: this.currentUser,
     });
     const user = await this.api!.user();
-    const isCollab = this.useApps || await this.api!.hasWriteAccess().catch(error => {
-      error.message = stripIndent`
+    const isCollab =
+      this.useApps ||
+      (await this.api!.hasWriteAccess().catch(error => {
+        error.message = stripIndent`
         Repo "${this.repo}" not found.
 
         Please ensure the repo information is spelled correctly.
@@ -398,8 +400,8 @@ export default class GitHub implements Implementation {
 
         If your repo is under an organization, ensure the organization has granted access to Decap CMS.
       `;
-      throw error;
-    });
+        throw error;
+      }));
 
     // Unauthorized user
     if (!isCollab && !this.bypassWriteAccessCheckForAppTokens) {
@@ -414,27 +416,32 @@ export default class GitHub implements Implementation {
     // }
 
     // Authorized user
-    return { ...user, token: state.token as string, google_auth: state.google_auth, useOpenAuthoring: this.useOpenAuthoring };
+    return {
+      ...user,
+      token: state.token as string,
+      google_auth: state.google_auth,
+      useOpenAuthoring: this.useOpenAuthoring,
+    };
   }
 
   updateToken(token: string) {
     this.token = token;
     this.api!.token = token;
     this.updateUserCredentials({ token });
-    return token
+    return token;
   }
 
   async getRefreshedAccessToken() {
     const tokenInfo = await fetch(this.appsAPIToken, {
       method: 'POST',
       body: JSON.stringify({
-        repo: this.repo
+        repo: this.repo,
       }),
       headers: {
         Authorization: `token ${this.googleAuth!.token}`,
-      }
-    })
-    return this.updateToken((await tokenInfo.json()).token)
+      },
+    });
+    return this.updateToken((await tokenInfo.json()).token);
   }
 
   logout() {
@@ -506,7 +513,13 @@ export default class GitHub implements Implementation {
     return files;
   }
 
-  async allEntriesByFolder(folder: string, extension: string, depth: number, indexFile: string, pathRegex?: RegExp) {
+  async allEntriesByFolder(
+    folder: string,
+    extension: string,
+    depth: number,
+    indexFile: string,
+    pathRegex?: RegExp,
+  ) {
     const repoURL = this.api!.originRepoURL;
 
     const listFiles = () =>
@@ -515,7 +528,10 @@ export default class GitHub implements Implementation {
         depth,
       }).then(files =>
         files.filter(
-          file => filterByIndexFile(file, indexFile) && (!pathRegex || pathRegex.test(file.path)) && filterByExtension(file, extension),
+          file =>
+            filterByIndexFile(file, indexFile) &&
+            (!pathRegex || pathRegex.test(file.path)) &&
+            filterByExtension(file, extension),
         ),
       );
 
@@ -774,7 +790,11 @@ export default class GitHub implements Implementation {
     );
   }
 
-  publishUnpublishedEntryStack(collection: string, slug: string, options: { stackCommitMessage: string, publishStack?: boolean }) {
+  publishUnpublishedEntryStack(
+    collection: string,
+    slug: string,
+    options: { stackCommitMessage: string; publishStack?: boolean },
+  ) {
     // publishUnpublishedEntryStack is a transactional operation
     return runWithLock(
       this.lock,

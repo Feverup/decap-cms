@@ -80,7 +80,7 @@ export default class ObjectControl extends React.Component {
     fields = List.isList(fields) ? fields : List([fields]);
     fields.forEach(field => {
       const widget = field.get('widget');
-      if (widget === 'hidden' || widget === 'object' && field.has('flat')) return;
+      if (widget === 'hidden' || (widget === 'object' && field.has('flat'))) return;
       const parentName = field.get('parentName');
       const name = field.get('name');
 
@@ -92,9 +92,9 @@ export default class ObjectControl extends React.Component {
   isFieldUnused(field, value) {
     const { isFieldUnused, setFieldUnused } = this.props;
     const isObjectField = field.get('widget') === 'object';
-    const fieldValue = value ?
-      this.getFieldValue.bind({ props: { value } })(field) :
-      this.getFieldValue(field);
+    const fieldValue = value
+      ? this.getFieldValue.bind({ props: { value } })(field)
+      : this.getFieldValue(field);
     const isUnused = isFieldUnused(fieldValue);
     if (!isUnused) {
       if (!isObjectField) setFieldUnused(false);
@@ -106,7 +106,7 @@ export default class ObjectControl extends React.Component {
       const fields = singleField ? [singleField] : multiFields;
       const isWrapper = field.has('wrapper');
       const isAnyFieldUsed = fields.some(f => {
-        if (isWrapper) return !this.isFieldUnused(f)
+        if (isWrapper) return !this.isFieldUnused(f);
         return !this.isFieldUnused(f, fieldValue);
       });
       if (isAnyFieldUsed) return false;
@@ -130,7 +130,7 @@ export default class ObjectControl extends React.Component {
     if (isMap) {
       const parentName = field.get('parentName');
       const name = field.get('name');
-      if (parentName) return value.getIn([...(parentName.split('.')), name]);
+      if (parentName) return value.getIn([...parentName.split('.'), name]);
       return value.get(name);
     }
 
@@ -212,7 +212,7 @@ export default class ObjectControl extends React.Component {
     });
 
     return [...Object.values(orderMap), ...notordered];
-  }
+  };
 
   renderFields = (multiFields, singleField, field) => {
     if (multiFields) {
@@ -224,7 +224,9 @@ export default class ObjectControl extends React.Component {
           const name = f.get('name');
 
           const fieldParentName = parentName ? `${parentName}.${name}` : name;
-          const multiFields = f.get('fields')?.map(field => field.set('parentName', fieldParentName));
+          const multiFields = f
+            .get('fields')
+            ?.map(field => field.set('parentName', fieldParentName));
           const singleField = f.get('field')?.set('parentName', fieldParentName);
 
           return mappedMultiFields.push(...this.renderFields(multiFields, singleField, f));
@@ -232,7 +234,9 @@ export default class ObjectControl extends React.Component {
         return mappedMultiFields.push(this.controlFor(f, idx));
       });
 
-      return field.has('order') ? this.orderRenderedFields(mappedMultiFields, field) : mappedMultiFields;
+      return field.has('order')
+        ? this.orderRenderedFields(mappedMultiFields, field)
+        : mappedMultiFields;
     }
     return this.controlFor(singleField);
   };
@@ -258,49 +262,49 @@ export default class ObjectControl extends React.Component {
     if (multiFields || singleField) {
       return (
         <ClassNames>
-          {({ css, cx }) => isFlat ? (
-            <div id={forID}>
-              {render && this.renderFields(multiFields, singleField, field)}
-            </div>
-          ) : (
-            <div
-              id={forID}
-              className={cx(
-                classNameWrapper,
-                css`
-                  ${styleStrings.objectWidgetTopBarContainer}
-                `,
-                {
-                  [css`
-                    ${styleStrings.nestedObjectControl}
-                  `]: forList,
-                },
-                {
-                  [css`
-                    border-color: ${colors.textFieldBorder};
-                  `]: forList ? !hasError : false,
-                },
-              )}
-            >
-              {forList ? null : (
-                <ObjectWidgetTopBar
-                  collapsed={collapsed}
-                  onCollapseToggle={this.handleCollapseToggle}
-                  heading={collapsed && this.objectLabel()}
-                  t={t}
-                />
-              )}
+          {({ css, cx }) =>
+            isFlat ? (
+              <div id={forID}>{render && this.renderFields(multiFields, singleField, field)}</div>
+            ) : (
               <div
-                className={cx({
-                  [css`
-                    ${styleStrings.collapsedObjectControl}
-                  `]: collapsed,
-                })}
+                id={forID}
+                className={cx(
+                  classNameWrapper,
+                  css`
+                    ${styleStrings.objectWidgetTopBarContainer}
+                  `,
+                  {
+                    [css`
+                      ${styleStrings.nestedObjectControl}
+                    `]: forList,
+                  },
+                  {
+                    [css`
+                      border-color: ${colors.textFieldBorder};
+                    `]: forList ? !hasError : false,
+                  },
+                )}
               >
-                {render && this.renderFields(multiFields, singleField, field)}
+                {forList ? null : (
+                  <ObjectWidgetTopBar
+                    collapsed={collapsed}
+                    onCollapseToggle={this.handleCollapseToggle}
+                    heading={collapsed && this.objectLabel()}
+                    t={t}
+                  />
+                )}
+                <div
+                  className={cx({
+                    [css`
+                      ${styleStrings.collapsedObjectControl}
+                    `]: collapsed,
+                  })}
+                >
+                  {render && this.renderFields(multiFields, singleField, field)}
+                </div>
               </div>
-            </div>
-          )}
+            )
+          }
         </ClassNames>
       );
     }

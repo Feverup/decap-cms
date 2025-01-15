@@ -126,43 +126,43 @@ export default class ControlPane extends React.Component {
 
   copyFromOtherLocale =
     ({ targetLocale, t }) =>
-      sourceLocale => {
-        if (
-          !window.confirm(
-            t('editor.editorControlPane.i18n.copyFromLocaleConfirm', {
-              locale: sourceLocale.toUpperCase(),
-            }),
-          )
-        ) {
-          return;
-        }
-        const { entry, collection } = this.props;
-        const { locales, defaultLocale } = getI18nInfo(collection);
+    sourceLocale => {
+      if (
+        !window.confirm(
+          t('editor.editorControlPane.i18n.copyFromLocaleConfirm', {
+            locale: sourceLocale.toUpperCase(),
+          }),
+        )
+      ) {
+        return;
+      }
+      const { entry, collection } = this.props;
+      const { locales, defaultLocale } = getI18nInfo(collection);
 
-        const locale = this.state.selectedLocale;
-        const i18n = locales && {
-          currentLocale: locale,
-          locales,
-          defaultLocale,
-        };
-
-        this.props.fields.forEach(field => {
-          if (isFieldTranslatable(field, targetLocale, sourceLocale)) {
-            const copyValue = getFieldValue({
-              field,
-              entry,
-              locale: sourceLocale,
-              isTranslatable: sourceLocale !== defaultLocale,
-            });
-            this.props.onChange(field, copyValue, undefined, i18n);
-          }
-        });
+      const locale = this.state.selectedLocale;
+      const i18n = locales && {
+        currentLocale: locale,
+        locales,
+        defaultLocale,
       };
+
+      this.props.fields.forEach(field => {
+        if (isFieldTranslatable(field, targetLocale, sourceLocale)) {
+          const copyValue = getFieldValue({
+            field,
+            entry,
+            locale: sourceLocale,
+            isTranslatable: sourceLocale !== defaultLocale,
+          });
+          this.props.onChange(field, copyValue, undefined, i18n);
+        }
+      });
+    };
 
   validate = async () => {
     this.props.fields.forEach(field => {
       const widget = field.get('widget');
-      if (widget === 'hidden' || widget === 'object' && field.has('flat')) return;
+      if (widget === 'hidden' || (widget === 'object' && field.has('flat'))) return;
 
       const parentName = field.get('parentName');
       const name = field.get('name');

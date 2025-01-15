@@ -228,9 +228,9 @@ export default class CodeControl extends React.Component {
   }
 
   /**
- * When the document value changes, serialize from Slate's AST back to
- * code and pass that up as the new value.
- */
+   * When the document value changes, serialize from Slate's AST back to
+   * code and pass that up as the new value.
+   */
   handleCodeChange = debounce(newValue => {
     const cursor = this.cm.doc.getCursor();
     const selections = this.cm.doc.listSelections();

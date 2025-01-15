@@ -31,9 +31,7 @@ export default class StringControl extends React.Component {
 
   shouldComponentUpdate(nextProps, nextState) {
     return Boolean(
-      nextState &&
-      (this.state.value !== nextState.value ||
-        nextProps.value !== nextState.value)
+      nextState && (this.state.value !== nextState.value || nextProps.value !== nextState.value),
     );
   }
 

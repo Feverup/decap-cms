@@ -231,7 +231,8 @@ class WorkflowList extends React.Component {
           const isDeleteWorkflow = entry.get('isDeleteWorkflow');
 
           const allowPublish = collection?.get('publish');
-          const canPublish = ownStatus === status.get('PENDING_PUBLISH') && !entry.get('isPersisting', false);
+          const canPublish =
+            ownStatus === status.get('PENDING_PUBLISH') && !entry.get('isPersisting', false);
           const postAuthor = entry.get('author');
 
           return (

@@ -267,7 +267,15 @@ export class Editor extends React.Component {
     } else if (entryDraft.get('hasChanged')) {
       window.alert(t('editor.editor.onPublishingWithUnsavedChanges'));
       return;
-    } else if (!window.confirm(t(isDeleteWorkflow ? 'editor.editor.onDeleteUnpublishedChanges' : 'editor.editor.onPublishing'))) {
+    } else if (
+      !window.confirm(
+        t(
+          isDeleteWorkflow
+            ? 'editor.editor.onDeleteUnpublishedChanges'
+            : 'editor.editor.onPublishing',
+        ),
+      )
+    ) {
       return;
     }
 
@@ -299,7 +307,7 @@ export class Editor extends React.Component {
   };
 
   handleDeleteEntry = () => {
-    const { entryDraft, newEntry, collection, deleteEntry, slug, t, } = this.props;
+    const { entryDraft, newEntry, collection, deleteEntry, slug, t } = this.props;
     if (entryDraft.get('hasChanged')) {
       if (!window.confirm(t('editor.editor.onDeleteWithUnsavedChanges'))) {
         return;
@@ -319,11 +327,23 @@ export class Editor extends React.Component {
   };
 
   handleDeleteUnpublishedChanges = async () => {
-    const { entryDraft, collection, slug, removeAssets, removeDraftEntryMediaFiles, deleteUnpublishedEntry, loadEntry, isModification, isDeleteWorkflow, t } =
-      this.props;
+    const {
+      entryDraft,
+      collection,
+      slug,
+      removeAssets,
+      removeDraftEntryMediaFiles,
+      deleteUnpublishedEntry,
+      loadEntry,
+      isModification,
+      isDeleteWorkflow,
+      t,
+    } = this.props;
     if (
       entryDraft.get('hasChanged') &&
-      !window.confirm(t('editor.editor.onDeleteUnpublishedChangesWithUnsavedChanges') || isDeleteWorkflow)
+      !window.confirm(
+        t('editor.editor.onDeleteUnpublishedChangesWithUnsavedChanges') || isDeleteWorkflow,
+      )
     ) {
       return;
     } else if (!window.confirm(t('editor.editor.onDeleteUnpublishedChanges'))) {

@@ -96,7 +96,11 @@ function MediaLibraryModal({
   displayURLs,
   t,
 }) {
-  const filteredFiles = fileExtensions ? handleFilter(files, fileExtensions) : (forImage ? handleImageFilter(files) : files);
+  const filteredFiles = fileExtensions
+    ? handleFilter(files, fileExtensions)
+    : forImage
+    ? handleImageFilter(files)
+    : files;
   const queriedFiles = !dynamicSearch && query ? handleQuery(query, filteredFiles) : filteredFiles;
   const tableData = toTableData(queriedFiles);
   const hasFiles = files && !!files.length;

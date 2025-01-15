@@ -15,7 +15,7 @@ function getLabelPrefix(labelPrefix: string) {
 }
 
 export function isCmsRefSuffix(ref: string) {
-  return ref.endsWith(REF_SUFFIX)
+  return ref.endsWith(REF_SUFFIX);
 }
 
 export function isCMSLabel(label: string, labelPrefix: string) {

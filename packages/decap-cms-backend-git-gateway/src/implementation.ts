@@ -396,7 +396,13 @@ export default class GitGateway implements Implementation {
   async entriesByFolder(folder: string, extension: string, depth: number, indexFile: string) {
     return this.backend!.entriesByFolder(folder, extension, depth, indexFile);
   }
-  allEntriesByFolder(folder: string, extension: string, depth: number, indexFile: string, pathRegex?: RegExp) {
+  allEntriesByFolder(
+    folder: string,
+    extension: string,
+    depth: number,
+    indexFile: string,
+    pathRegex?: RegExp,
+  ) {
     return this.backend!.allEntriesByFolder(folder, extension, depth, indexFile, pathRegex);
   }
   entriesByFiles(files: ImplementationFile[]) {
