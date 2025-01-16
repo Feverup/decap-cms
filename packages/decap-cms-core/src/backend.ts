@@ -1291,12 +1291,17 @@ export class Backend {
     if (hasI18n(collection)) {
       paths = getFilePaths(collection, extension, path, slug);
     }
-    await this.implementation.deleteCollectionFiles(
-      paths,
-      commitMessage,
-      collection.get('name'),
-      slug,
-    );
+
+    if (this.implementation.deleteCollectionFiles) {
+      await this.implementation.deleteCollectionFiles(
+        paths,
+        commitMessage,
+        collection.get('name'),
+        slug,
+      );
+    } else {
+      await this.implementation.deleteFiles(paths, commitMessage);
+    }
 
     await this.invokePostUnpublishEvent(entry);
   }

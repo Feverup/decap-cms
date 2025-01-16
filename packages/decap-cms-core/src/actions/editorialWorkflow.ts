@@ -558,23 +558,29 @@ export function unpublishPublishedEntry(collection: Collection, slug: string) {
     dispatch(unpublishedEntryPersisting(collection, slug));
     return backend
       .deleteEntry(state, collection, slug)
-      .then(() =>
-        backend.persistEntry({
-          config: state.config,
-          collection,
-          entryDraft,
-          assetProxies: [],
-          usedSlugs: List(),
-          status: status.get('PENDING_PUBLISH'),
-        }),
-      )
+      .then(() => {
+        if (!backend.implementation.deleteCollectionFiles) {
+          backend.persistEntry({
+            config: state.config,
+            collection,
+            entryDraft,
+            assetProxies: [],
+            usedSlugs: List(),
+            status: status.get('PENDING_PUBLISH'),
+          });
+        }
+      })
       .then(() => {
         dispatch(unpublishedEntryPersisted(collection, entry));
         dispatch(entryDeleted(collection, slug));
         dispatch(loadUnpublishedEntry(collection, slug));
         dispatch(
           addNotification({
-            message: { key: 'ui.toast.entryUnpublished' },
+            message: {
+              key: backend.implementation.deleteCollectionFiles
+                ? 'ui.toast.entryBeingUnpublished'
+                : 'ui.toast.entryUnpublished',
+            },
             type: 'success',
             dismissAfter: 4000,
           }),
