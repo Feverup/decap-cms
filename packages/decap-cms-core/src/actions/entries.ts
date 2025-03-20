@@ -37,7 +37,7 @@ import type {
   Entry,
 } from '../types/redux';
 import type { EntryValue } from '../valueObjects/Entry';
-import type { Backend } from '../backend';
+import type { Backend, HookContext } from '../backend';
 import type AssetProxy from '../valueObjects/AssetProxy';
 import type { Set } from 'immutable';
 
@@ -885,7 +885,7 @@ export function getSerializedEntry(collection: Collection, entry: Entry) {
   return serializedEntry;
 }
 
-export function persistEntry(collection: Collection, publishStack?: boolean) {
+export function persistEntry(collection: Collection, context: HookContext) {
   return async (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
     const state = getState();
     const entryDraft = state.entryDraft;
@@ -929,7 +929,7 @@ export function persistEntry(collection: Collection, publishStack?: boolean) {
         entryDraft: serializedEntryDraft,
         assetProxies,
         usedSlugs,
-        publishStack,
+        context,
       })
       .then(async (newSlug: string) => {
         dispatch(

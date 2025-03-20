@@ -220,6 +220,13 @@ const StatusButton = styled(DropdownButton)`
   color: ${colorsRaw.teal};
 
   ${props =>
+    props.label === 'processing' &&
+    css`
+      background-color: ${colors.processingBackground};
+      color: ${colors.processingText};
+   `}
+
+  ${props =>
     props.label === 'stale' &&
     css`
       background-color: ${colors.staleBackground};
@@ -390,6 +397,7 @@ export class EditorToolbar extends React.Component {
       [status.get('DRAFT')]: t('editor.editorToolbar.draft'),
       [status.get('PENDING_REVIEW')]: t('editor.editorToolbar.inReview'),
       [status.get('PENDING_PUBLISH')]: t('editor.editorToolbar.ready'),
+      [status.get('PROCESSING')]: t('editor.editorToolbar.inProcessing'),
       [status.get('STALE')]: t('editor.editorToolbar.inStale'),
     };
 

@@ -15,7 +15,7 @@ import { selectEntryCollectionTitle } from '../../reducers/collections';
 const WorkflowListContainer = styled.div`
   min-height: 60%;
   display: grid;
-  grid-template-columns: 25% 25% 25% 25%;
+  grid-template-columns: 20% 20% 20% 20% 20%;
 `;
 
 const WorkflowListContainerOpenAuthoring = styled.div`
@@ -106,6 +106,13 @@ const ColumnHeader = styled.h2`
     `}
 
   ${props =>
+    props.name === 'processing' &&
+    css`
+      background-color: ${colors.processingBackground};
+      color: ${colors.processingText};
+   `}
+
+  ${props =>
     props.name === 'stale' &&
     css`
       background-color: ${colors.staleBackground};
@@ -128,12 +135,14 @@ function getColumnHeaderText(columnName, t) {
   switch (columnName) {
     case 'draft':
       return t('workflow.workflowList.draftHeader');
-    case 'stale':
-      return t('workflow.workflowList.inStaleHeader');
     case 'pending_review':
       return t('workflow.workflowList.inReviewHeader');
     case 'pending_publish':
       return t('workflow.workflowList.readyHeader');
+    case 'processing':
+      return t('workflow.workflowList.inProcessingHeader');
+    case 'stale':
+      return t('workflow.workflowList.inStaleHeader');
   }
 }
 
@@ -152,6 +161,10 @@ class WorkflowList extends React.Component {
     const slug = dragProps.slug;
     const collection = dragProps.collection;
     const oldStatus = dragProps.ownStatus;
+    if (oldStatus === 'processing') {
+      window.alert(this.props.t('workflow.workflowList.onProcessingUpdate'))
+      return;
+    }
     if (newStatus === 'stale') {
       window.alert(this.props.t('workflow.workflowList.onStaleUpdate'));
       return;
@@ -160,6 +173,10 @@ class WorkflowList extends React.Component {
   };
 
   requestDelete = (collection, slug, ownStatus) => {
+    if (ownStatus === 'processing') {
+      window.alert(this.props.t('workflow.workflowList.onProcessingUpdate'))
+      return;
+    }
     if (window.confirm(this.props.t('workflow.workflowList.onDeleteEntry'))) {
       this.props.handleDelete(collection, slug, ownStatus);
     }

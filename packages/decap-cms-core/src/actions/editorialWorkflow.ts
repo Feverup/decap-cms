@@ -39,6 +39,7 @@ import type { AnyAction } from 'redux';
 import type { EntryValue } from '../valueObjects/Entry';
 import type { Status } from '../constants/publishModes';
 import type { ThunkDispatch } from 'redux-thunk';
+import type { HookContext } from '../backend';
 
 /*
  * Constant Declarations
@@ -66,6 +67,8 @@ export const UNPUBLISHED_ENTRY_PUBLISH_FAILURE = 'UNPUBLISHED_ENTRY_PUBLISH_FAIL
 export const UNPUBLISHED_ENTRY_DELETE_REQUEST = 'UNPUBLISHED_ENTRY_DELETE_REQUEST';
 export const UNPUBLISHED_ENTRY_DELETE_SUCCESS = 'UNPUBLISHED_ENTRY_DELETE_SUCCESS';
 export const UNPUBLISHED_ENTRY_DELETE_FAILURE = 'UNPUBLISHED_ENTRY_DELETE_FAILURE';
+
+export const EDITORIAL_WORKFLOW_DISMISS_ERROR = 'EDITORIAL_WORKFLOW_DISMISS_ERROR';
 
 /*
  * Simple Action Creators (Internal)
@@ -271,6 +274,7 @@ export function loadUnpublishedEntry(collection: Collection, slug: string) {
       dispatch(unpublishedEntryLoaded(collection, entry));
       dispatch(createDraftFromEntry(entry));
     } catch (error) {
+      if (error.name === EDITORIAL_WORKFLOW_DISMISS_ERROR) return
       if (error.name === EDITORIAL_WORKFLOW_ERROR && error.notUnderEditorialWorkflow) {
         dispatch(unpublishedEntryRedirected(collection, slug));
         dispatch(loadEntry(collection, slug));
@@ -392,6 +396,7 @@ export function persistUnpublishedEntry(collection: Collection, existingUnpublis
         navigateToEntry(collection.get('name'), newSlug);
       }
     } catch (error) {
+      if (error.name === EDITORIAL_WORKFLOW_DISMISS_ERROR) return;
       dispatch(
         addNotification({
           message: {
@@ -483,7 +488,7 @@ export function deleteUnpublishedEntry(collection: string, slug: string) {
 export function publishUnpublishedEntry(
   collectionName: string,
   slug: string,
-  publishStack: boolean,
+  context: HookContext,
 ) {
   return async (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
     const state = getState();
@@ -493,7 +498,7 @@ export function publishUnpublishedEntry(
     const isDeleteWorkflow = entry.get('isDeleteWorkflow');
     dispatch(unpublishedEntryPublishRequest(collectionName, slug));
     try {
-      if (!publishStack && state.stack.status.status) {
+      if (!context.publishStack && state.stack.status.status) {
         dispatch(
           addNotification({
             message: {
@@ -507,7 +512,7 @@ export function publishUnpublishedEntry(
         return dispatch(unpublishedEntryPublishError(collectionName, slug));
       }
 
-      await backend.publishUnpublishedEntry(entry, publishStack);
+      await backend.publishUnpublishedEntry(entry, context);
 
       await dispatch(checkStackStatus());
 
@@ -537,6 +542,7 @@ export function publishUnpublishedEntry(
         return dispatch(loadEntry(collection, slug));
       }
     } catch (error) {
+      if (error.name === EDITORIAL_WORKFLOW_DISMISS_ERROR) return;
       dispatch(
         addNotification({
           message: { key: 'ui.toast.onFailToPublishEntry', details: error },

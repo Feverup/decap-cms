@@ -276,9 +276,9 @@ interface PersistArgs {
   entryDraft: EntryDraft;
   assetProxies: AssetProxy[];
   usedSlugs: List<string>;
-  publishStack?: boolean;
   unpublished?: boolean;
   status?: string;
+  context?: HookContext;
 }
 
 interface ImplementationInitOptions {
@@ -290,6 +290,11 @@ interface ImplementationInitOptions {
 type Implementation = BackendImplementation & {
   init: (config: CmsConfig, options: ImplementationInitOptions) => Implementation;
 };
+
+export interface HookContext {
+  publishStack?: boolean;
+  actions?: Record<string, Function>;
+}
 
 function prepareMetaPath(path: string, collection: Collection) {
   if (!selectHasMetaPath(collection)) {
@@ -703,7 +708,7 @@ export class Backend {
     }
 
     const merged = mergeExpandedEntries(hits);
-    return { query: searchTerm, hits: merged };
+    return { query: searchTerm, hits: merged, collection };
   }
 
   traverseCursor(cursor: Cursor, action: string) {
@@ -1103,9 +1108,9 @@ export class Backend {
     entryDraft: draft,
     assetProxies,
     usedSlugs,
-    publishStack = false,
     unpublished = false,
     status,
+    context,
   }: PersistArgs) {
     const updatedEntity = await this.invokePreSaveEvent(draft.get('entry'));
 
@@ -1191,12 +1196,12 @@ export class Backend {
       commitMessage,
       collectionName,
       useWorkflow,
-      publishStack,
+      publishStack: context?.publishStack || false,
       ...updatedOptions,
     };
 
     if (!useWorkflow) {
-      await this.invokePrePublishEvent(entryDraft.get('entry'));
+      await this.invokePrePublishEvent(entryDraft.get('entry'), context);
     }
 
     await this.implementation.persistEntry(
@@ -1216,13 +1221,16 @@ export class Backend {
     return slug;
   }
 
-  async invokeEventWithEntry(event: string, entry: EntryMap) {
+  async invokeEventWithEntry(event: string, entry: EntryMap, context: HookContext = {}) {
     const { login, name } = (await this.currentUser()) as User;
-    return await invokeEvent({ name: event, data: { entry, author: { login, name } } });
+    return await invokeEvent({
+      name: event,
+      data: { entry, author: { login, name }, context },
+    });
   }
 
-  async invokePrePublishEvent(entry: EntryMap) {
-    await this.invokeEventWithEntry('prePublish', entry);
+  async invokePrePublishEvent(entry: EntryMap, context?: HookContext) {
+    await this.invokeEventWithEntry('prePublish', entry, context);
   }
 
   async invokePostPublishEvent(entry: EntryMap) {
@@ -1329,11 +1337,11 @@ export class Backend {
     return this.implementation.updateUnpublishedEntryStatus!(collection, slug, newStatus);
   }
 
-  async publishUnpublishedEntry(entry: EntryMap, publishStack?: boolean) {
+  async publishUnpublishedEntry(entry: EntryMap, context: HookContext) {
     const collection = entry.get('collection');
     const slug = entry.get('slug');
 
-    await this.invokePrePublishEvent(entry);
+    await this.invokePrePublishEvent(entry, context);
 
     const config = this.config;
     if (config.backend.stack) {
@@ -1350,7 +1358,7 @@ export class Backend {
       );
       await this.implementation.publishUnpublishedEntryStack!(collection, slug, {
         stackCommitMessage,
-        publishStack,
+        publishStack: context.publishStack,
       });
     } else {
       await this.implementation.publishUnpublishedEntry!(collection, slug);

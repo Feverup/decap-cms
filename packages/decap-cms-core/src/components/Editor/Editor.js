@@ -210,6 +210,10 @@ export class Editor extends React.Component {
   handleChangeStatus = newStatusName => {
     const { entryDraft, updateUnpublishedEntryStatus, collection, slug, currentStatus, t } =
       this.props;
+    if (currentStatus === status.get('PROCESSING')) {
+      window.alert(t('editor.editor.onProcessingUpdate'));
+      return;
+    }
     if (entryDraft.get('hasChanged')) {
       window.alert(t('editor.editor.onUpdatingWithUnsavedChanges'));
       return;
@@ -224,6 +228,15 @@ export class Editor extends React.Component {
   //   deleteLocalBackup(collection, !newEntry && slug);
   // }
 
+  createHookContext = (context) => {
+    const defaultContext = {
+      handleChangeStatus: this.handleChangeStatus
+    }
+    if (!context) return defaultContext
+
+    return Object.assign(defaultContext, context)
+  }
+
   handlePersistEntry = async (opts = {}) => {
     const { createNew = false, duplicate = false, publishStack = false } = opts;
     const {
@@ -237,7 +250,7 @@ export class Editor extends React.Component {
       entryDraft,
     } = this.props;
 
-    await persistEntry(collection, publishStack);
+    await persistEntry(collection, this.createHookContext({ publishStack }));
 
     // this.deleteBackup();
 
@@ -279,7 +292,7 @@ export class Editor extends React.Component {
       return;
     }
 
-    await publishUnpublishedEntry(collection.get('name'), slug, publishStack);
+    await publishUnpublishedEntry(collection.get('name'), slug, this.createHookContext({ publishStack }));
 
     // this.deleteBackup();
 
@@ -307,7 +320,11 @@ export class Editor extends React.Component {
   };
 
   handleDeleteEntry = () => {
-    const { entryDraft, newEntry, collection, deleteEntry, slug, t } = this.props;
+    const { entryDraft, newEntry, collection, deleteEntry, slug, currentStatus, t } = this.props;
+    if (currentStatus === status.get('PROCESSING')) {
+      window.alert(t('editor.editor.onProcessingUpdate'));
+      return;
+    }
     if (entryDraft.get('hasChanged')) {
       if (!window.confirm(t('editor.editor.onDeleteWithUnsavedChanges'))) {
         return;
@@ -331,6 +348,7 @@ export class Editor extends React.Component {
       entryDraft,
       collection,
       slug,
+      currentStatus,
       removeAssets,
       removeDraftEntryMediaFiles,
       deleteUnpublishedEntry,
@@ -339,6 +357,11 @@ export class Editor extends React.Component {
       isDeleteWorkflow,
       t,
     } = this.props;
+    if (currentStatus === status.get('PROCESSING')) {
+      window.alert(t('editor.editor.onProcessingUpdate'));
+      return;
+    }
+
     if (
       entryDraft.get('hasChanged') &&
       !window.confirm(

@@ -433,6 +433,26 @@ export default class ListControl extends React.Component {
     };
   }
 
+  handleDuplicate = (index, event) => {
+    event.preventDefault();
+    const { value, onChange } = this.props;
+    const { itemsCollapsed } = this.state;
+
+    // Create new arrays with the item inserted at index + 1
+    const newItemsCollapsed = [...itemsCollapsed];
+    const newKeys = [...this.state.keys];
+
+    newItemsCollapsed.splice(index + 1, 0, false); // Insert expanded state
+    newKeys.splice(index + 1, 0, uuid()); // Insert new key
+
+    this.setState({
+      itemsCollapsed: newItemsCollapsed,
+      keys: newKeys
+    });
+
+    onChange(value.insert(index + 1, value.get(index)));
+  };
+
   handleRemove = (index, event) => {
     event.preventDefault();
     const { itemsCollapsed } = this.state;
@@ -623,6 +643,7 @@ export default class ListControl extends React.Component {
           onCollapseToggle={partial(this.handleItemCollapseToggle, index)}
           dragHandle={DragHandle}
           id={key}
+          onDuplicate={partial(this.handleDuplicate, index)}
           onRemove={partial(this.handleRemove, index)}
           data-testid={`styled-list-item-top-bar-${key}`}
         />
@@ -675,6 +696,7 @@ export default class ListControl extends React.Component {
       >
         <StyledListItemTopBar
           onCollapseToggle={null}
+          onDuplicate={partial(this.handleDuplicate, index)}
           onRemove={partial(this.handleRemove, index, key)}
           dragHandle={DragHandle}
           id={key}
