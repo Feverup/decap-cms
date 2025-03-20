@@ -265,6 +265,7 @@ export default class Widget extends Component {
       controlComponent,
       entry,
       collection,
+      collections,
       config,
       field,
       value,
@@ -315,6 +316,7 @@ export default class Widget extends Component {
     return React.createElement(controlComponent, {
       entry,
       collection,
+      collections,
       config,
       field,
       value,

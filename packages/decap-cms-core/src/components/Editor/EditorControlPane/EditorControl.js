@@ -205,6 +205,7 @@ class EditorControl extends React.Component {
       value,
       entry,
       collection,
+      collections,
       config,
       field,
       fieldsMetaData,
@@ -337,6 +338,7 @@ class EditorControl extends React.Component {
               controlComponent={widget.control}
               entry={entry}
               collection={collection}
+              collections={collections}
               config={config}
               field={field}
               uniqueFieldId={this.uniqueFieldId}
@@ -439,6 +441,7 @@ function mapStateToProps(state) {
     config: state.config,
     entry,
     collection,
+    collections: state.collections,
     isLoadingAsset,
     loadEntry,
     validateMetaField: (field, value, t) => validateMetaField(state, collection, field, value, t),
