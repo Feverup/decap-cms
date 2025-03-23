@@ -26,9 +26,13 @@ export default class ObjectControl extends React.Component {
 
   processControlRef = ref => {
     if (!ref) return;
-    const name = ref.props.field.get('name');
-    this.childRefs[name] = ref;
-    this.props.controlRef?.(ref);
+    const parentId = ref.props.parentIds[ref.props.parentIds.length - 1];
+    const belongsToDifferentParent = parentId && this.props.forID && parentId !== this.props.forID;
+    if (!belongsToDifferentParent) {
+      const name = ref.props.field.get('name');
+      this.childRefs[name] = ref;
+    }
+    this.props.controlRef?.(this);
   };
 
   static propTypes = {
