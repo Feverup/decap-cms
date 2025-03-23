@@ -143,7 +143,6 @@ class EditorControl extends React.Component {
     removeInsertedMedia: PropTypes.func.isRequired,
     persistMedia: PropTypes.func.isRequired,
     onValidate: PropTypes.func,
-    processControlRef: PropTypes.func,
     controlRef: PropTypes.func,
     query: PropTypes.func.isRequired,
     queryHits: PropTypes.object,
@@ -220,7 +219,6 @@ class EditorControl extends React.Component {
       removeInsertedMedia,
       persistMedia,
       onValidate,
-      processControlRef,
       controlRef,
       query,
       queryHits,
@@ -364,7 +362,6 @@ class EditorControl extends React.Component {
               resolveWidget={resolveWidget}
               widget={widget}
               getEditorComponents={getEditorComponents}
-              ref={processControlRef && partial(processControlRef, field)}
               controlRef={controlRef}
               editorControl={ConnectedEditorControl}
               query={query}

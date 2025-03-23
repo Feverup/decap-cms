@@ -22,7 +22,14 @@ const styleStrings = {
 };
 
 export default class ObjectControl extends React.Component {
-  componentValidate = {};
+  childRefs = {};
+
+  processControlRef = ref => {
+    if (!ref) return;
+    const name = ref.props.field.get('name');
+    this.childRefs[name] = ref;
+    this.props.controlRef?.(ref);
+  };
 
   static propTypes = {
     onChangeObject: PropTypes.func.isRequired,
@@ -80,12 +87,20 @@ export default class ObjectControl extends React.Component {
     fields = List.isList(fields) ? fields : List([fields]);
     fields.forEach(field => {
       const widget = field.get('widget');
+
       if (widget === 'hidden' || (widget === 'object' && field.has('flat'))) return;
+
       const parentName = field.get('parentName');
       const name = field.get('name');
 
       const validateName = parentName ? `${parentName}.${name}` : name;
-      this.componentValidate[validateName]();
+      const control = this.childRefs[validateName];
+
+      if (control?.innerWrappedControl?.validate) {
+        control.innerWrappedControl.validate();
+      } else {
+        control?.validate?.();
+      }
     });
   };
 
@@ -145,7 +160,6 @@ export default class ObjectControl extends React.Component {
       metadata,
       fieldsErrors,
       editorControl: EditorControl,
-      controlRef,
       parentIds,
       isFieldDuplicate,
       isFieldHidden,
@@ -173,8 +187,7 @@ export default class ObjectControl extends React.Component {
         fieldsMetaData={metadata}
         fieldsErrors={fieldsErrors}
         onValidate={onValidateObject}
-        processControlRef={controlRef && controlRef.bind(this)}
-        controlRef={controlRef}
+        controlRef={this.processControlRef}
         parentIds={[...parentIds, forID]}
         isDisabled={isDuplicate}
         isHidden={isHidden}
@@ -213,6 +226,26 @@ export default class ObjectControl extends React.Component {
 
     return [...Object.values(orderMap), ...notordered];
   };
+
+  focus(path) {
+    if (this.state.collapsed) {
+      this.setState({ collapsed: false }, () => {
+        if (path) {
+          const [fieldName, ...remainingPath] = path.split('.');
+          const field = this.childRefs[fieldName];
+          if (field?.focus) {
+            field.focus(remainingPath.join('.'));
+          }
+        }
+      });
+    } else if (path) {
+      const [fieldName, ...remainingPath] = path.split('.');
+      const field = this.childRefs[fieldName];
+      if (field?.focus) {
+        field.focus(remainingPath.join('.'));
+      }
+    }
+  }
 
   renderFields = (multiFields, singleField, field) => {
     if (multiFields) {
