@@ -266,7 +266,9 @@ export default class ObjectControl extends React.Component {
             ?.map(field => field.set('parentName', fieldParentName));
           const singleField = f.get('field')?.set('parentName', fieldParentName);
 
-          return mappedMultiFields.push(...this.renderFields(multiFields, singleField, f));
+          const renderedFields = this.renderFields(multiFields, singleField, f);
+          if (Array.isArray(renderedFields)) return mappedMultiFields.push(...renderedFields);
+          return mappedMultiFields.push(renderedFields);
         }
         return mappedMultiFields.push(this.controlFor(f, idx));
       });

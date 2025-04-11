@@ -6,7 +6,6 @@ import { css, ClassNames } from '@emotion/react';
 import { List, Map, fromJS } from 'immutable';
 import { partial, isEmpty, uniqueId } from 'lodash';
 import { v4 as uuid } from 'uuid';
-import DecapCmsWidgetObject from 'decap-cms-widget-object';
 import {
   DndContext,
   MouseSensor,
@@ -33,8 +32,6 @@ import {
   resolveFieldKeyType,
   getErrorMessageForTypedFieldAndValue,
 } from './typedListHelpers';
-
-const ObjectControl = DecapCmsWidgetObject.controlComponent;
 
 const ListItem = styled.div();
 
@@ -412,7 +409,7 @@ export default class ListControl extends React.Component {
    */
   getObjectValue = idx => this.props.value.get(idx) || Map();
 
-  handleChangeFor(index) {
+  handleFieldChangeFor(index) {
     return (f, newValue, newMetadata) => {
       const { value, metadata, onChange, field } = this.props;
       const collectionName = field.get('name');
@@ -430,6 +427,17 @@ export default class ListControl extends React.Component {
         [collectionName]: Object.assign(metadata ? metadata.toJS() : {}, newMetadata || {}),
       };
       onChange(value.set(index, newObjectValue), parsedMetadata);
+    };
+  }
+
+  handleChangeFor(index) {
+    return (newValue, newMetadata) => {
+      const { value, metadata, onChange, field } = this.props;
+      const collectionName = field.get('name');
+      const parsedMetadata = {
+        [collectionName]: Object.assign(metadata ? metadata.toJS() : {}, newMetadata || {}),
+      };
+      onChange(value.set(index, newValue), parsedMetadata);
     };
   }
 
@@ -664,6 +672,8 @@ export default class ListControl extends React.Component {
       parentIds,
       forID,
       t,
+      collection,
+      collections,
     } = this.props;
 
     const { itemsCollapsed, keys } = this.state;
@@ -678,6 +688,8 @@ export default class ListControl extends React.Component {
         return this.renderErroneousTypedItem(index, item);
       }
     }
+
+    const ObjectControl = (this.props.getWidget('object')).control;
 
     return (
       <SortableListItem
@@ -719,7 +731,10 @@ export default class ListControl extends React.Component {
               })}
               value={item}
               field={field}
-              onChangeObject={this.handleChangeFor(index)}
+              collection={collection}
+              collections={collections}
+              onChange={this.handleChangeFor(index)}
+              onChangeObject={this.handleFieldChangeFor(index)}
               editorControl={editorControl}
               resolveWidget={resolveWidget}
               metadata={metadata}

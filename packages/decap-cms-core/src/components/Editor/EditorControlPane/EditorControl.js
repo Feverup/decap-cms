@@ -12,7 +12,7 @@ import ReactMarkdown from 'react-markdown';
 import gfm from 'remark-gfm';
 import { List, Map } from 'immutable';
 
-import { resolveWidget, getEditorComponents } from '../../../lib/registry';
+import { resolveWidget, getEditorComponents, getWidget } from '../../../lib/registry';
 import { clearFieldErrors, tryLoadEntry, validateMetaField } from '../../../actions/entries';
 import { addAsset, boundGetAsset } from '../../../actions/media';
 import { selectIsLoadingAsset } from '../../../reducers/medias';
@@ -70,6 +70,9 @@ const styleStrings = {
   unused: `
     opacity: 0.5;
   `,
+  flat: `
+    margin-top: 0 !important;
+  `
 };
 
 const ControlContainer = styled.div`
@@ -269,6 +272,7 @@ class EditorControl extends React.Component {
             css={css`
               ${!this.state.use && unused && styleStrings.unused}
               ${isHidden && styleStrings.hidden};
+              ${isFlat && styleStrings.flat}
             `}
           >
             {widgetTitle && <h1>{widgetTitle}</h1>}
@@ -362,6 +366,7 @@ class EditorControl extends React.Component {
               resolveWidget={resolveWidget}
               widget={widget}
               getEditorComponents={getEditorComponents}
+              getWidget={getWidget}
               controlRef={controlRef}
               editorControl={ConnectedEditorControl}
               query={query}
