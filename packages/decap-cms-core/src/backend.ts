@@ -628,7 +628,7 @@ export class Backend {
         collections.map(async collection => {
           const entries = await this.listAllEntries(collection);
           return entries;
-        })
+        }),
       );
       return { entries: flatten(allEntries) };
     }
@@ -1224,7 +1224,7 @@ export class Backend {
       opts,
     );
 
-    await this.invokePostSaveEvent(entryDraft.get('entry'));
+    await this.invokePostSaveEvent(entryDraft.get('entry'), context);
 
     if (!useWorkflow) {
       await this.invokePostPublishEvent(entryDraft.get('entry'));
@@ -1245,24 +1245,24 @@ export class Backend {
     await this.invokeEventWithEntry('prePublish', entry, context);
   }
 
-  async invokePostPublishEvent(entry: EntryMap) {
-    await this.invokeEventWithEntry('postPublish', entry);
+  async invokePostPublishEvent(entry: EntryMap, context?: HookContext) {
+    await this.invokeEventWithEntry('postPublish', entry, context);
   }
 
-  async invokePreUnpublishEvent(entry: EntryMap) {
-    await this.invokeEventWithEntry('preUnpublish', entry);
+  async invokePreUnpublishEvent(entry: EntryMap, context?: HookContext) {
+    await this.invokeEventWithEntry('preUnpublish', entry, context);
   }
 
-  async invokePostUnpublishEvent(entry: EntryMap) {
-    await this.invokeEventWithEntry('postUnpublish', entry);
+  async invokePostUnpublishEvent(entry: EntryMap, context?: HookContext) {
+    await this.invokeEventWithEntry('postUnpublish', entry, context);
   }
 
   async invokePreSaveEvent(entry: EntryMap, context?: HookContext) {
     return await this.invokeEventWithEntry('preSave', entry, context);
   }
 
-  async invokePostSaveEvent(entry: EntryMap) {
-    await this.invokeEventWithEntry('postSave', entry);
+  async invokePostSaveEvent(entry: EntryMap, context?: HookContext) {
+    await this.invokeEventWithEntry('postSave', entry, context);
   }
 
   async persistMedia(config: CmsConfig, file: AssetProxy) {
@@ -1282,7 +1282,7 @@ export class Backend {
     return this.implementation.persistMedia(file, options);
   }
 
-  async deleteEntry(state: State, collection: Collection, slug: string) {
+  async deleteEntry(state: State, collection: Collection, slug: string, context?: HookContext) {
     const config = state.config;
     const path = selectEntryPath(collection, slug) as string;
     const extension = selectFolderEntryExtension(collection) as string;
@@ -1306,7 +1306,7 @@ export class Backend {
     );
 
     const entry = selectEntry(state.entries, collection.get('name'), slug);
-    await this.invokePreUnpublishEvent(entry);
+    await this.invokePreUnpublishEvent(entry, context);
     let paths = [path];
     if (hasI18n(collection)) {
       paths = getFilePaths(collection, extension, path, slug);
@@ -1323,7 +1323,7 @@ export class Backend {
       await this.implementation.deleteFiles(paths, commitMessage);
     }
 
-    await this.invokePostUnpublishEvent(entry);
+    await this.invokePostUnpublishEvent(entry, context);
   }
 
   async deleteMedia(config: CmsConfig, path: string) {
@@ -1376,7 +1376,7 @@ export class Backend {
       await this.implementation.publishUnpublishedEntry!(collection, slug);
     }
 
-    await this.invokePostPublishEvent(entry);
+    await this.invokePostPublishEvent(entry, context);
   }
 
   deleteUnpublishedEntry(collection: string, slug: string) {

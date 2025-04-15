@@ -992,14 +992,14 @@ export function persistEntry(collection: Collection, context: HookContext) {
   };
 }
 
-export function deleteEntry(collection: Collection, slug: string) {
+export function deleteEntry(collection: Collection, slug: string, context: HookContext) {
   return (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
     const state = getState();
     const backend = currentBackend(state.config);
 
     dispatch(entryDeleting(collection, slug));
     return backend
-      .deleteEntry(state, collection, slug)
+      .deleteEntry(state, collection, slug, context)
       .then(async () => {
         dispatch(entryDeleted(collection, slug));
         dispatch(

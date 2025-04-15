@@ -246,22 +246,18 @@ export class Editor extends React.Component {
           const { entries } = (await this.props.searchEntries(null, [collection.get('name')])).payload;
           return this.props.persistCustomEntry(collection, context, entry, entries);
         },
-        // deleteEntry: async (collection, slug) => {
-        //   return this.props.deleteEntry(collection, slug);
-        // },
-        // publishEntry: async (collection, slug, opts = {}) => {
-        //   const context = this.createHookContext(opts);
-        //   return this.props.publishUnpublishedEntry(collection.get('name'), slug, context);
-        // },
-        // unpublishEntry: async (collection, slug) => {
-        //   return this.props.unpublishPublishedEntry(collection, slug);
-        // },
-        // createDraft: (collection, searchParams) => {
-        //   return this.props.createEmptyDraft(collection, searchParams);
-        // },
-        // duplicateEntry: (collection, entry) => {
-        //   return this.props.createDraftDuplicateFromEntry(entry);
-        // },
+        deleteEntry: async (collection, slug, opts = {}) => {
+          const context = this.createHookContext(opts);
+          return this.props.deleteEntry(collection, slug, context);
+        },
+        publishEntry: async (collection, slug, opts = {}) => {
+          const context = this.createHookContext(opts);
+          return this.props.publishUnpublishedEntry(collection.get('name'), slug, context);
+        },
+        unpublishEntry: async (collection, slug, opts = {}) => {
+          const context = this.createHookContext(opts);
+          return this.props.unpublishPublishedEntry(collection, slug, context);
+        },
       }
     }
     if (!context) return defaultContext
@@ -339,7 +335,7 @@ export class Editor extends React.Component {
     const { unpublishPublishedEntry, collection, slug, t } = this.props;
     if (!window.confirm(t('editor.editor.onUnpublishing'))) return;
 
-    await unpublishPublishedEntry(collection, slug);
+    await unpublishPublishedEntry(collection, slug, this.createHookContext());
 
     // return navigateToCollection(collection.get('name'));
   };
@@ -369,7 +365,7 @@ export class Editor extends React.Component {
     }
 
     setTimeout(async () => {
-      await deleteEntry(collection, slug);
+      await deleteEntry(collection, slug, this.createHookContext());
       // this.deleteBackup();
       // return navigateToCollection(collection.get('name'));
     }, 0);

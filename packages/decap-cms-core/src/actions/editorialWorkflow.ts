@@ -325,7 +325,7 @@ export function loadUnpublishedEntries(collections: Collections) {
   };
 }
 
-export function persistUnpublishedEntry(collection: Collection, existingUnpublishedEntry: boolean) {
+export function persistUnpublishedEntry(collection: Collection, existingUnpublishedEntry: boolean, context: HookContext) {
   return async (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
     const state = getState();
     const entryDraft = state.entryDraft;
@@ -379,6 +379,7 @@ export function persistUnpublishedEntry(collection: Collection, existingUnpublis
         entryDraft: serializedEntryDraft,
         assetProxies,
         usedSlugs,
+        context,
       });
       dispatch(
         addNotification({
@@ -555,7 +556,7 @@ export function publishUnpublishedEntry(
   };
 }
 
-export function unpublishPublishedEntry(collection: Collection, slug: string) {
+export function unpublishPublishedEntry(collection: Collection, slug: string, context: HookContext) {
   return (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
     const state = getState();
     const backend = currentBackend(state.config);
@@ -563,7 +564,7 @@ export function unpublishPublishedEntry(collection: Collection, slug: string) {
     const entryDraft = Map().set('entry', entry) as unknown as EntryDraft;
     dispatch(unpublishedEntryPersisting(collection, slug));
     return backend
-      .deleteEntry(state, collection, slug)
+      .deleteEntry(state, collection, slug, context)
       .then(() => {
         if (!backend.implementation.deleteCollectionFiles) {
           backend.persistEntry({
@@ -573,6 +574,7 @@ export function unpublishPublishedEntry(collection: Collection, slug: string) {
             assetProxies: [],
             usedSlugs: List(),
             status: status.get('PENDING_PUBLISH'),
+            context,
           });
         }
       })
