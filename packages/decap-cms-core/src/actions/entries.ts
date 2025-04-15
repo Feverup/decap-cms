@@ -35,6 +35,8 @@ import type {
   ViewFilter,
   ViewGroup,
   Entry,
+  EntryDraft,
+  Entries,
 } from '../types/redux';
 import type { EntryValue } from '../valueObjects/Entry';
 import type { Backend, HookContext } from '../backend';
@@ -885,33 +887,19 @@ export function getSerializedEntry(collection: Collection, entry: Entry) {
   return serializedEntry;
 }
 
-export function persistEntry(collection: Collection, context: HookContext) {
+export function persistCustomEntry(
+  collection: Collection,
+  context: HookContext,
+  entryDraft: EntryDraft,
+  entries?: Entries,
+) {
   return async (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
     const state = getState();
-    const entryDraft = state.entryDraft;
-    const fieldsErrors = entryDraft.get('fieldsErrors');
-    const usedSlugs = selectPublishedSlugs(state, collection.get('name'));
 
-    // Early return if draft contains validation errors
-    if (!fieldsErrors.isEmpty()) {
-      const hasPresenceErrors = fieldsErrors.some(errors =>
-        errors.some(error => error.type && error.type === ValidationErrorTypes.PRESENCE),
-      );
-
-      if (hasPresenceErrors) {
-        dispatch(
-          addNotification({
-            message: {
-              key: 'ui.toast.missingRequiredField',
-            },
-            type: 'error',
-            dismissAfter: 8000,
-          }),
-        );
-      }
-
-      return Promise.reject();
-    }
+    const usedSlugs = selectPublishedSlugs(
+      entries ? { ...state, entries: fromJS(entries) } : state,
+      collection.get('name'),
+    );
 
     const backend = currentBackend(state.config);
     const entry = entryDraft.get('entry');
@@ -969,6 +957,38 @@ export function persistEntry(collection: Collection, context: HookContext) {
         );
         return Promise.reject(dispatch(entryPersistFail(collection, serializedEntry, error)));
       });
+  };
+}
+
+export function persistEntry(collection: Collection, context: HookContext) {
+  return async (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
+    const state = getState();
+    const entryDraft = state.entryDraft;
+
+    const fieldsErrors = entryDraft.get('fieldsErrors');
+
+    // Early return if draft contains validation errors
+    if (!fieldsErrors.isEmpty()) {
+      const hasPresenceErrors = fieldsErrors.some(errors =>
+        errors.some(error => error.type && error.type === ValidationErrorTypes.PRESENCE),
+      );
+
+      if (hasPresenceErrors) {
+        dispatch(
+          addNotification({
+            message: {
+              key: 'ui.toast.missingRequiredField',
+            },
+            type: 'error',
+            dismissAfter: 8000,
+          }),
+        );
+      }
+
+      return Promise.reject();
+    }
+    const persistFunc = persistCustomEntry(collection, context, entryDraft);
+    return persistFunc(dispatch, getState);
   };
 }
 

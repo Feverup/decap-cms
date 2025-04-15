@@ -1123,7 +1123,7 @@ export class Backend {
     status,
     context,
   }: PersistArgs) {
-    const updatedEntity = await this.invokePreSaveEvent(draft.get('entry'));
+    const updatedEntity = await this.invokePreSaveEvent(draft.get('entry'), context);
 
     let entryDraft;
     if (updatedEntity.get('data') === undefined) {
@@ -1257,8 +1257,8 @@ export class Backend {
     await this.invokeEventWithEntry('postUnpublish', entry);
   }
 
-  async invokePreSaveEvent(entry: EntryMap) {
-    return await this.invokeEventWithEntry('preSave', entry);
+  async invokePreSaveEvent(entry: EntryMap, context?: HookContext) {
+    return await this.invokeEventWithEntry('preSave', entry, context);
   }
 
   async invokePostSaveEvent(entry: EntryMap) {

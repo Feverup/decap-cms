@@ -16,6 +16,7 @@ import {
   discardDraft,
   changeDraftField,
   changeDraftFieldValidation,
+  persistCustomEntry,
   persistEntry,
   deleteEntry,
   // persistLocalBackup,
@@ -50,6 +51,7 @@ export class Editor extends React.Component {
     entry: ImmutablePropTypes.map,
     entryDraft: ImmutablePropTypes.map.isRequired,
     loadEntry: PropTypes.func.isRequired,
+    persistCustomEntry: PropTypes.func.isRequired,
     persistEntry: PropTypes.func.isRequired,
     deleteEntry: PropTypes.func.isRequired,
     showDelete: PropTypes.bool.isRequired,
@@ -236,30 +238,30 @@ export class Editor extends React.Component {
         navigateToCollection,
         searchEntries: this.props.searchEntries,
         handleChangeStatus: this.handleChangeStatus,
-        // loadEntry: (collection, slug) => this.props.loadEntry(collection, slug),
         getCollection: (name) => {
           return this.props.collections.get(name);
         },
-        persistEntry: async (collection, entry, opts = {}) => {
+        persistCustomEntry: async (collection, entry, opts = {}) => {
           const context = this.createHookContext(opts);
-          return this.props.persistEntry(collection, context);
+          const { entries } = (await this.props.searchEntries(null, [collection.get('name')])).payload;
+          return this.props.persistCustomEntry(collection, context, entry, entries);
         },
-        deleteEntry: async (collection, slug) => {
-          return this.props.deleteEntry(collection, slug);
-        },
-        publishEntry: async (collection, slug, opts = {}) => {
-          const context = this.createHookContext(opts);
-          return this.props.publishUnpublishedEntry(collection.get('name'), slug, context);
-        },
-        unpublishEntry: async (collection, slug) => {
-          return this.props.unpublishPublishedEntry(collection, slug);
-        },
-        createDraft: (collection, searchParams) => {
-          return this.props.createEmptyDraft(collection, searchParams);
-        },
-        duplicateEntry: (collection, entry) => {
-          return this.props.createDraftDuplicateFromEntry(entry);
-        },
+        // deleteEntry: async (collection, slug) => {
+        //   return this.props.deleteEntry(collection, slug);
+        // },
+        // publishEntry: async (collection, slug, opts = {}) => {
+        //   const context = this.createHookContext(opts);
+        //   return this.props.publishUnpublishedEntry(collection.get('name'), slug, context);
+        // },
+        // unpublishEntry: async (collection, slug) => {
+        //   return this.props.unpublishPublishedEntry(collection, slug);
+        // },
+        // createDraft: (collection, searchParams) => {
+        //   return this.props.createEmptyDraft(collection, searchParams);
+        // },
+        // duplicateEntry: (collection, entry) => {
+        //   return this.props.createDraftDuplicateFromEntry(entry);
+        // },
       }
     }
     if (!context) return defaultContext
@@ -575,6 +577,7 @@ const mapDispatchToProps = {
   createDraftDuplicateFromEntry,
   createEmptyDraft,
   discardDraft,
+  persistCustomEntry,
   persistEntry,
   deleteEntry,
   updateUnpublishedEntryStatus,
