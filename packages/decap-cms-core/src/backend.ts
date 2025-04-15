@@ -622,6 +622,17 @@ export class Backend {
     // Perform a local search by requesting all entries. For each
     // collection, load it, search, and call onCollectionResults with
     // its results.
+
+    if (searchTerm === null) {
+      const allEntries = await Promise.all(
+        collections.map(async collection => {
+          const entries = await this.listAllEntries(collection);
+          return entries;
+        })
+      );
+      return { entries: flatten(allEntries) };
+    }
+
     const errors: Error[] = [];
     const collectionEntriesRequests = collections
       .map(async collection => {
@@ -954,7 +965,7 @@ export class Backend {
         data,
         dataFile.path,
         dataFile.newFile,
-        dataFile.deletedFile,
+        dataFile.deleteFile,
       );
       return entryWithFormat;
     };

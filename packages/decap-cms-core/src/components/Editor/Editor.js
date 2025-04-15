@@ -32,6 +32,7 @@ import {
 } from '../../actions/editorialWorkflow';
 import { removeAssets } from '../../actions/media';
 import { loadDeployPreview } from '../../actions/deploys';
+import { searchEntries } from '../../actions/search';
 import { selectEntry, selectUnpublishedEntry, selectDeployPreview } from '../../reducers';
 import { selectFields } from '../../reducers/collections';
 import { status, EDITORIAL_WORKFLOW } from '../../constants/publishModes';
@@ -71,6 +72,7 @@ export class Editor extends React.Component {
     loadDeployPreview: PropTypes.func.isRequired,
     currentStatus: PropTypes.string,
     user: PropTypes.object,
+    searchEntries: PropTypes.func.isRequired,
     location: PropTypes.shape({
       pathname: PropTypes.string,
       search: PropTypes.string,
@@ -230,7 +232,35 @@ export class Editor extends React.Component {
 
   createHookContext = (context) => {
     const defaultContext = {
-      handleChangeStatus: this.handleChangeStatus
+      actions: {
+        navigateToCollection,
+        searchEntries: this.props.searchEntries,
+        handleChangeStatus: this.handleChangeStatus,
+        // loadEntry: (collection, slug) => this.props.loadEntry(collection, slug),
+        getCollection: (name) => {
+          return this.props.collections.get(name);
+        },
+        persistEntry: async (collection, entry, opts = {}) => {
+          const context = this.createHookContext(opts);
+          return this.props.persistEntry(collection, context);
+        },
+        deleteEntry: async (collection, slug) => {
+          return this.props.deleteEntry(collection, slug);
+        },
+        publishEntry: async (collection, slug, opts = {}) => {
+          const context = this.createHookContext(opts);
+          return this.props.publishUnpublishedEntry(collection.get('name'), slug, context);
+        },
+        unpublishEntry: async (collection, slug) => {
+          return this.props.unpublishPublishedEntry(collection, slug);
+        },
+        createDraft: (collection, searchParams) => {
+          return this.props.createEmptyDraft(collection, searchParams);
+        },
+        duplicateEntry: (collection, entry) => {
+          return this.props.createDraftDuplicateFromEntry(entry);
+        },
+      }
     }
     if (!context) return defaultContext
 
@@ -554,6 +584,7 @@ const mapDispatchToProps = {
   removeAssets,
   removeDraftEntryMediaFiles,
   logoutUser,
+  searchEntries,
 };
 
 export default connect(mapStateToProps, mapDispatchToProps)(withWorkflow(translate()(Editor)));
