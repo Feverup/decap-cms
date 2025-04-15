@@ -325,38 +325,20 @@ export function loadUnpublishedEntries(collections: Collections) {
   };
 }
 
-export function persistUnpublishedEntry(collection: Collection, existingUnpublishedEntry: boolean, context: HookContext) {
+export function persistCustomUnpublishedEntry(
+  collection: Collection,
+  existingUnpublishedEntry: boolean,
+  entryDraft: EntryDraft,
+  context: HookContext,
+) {
   return async (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
     const state = getState();
-    const entryDraft = state.entryDraft;
-    const fieldsErrors = entryDraft.get('fieldsErrors');
     const unpublishedSlugs = selectUnpublishedSlugs(state, collection.get('name'));
     const publishedSlugs = selectPublishedSlugs(state, collection.get('name'));
     const usedSlugs = publishedSlugs.concat(unpublishedSlugs) as List<string>;
     const entriesLoaded = get(state.editorialWorkflow.toJS(), 'pages.ids', false);
 
-    //load unpublishedEntries
     !entriesLoaded && dispatch(loadUnpublishedEntries(state.collections));
-
-    // Early return if draft contains validation errors
-    if (!fieldsErrors.isEmpty()) {
-      const hasPresenceErrors = fieldsErrors.some(errors =>
-        errors.some(error => error.type && error.type === ValidationErrorTypes.PRESENCE),
-      );
-
-      if (hasPresenceErrors) {
-        dispatch(
-          addNotification({
-            message: {
-              key: 'ui.toast.missingRequiredField',
-            },
-            type: 'error',
-            dismissAfter: 8000,
-          }),
-        );
-      }
-      return Promise.reject();
-    }
 
     const backend = currentBackend(state.config);
     const entry = entryDraft.get('entry');
@@ -412,6 +394,37 @@ export function persistUnpublishedEntry(collection: Collection, existingUnpublis
         dispatch(unpublishedEntryPersistedFail(error, collection, entry.get('slug'))),
       );
     }
+  };
+}
+
+export function persistUnpublishedEntry(collection: Collection, existingUnpublishedEntry: boolean, context: HookContext) {
+  return async (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
+    const state = getState();
+    const entryDraft = state.entryDraft;
+    const fieldsErrors = entryDraft.get('fieldsErrors');
+
+    // Early return if draft contains validation errors
+    if (!fieldsErrors.isEmpty()) {
+      const hasPresenceErrors = fieldsErrors.some(errors =>
+        errors.some(error => error.type && error.type === ValidationErrorTypes.PRESENCE),
+      );
+
+      if (hasPresenceErrors) {
+        dispatch(
+          addNotification({
+            message: {
+              key: 'ui.toast.missingRequiredField',
+            },
+            type: 'error',
+            dismissAfter: 8000,
+          }),
+        );
+      }
+      return Promise.reject();
+    }
+
+    const persistFunc = persistCustomUnpublishedEntry(collection, existingUnpublishedEntry, entryDraft, context);
+    return persistFunc(dispatch, getState);
   };
 }
 
@@ -556,11 +569,15 @@ export function publishUnpublishedEntry(
   };
 }
 
-export function unpublishPublishedEntry(collection: Collection, slug: string, context: HookContext) {
+export function unpublishCustomPublishedEntry(
+  collection: Collection,
+  slug: string,
+  entry: EntryMap,
+  context: HookContext,
+) {
   return (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
     const state = getState();
     const backend = currentBackend(state.config);
-    const entry = selectEntry(state, collection.get('name'), slug);
     const entryDraft = Map().set('entry', entry) as unknown as EntryDraft;
     dispatch(unpublishedEntryPersisting(collection, slug));
     return backend
@@ -604,5 +621,14 @@ export function unpublishPublishedEntry(collection: Collection, slug: string, co
         );
         dispatch(unpublishedEntryPersistedFail(error, collection, entry.get('slug')));
       });
+  };
+}
+
+export function unpublishPublishedEntry(collection: Collection, slug: string, context: HookContext) {
+  return (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
+    const state = getState();
+    const entry = selectEntry(state, collection.get('name'), slug);
+    const unpublishFunc = unpublishCustomPublishedEntry(collection, slug, entry, context);
+    return unpublishFunc(dispatch, getState);
   };
 }

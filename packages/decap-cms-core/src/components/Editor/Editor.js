@@ -241,14 +241,14 @@ export class Editor extends React.Component {
         getCollection: (name) => {
           return this.props.collections.get(name);
         },
-        persistCustomEntry: async (collection, entry, opts = {}) => {
+        persistEntry: async (collection, entry, opts = {}) => {
           const context = this.createHookContext(opts);
           const { entries } = (await this.props.searchEntries(null, [collection.get('name')])).payload;
           return this.props.persistCustomEntry(collection, context, entry, entries);
         },
-        deleteEntry: async (collection, slug, opts = {}) => {
+        persistUnpublishedEntry: async (collection, existingUnpublishedEntry, entry, opts = {}) => {
           const context = this.createHookContext(opts);
-          return this.props.deleteEntry(collection, slug, context);
+          return this.props.persistCustomUnpublishedEntry(collection, existingUnpublishedEntry, entry, context);
         },
         publishEntry: async (collection, slug, opts = {}) => {
           const context = this.createHookContext(opts);
@@ -257,6 +257,14 @@ export class Editor extends React.Component {
         unpublishEntry: async (collection, slug, opts = {}) => {
           const context = this.createHookContext(opts);
           return this.props.unpublishPublishedEntry(collection, slug, context);
+        },
+        unpublishPublishedEntry: async (collection, slug, entry, opts = {}) => {
+          const context = this.createHookContext(opts);
+          return this.props.unpublishCustomPublishedEntry(collection, slug, entry, context);
+        },
+        deleteEntry: async (collection, slug, opts = {}) => {
+          const context = this.createHookContext(opts);
+          return this.props.deleteEntry(collection, slug, context);
         },
       }
     }

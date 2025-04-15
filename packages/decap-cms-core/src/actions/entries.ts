@@ -889,8 +889,8 @@ export function getSerializedEntry(collection: Collection, entry: Entry) {
 
 export function persistCustomEntry(
   collection: Collection,
-  context: HookContext,
   entryDraft: EntryDraft,
+  context: HookContext,
   entries?: Entries,
 ) {
   return async (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
@@ -987,7 +987,7 @@ export function persistEntry(collection: Collection, context: HookContext) {
 
       return Promise.reject();
     }
-    const persistFunc = persistCustomEntry(collection, context, entryDraft);
+    const persistFunc = persistCustomEntry(collection, entryDraft, context);
     return persistFunc(dispatch, getState);
   };
 }
