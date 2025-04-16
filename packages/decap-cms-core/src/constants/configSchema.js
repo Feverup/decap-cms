@@ -66,6 +66,11 @@ function fieldsConfig() {
           minItems: 2,
           items: [{ oneOf: [{ type: 'string' }, { instanceof: 'RegExp' }] }, { type: 'string' }],
         },
+        negative_pattern: {
+          type: 'array',
+          minItems: 2,
+          items: [{ oneOf: [{ type: 'string' }, { instanceof: 'RegExp' }] }, { type: 'string' }],
+        },
         field: { $ref: `field_${id}` },
         fields: { $ref: `fields_${id}` },
         types: { $ref: `fields_${id}` },

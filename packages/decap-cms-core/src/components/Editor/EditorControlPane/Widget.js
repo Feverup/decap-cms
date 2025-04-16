@@ -127,7 +127,7 @@ export default class Widget extends Component {
     const value = this.getValidateValue();
     const field = this.props.field;
     const errors = [];
-    const validations = [this.validatePresence, this.validatePattern];
+    const validations = [this.validatePresence, this.validatePattern, this.validateNegativePattern];
     if (field.get('meta')) {
       validations.push(this.props.validateMetaField);
     }
@@ -177,6 +177,30 @@ export default class Widget extends Component {
         message: t('editor.editorControlPane.widget.regexPattern', {
           fieldLabel: field.get('label', field.get('name')),
           pattern: pattern.last(),
+        }),
+      };
+
+      return { error };
+    }
+
+    return { error: false };
+  };
+
+  validateNegativePattern = (field, value) => {
+    const { t, parentIds } = this.props;
+    const negativePattern = field.get('negative_pattern', false);
+
+    if (isEmpty(value)) {
+      return { error: false };
+    }
+
+    if (negativePattern && RegExp(negativePattern.first()).test(value)) {
+      const error = {
+        type: ValidationErrorTypes.PATTERN,
+        parentIds,
+        message: t('editor.editorControlPane.widget.regexNegativePattern', {
+          fieldLabel: field.get('label', field.get('name')),
+          pattern: negativePattern.last(),
         }),
       };
 
@@ -255,7 +279,7 @@ export default class Widget extends Component {
 
   setInactiveStyle = () => {
     this.props.setInactiveStyle();
-    if (this.props.field.has('pattern') && !isEmpty(this.getValidateValue())) {
+    if ((this.props.field.has('pattern') || this.props.field.has('negative_pattern')) && !isEmpty(this.getValidateValue())) {
       this.validate();
     }
   };

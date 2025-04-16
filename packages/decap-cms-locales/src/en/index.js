@@ -80,6 +80,7 @@ const en = {
       widget: {
         required: '%{fieldLabel} is required.',
         regexPattern: "%{fieldLabel} didn't match the pattern: %{pattern}.",
+        regexNegativePattern: "%{fieldLabel} should not contain pattern: %{pattern}.",
         processing: '%{fieldLabel} is processing.',
         range: '%{fieldLabel} must be between %{minValue} and %{maxValue}.',
         min: '%{fieldLabel} must be at least %{minValue}.',
@@ -139,7 +140,7 @@ const en = {
       saving: 'Saving...',
       save: 'Save',
       statusInfoTooltipDraft:
-        'Entry status is set to draft. To finalize and submit it for review, set the status to ‘In review’',
+        'Entry status is set to draft. To finalize and submit it for review, set the status to "In review"',
       statusInfoTooltipInReview:
         'Entry is being reviewed, no further actions are required. However, you can still make additional changes while it is being reviewed.',
       discarding: 'Discarding...',
