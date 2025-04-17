@@ -667,7 +667,6 @@ export default class ListControl extends React.Component {
       metadata,
       clearFieldErrors,
       fieldsErrors,
-      controlRef,
       resolveWidget,
       parentIds,
       forID,
@@ -742,8 +741,7 @@ export default class ListControl extends React.Component {
               onValidateObject={onValidateObject}
               clearFieldErrors={clearFieldErrors}
               fieldsErrors={fieldsErrors}
-              ref={this.processControlRef}
-              controlRef={controlRef}
+              controlRef={this.processControlRef}
               validationKey={key}
               collapsed={collapsed}
               data-testid={`object-control-${key}`}
