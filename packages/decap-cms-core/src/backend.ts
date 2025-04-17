@@ -146,7 +146,7 @@ export function extractSearchFields(searchFields: string[]) {
     searchFields.reduce((acc, field) => {
       const value = getEntryField(field, entry);
       if (value) {
-        return `${acc} ${value}`;
+        return acc ? `${acc} ${value}` : value;
       } else {
         return acc;
       }
