@@ -113,10 +113,12 @@ export default class ControlPane extends React.Component {
     const parentName = field.get('parentName');
     const name = field.get('name');
     const validateName = parentName ? `${parentName}.${name}` : name;
+    this.childRefs[validateName] = wrappedControl;
+  };
 
-    this.componentValidate[validateName] =
-      wrappedControl.innerWrappedControl?.validate || wrappedControl.validate;
-  }
+  getControlRef = field => wrappedControl => {
+    this.controlRef(field, wrappedControl);
+  };
 
   handleLocaleChange = val => {
     this.setState({ selectedLocale: val });

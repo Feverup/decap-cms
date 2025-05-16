@@ -1,6 +1,7 @@
 import { Map } from 'immutable';
 import { produce } from 'immer';
 import { oneLine } from 'common-tags';
+import * as immutable from 'immutable';
 
 import EditorComponent from '../valueObjects/EditorComponent';
 
@@ -17,10 +18,15 @@ allowedEvents.forEach(e => {
   eventHandlers[e] = [];
 });
 
+const lib = {
+  immutable,
+}
+
 /**
  * Global Registry Object
  */
 const registry = {
+  lib,
   backends: {},
   templates: {},
   previewStyles: [],
@@ -35,6 +41,7 @@ const registry = {
 };
 
 export default {
+  getLib,
   registerPreviewStyle,
   getPreviewStyles,
   registerPreviewTemplate,
@@ -64,6 +71,10 @@ export default {
   getCustomFormatsExtensions,
   getCustomFormatsFormatters,
 };
+
+export function getLib() {
+  return registry.lib;
+}
 
 /**
  * Preview Styles
@@ -310,3 +321,4 @@ export function getCustomFormatsFormatters() {
 export function getFormatter(name) {
   return registry.formats[name]?.formatter;
 }
+

@@ -16,6 +16,7 @@ import {
   discardDraft,
   changeDraftField,
   changeDraftFieldValidation,
+  persistCustomEntry,
   persistEntry,
   deleteEntry,
   // persistLocalBackup,
@@ -32,6 +33,7 @@ import {
 } from '../../actions/editorialWorkflow';
 import { removeAssets } from '../../actions/media';
 import { loadDeployPreview } from '../../actions/deploys';
+import { searchEntries } from '../../actions/search';
 import { selectEntry, selectUnpublishedEntry, selectDeployPreview } from '../../reducers';
 import { selectFields } from '../../reducers/collections';
 import { status, EDITORIAL_WORKFLOW } from '../../constants/publishModes';
@@ -49,6 +51,7 @@ export class Editor extends React.Component {
     entry: ImmutablePropTypes.map,
     entryDraft: ImmutablePropTypes.map.isRequired,
     loadEntry: PropTypes.func.isRequired,
+    persistCustomEntry: PropTypes.func.isRequired,
     persistEntry: PropTypes.func.isRequired,
     deleteEntry: PropTypes.func.isRequired,
     showDelete: PropTypes.bool.isRequired,
@@ -71,6 +74,7 @@ export class Editor extends React.Component {
     loadDeployPreview: PropTypes.func.isRequired,
     currentStatus: PropTypes.string,
     user: PropTypes.object,
+    searchEntries: PropTypes.func.isRequired,
     location: PropTypes.shape({
       pathname: PropTypes.string,
       search: PropTypes.string,
@@ -210,6 +214,10 @@ export class Editor extends React.Component {
   handleChangeStatus = newStatusName => {
     const { entryDraft, updateUnpublishedEntryStatus, collection, slug, currentStatus, t } =
       this.props;
+    if (currentStatus === status.get('PROCESSING')) {
+      window.alert(t('editor.editor.onProcessingUpdate'));
+      return;
+    }
     if (entryDraft.get('hasChanged')) {
       window.alert(t('editor.editor.onUpdatingWithUnsavedChanges'));
       return;
@@ -224,6 +232,47 @@ export class Editor extends React.Component {
   //   deleteLocalBackup(collection, !newEntry && slug);
   // }
 
+  createHookContext = (context) => {
+    const defaultContext = {
+      actions: {
+        navigateToCollection,
+        searchEntries: this.props.searchEntries,
+        handleChangeStatus: this.handleChangeStatus,
+        getCollection: (name) => {
+          return this.props.collections.get(name);
+        },
+        persistEntry: async (collection, entry, opts = {}) => {
+          const context = this.createHookContext(opts);
+          const { entries } = (await this.props.searchEntries(null, [collection.get('name')])).payload;
+          return this.props.persistCustomEntry(collection, context, entry, entries);
+        },
+        persistUnpublishedEntry: async (collection, existingUnpublishedEntry, entry, opts = {}) => {
+          const context = this.createHookContext(opts);
+          return this.props.persistCustomUnpublishedEntry(collection, existingUnpublishedEntry, entry, context);
+        },
+        publishEntry: async (collection, slug, opts = {}) => {
+          const context = this.createHookContext(opts);
+          return this.props.publishUnpublishedEntry(collection.get('name'), slug, context);
+        },
+        unpublishEntry: async (collection, slug, opts = {}) => {
+          const context = this.createHookContext(opts);
+          return this.props.unpublishPublishedEntry(collection, slug, context);
+        },
+        unpublishPublishedEntry: async (collection, slug, entry, opts = {}) => {
+          const context = this.createHookContext(opts);
+          return this.props.unpublishCustomPublishedEntry(collection, slug, entry, context);
+        },
+        deleteEntry: async (collection, slug, opts = {}) => {
+          const context = this.createHookContext(opts);
+          return this.props.deleteEntry(collection, slug, context);
+        },
+      }
+    }
+    if (!context) return defaultContext
+
+    return Object.assign(defaultContext, context)
+  }
+
   handlePersistEntry = async (opts = {}) => {
     const { createNew = false, duplicate = false, publishStack = false } = opts;
     const {
@@ -237,7 +286,7 @@ export class Editor extends React.Component {
       entryDraft,
     } = this.props;
 
-    await persistEntry(collection, publishStack);
+    await persistEntry(collection, this.createHookContext({ publishStack }));
 
     // this.deleteBackup();
 
@@ -279,7 +328,7 @@ export class Editor extends React.Component {
       return;
     }
 
-    await publishUnpublishedEntry(collection.get('name'), slug, publishStack);
+    await publishUnpublishedEntry(collection.get('name'), slug, this.createHookContext({ publishStack }));
 
     // this.deleteBackup();
 
@@ -294,7 +343,7 @@ export class Editor extends React.Component {
     const { unpublishPublishedEntry, collection, slug, t } = this.props;
     if (!window.confirm(t('editor.editor.onUnpublishing'))) return;
 
-    await unpublishPublishedEntry(collection, slug);
+    await unpublishPublishedEntry(collection, slug, this.createHookContext());
 
     // return navigateToCollection(collection.get('name'));
   };
@@ -307,7 +356,11 @@ export class Editor extends React.Component {
   };
 
   handleDeleteEntry = () => {
-    const { entryDraft, newEntry, collection, deleteEntry, slug, t } = this.props;
+    const { entryDraft, newEntry, collection, deleteEntry, slug, currentStatus, t } = this.props;
+    if (currentStatus === status.get('PROCESSING')) {
+      window.alert(t('editor.editor.onProcessingUpdate'));
+      return;
+    }
     if (entryDraft.get('hasChanged')) {
       if (!window.confirm(t('editor.editor.onDeleteWithUnsavedChanges'))) {
         return;
@@ -320,7 +373,7 @@ export class Editor extends React.Component {
     }
 
     setTimeout(async () => {
-      await deleteEntry(collection, slug);
+      await deleteEntry(collection, slug, this.createHookContext());
       // this.deleteBackup();
       // return navigateToCollection(collection.get('name'));
     }, 0);
@@ -331,6 +384,7 @@ export class Editor extends React.Component {
       entryDraft,
       collection,
       slug,
+      currentStatus,
       removeAssets,
       removeDraftEntryMediaFiles,
       deleteUnpublishedEntry,
@@ -339,6 +393,11 @@ export class Editor extends React.Component {
       isDeleteWorkflow,
       t,
     } = this.props;
+    if (currentStatus === status.get('PROCESSING')) {
+      window.alert(t('editor.editor.onProcessingUpdate'));
+      return;
+    }
+
     if (
       entryDraft.get('hasChanged') &&
       !window.confirm(
@@ -522,6 +581,7 @@ const mapDispatchToProps = {
   createDraftDuplicateFromEntry,
   createEmptyDraft,
   discardDraft,
+  persistCustomEntry,
   persistEntry,
   deleteEntry,
   updateUnpublishedEntryStatus,
@@ -531,6 +591,7 @@ const mapDispatchToProps = {
   removeAssets,
   removeDraftEntryMediaFiles,
   logoutUser,
+  searchEntries,
 };
 
 export default connect(mapStateToProps, mapDispatchToProps)(withWorkflow(translate()(Editor)));

@@ -35,9 +35,11 @@ import type {
   ViewFilter,
   ViewGroup,
   Entry,
+  EntryDraft,
+  Entries,
 } from '../types/redux';
 import type { EntryValue } from '../valueObjects/Entry';
-import type { Backend } from '../backend';
+import type { Backend, HookContext } from '../backend';
 import type AssetProxy from '../valueObjects/AssetProxy';
 import type { Set } from 'immutable';
 
@@ -886,33 +888,19 @@ export function getSerializedEntry(collection: Collection, entry: Entry) {
   return serializedEntry;
 }
 
-export function persistEntry(collection: Collection, publishStack?: boolean) {
+export function persistCustomEntry(
+  collection: Collection,
+  entryDraft: EntryDraft,
+  context: HookContext,
+  entries?: Entries,
+) {
   return async (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
     const state = getState();
-    const entryDraft = state.entryDraft;
-    const fieldsErrors = entryDraft.get('fieldsErrors');
-    const usedSlugs = selectPublishedSlugs(state, collection.get('name'));
 
-    // Early return if draft contains validation errors
-    if (!fieldsErrors.isEmpty()) {
-      const hasPresenceErrors = fieldsErrors.some(errors =>
-        errors.some(error => error.type && error.type === ValidationErrorTypes.PRESENCE),
-      );
-
-      if (hasPresenceErrors) {
-        dispatch(
-          addNotification({
-            message: {
-              key: 'ui.toast.missingRequiredField',
-            },
-            type: 'error',
-            dismissAfter: 8000,
-          }),
-        );
-      }
-
-      return Promise.reject();
-    }
+    const usedSlugs = selectPublishedSlugs(
+      entries ? { ...state, entries: fromJS(entries) } : state,
+      collection.get('name'),
+    );
 
     const backend = currentBackend(state.config);
     const entry = entryDraft.get('entry');
@@ -930,7 +918,7 @@ export function persistEntry(collection: Collection, publishStack?: boolean) {
         entryDraft: serializedEntryDraft,
         assetProxies,
         usedSlugs,
-        publishStack,
+        context,
       })
       .then(async (newSlug: string) => {
         dispatch(
@@ -973,14 +961,46 @@ export function persistEntry(collection: Collection, publishStack?: boolean) {
   };
 }
 
-export function deleteEntry(collection: Collection, slug: string) {
+export function persistEntry(collection: Collection, context: HookContext) {
+  return async (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
+    const state = getState();
+    const entryDraft = state.entryDraft;
+
+    const fieldsErrors = entryDraft.get('fieldsErrors');
+
+    // Early return if draft contains validation errors
+    if (!fieldsErrors.isEmpty()) {
+      const hasPresenceErrors = fieldsErrors.some(errors =>
+        errors.some(error => error.type && error.type === ValidationErrorTypes.PRESENCE),
+      );
+
+      if (hasPresenceErrors) {
+        dispatch(
+          addNotification({
+            message: {
+              key: 'ui.toast.missingRequiredField',
+            },
+            type: 'error',
+            dismissAfter: 8000,
+          }),
+        );
+      }
+
+      return Promise.reject();
+    }
+    const persistFunc = persistCustomEntry(collection, entryDraft, context);
+    return persistFunc(dispatch, getState);
+  };
+}
+
+export function deleteEntry(collection: Collection, slug: string, context: HookContext) {
   return (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
     const state = getState();
     const backend = currentBackend(state.config);
 
     dispatch(entryDeleting(collection, slug));
     return backend
-      .deleteEntry(state, collection, slug)
+      .deleteEntry(state, collection, slug, context)
       .then(async () => {
         dispatch(entryDeleted(collection, slug));
         dispatch(

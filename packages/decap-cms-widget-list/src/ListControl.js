@@ -6,7 +6,6 @@ import { css, ClassNames } from '@emotion/react';
 import { List, Map, fromJS } from 'immutable';
 import { partial, isEmpty, uniqueId } from 'lodash';
 import { v4 as uuid } from 'uuid';
-import DecapCmsWidgetObject from 'decap-cms-widget-object';
 import {
   DndContext,
   MouseSensor,
@@ -33,8 +32,6 @@ import {
   resolveFieldKeyType,
   getErrorMessageForTypedFieldAndValue,
 } from './typedListHelpers';
-
-const ObjectControl = DecapCmsWidgetObject.controlComponent;
 
 const ListItem = styled.div();
 
@@ -195,8 +192,6 @@ export default class ListControl extends React.Component {
     resolveWidget: PropTypes.func.isRequired,
     clearFieldErrors: PropTypes.func.isRequired,
     fieldsErrors: ImmutablePropTypes.map.isRequired,
-    isFieldUnused: PropTypes.func,
-    setFieldUnused: PropTypes.func,
     entry: ImmutablePropTypes.map.isRequired,
     t: PropTypes.func,
   };
@@ -414,7 +409,7 @@ export default class ListControl extends React.Component {
    */
   getObjectValue = idx => this.props.value.get(idx) || Map();
 
-  handleChangeFor(index) {
+  handleFieldChangeFor(index) {
     return (f, newValue, newMetadata) => {
       const { value, metadata, onChange, field } = this.props;
       const collectionName = field.get('name');
@@ -434,6 +429,41 @@ export default class ListControl extends React.Component {
       onChange(value.set(index, newObjectValue), parsedMetadata);
     };
   }
+
+  handleChangeFor(index) {
+    return (newValue, newMetadata) => {
+      const { value, metadata, onChange, field } = this.props;
+      const collectionName = field.get('name');
+      const parsedMetadata = {
+        [collectionName]: Object.assign(metadata ? metadata.toJS() : {}, newMetadata || {}),
+      };
+      onChange(value.set(index, newValue), parsedMetadata);
+    };
+  }
+
+  handleDuplicate = (index, event) => {
+    event.preventDefault();
+    const { value, onChange } = this.props;
+
+    const listValue = value.get(index);
+    if (!listValue) return
+
+    const { itemsCollapsed } = this.state;
+
+    // Create new arrays with the item inserted at index + 1
+    const newItemsCollapsed = [...itemsCollapsed];
+    const newKeys = [...this.state.keys];
+
+    newItemsCollapsed.splice(index + 1, 0, false); // Insert expanded state
+    newKeys.splice(index + 1, 0, uuid()); // Insert new key
+
+    this.setState({
+      itemsCollapsed: newItemsCollapsed,
+      keys: newKeys
+    });
+
+    onChange(value.insert(index + 1, listValue));
+  };
 
   handleRemove = (index, event) => {
     event.preventDefault();
@@ -637,13 +667,12 @@ export default class ListControl extends React.Component {
       metadata,
       clearFieldErrors,
       fieldsErrors,
-      controlRef,
       resolveWidget,
       parentIds,
       forID,
       t,
-      isFieldUnused,
-      setFieldUnused,
+      collection,
+      collections,
     } = this.props;
 
     const { itemsCollapsed, keys } = this.state;
@@ -658,6 +687,8 @@ export default class ListControl extends React.Component {
         return this.renderErroneousTypedItem(index, item);
       }
     }
+
+    const ObjectControl = (this.props.getWidget('object')).control;
 
     return (
       <SortableListItem
@@ -682,6 +713,7 @@ export default class ListControl extends React.Component {
           onCollapseToggle={partial(this.handleItemCollapseToggle, index)}
           dragHandle={DragHandle}
           id={key}
+          onDuplicate={partial(this.handleDuplicate, index)}
           onRemove={partial(this.handleRemove, index)}
           data-testid={`styled-list-item-top-bar-${key}`}
         />
@@ -698,7 +730,10 @@ export default class ListControl extends React.Component {
               })}
               value={item}
               field={field}
-              onChangeObject={this.handleChangeFor(index)}
+              collection={collection}
+              collections={collections}
+              onChange={this.handleChangeFor(index)}
+              onChangeObject={this.handleFieldChangeFor(index)}
               editorControl={editorControl}
               resolveWidget={resolveWidget}
               metadata={metadata}
@@ -706,15 +741,12 @@ export default class ListControl extends React.Component {
               onValidateObject={onValidateObject}
               clearFieldErrors={clearFieldErrors}
               fieldsErrors={fieldsErrors}
-              ref={this.processControlRef}
-              controlRef={controlRef}
+              controlRef={this.processControlRef}
               validationKey={key}
               collapsed={collapsed}
               data-testid={`object-control-${key}`}
               hasError={hasError}
               parentIds={[...parentIds, forID, key]}
-              isFieldUnused={isFieldUnused}
-              setFieldUnused={setFieldUnused}
             />
           )}
         </ClassNames>
@@ -734,7 +766,7 @@ export default class ListControl extends React.Component {
       >
         <StyledListItemTopBar
           onCollapseToggle={null}
-          onRemove={partial(this.handleRemove, index, key)}
+          onRemove={partial(this.handleRemove, index)}
           dragHandle={DragHandle}
           id={key}
         />

@@ -516,10 +516,18 @@ declare module 'decap-cms-core' {
     handler: ({
       entry,
       author,
+      context,
     }: {
       entry: Map<string, any>;
       author: { login: string; name: string };
+      context?: HookContext;
     }) => any;
+  }
+
+  export interface HookContext {
+    publishStack?: boolean;
+    actions?: Record<string, Function>;
+    [key: string]: any;
   }
 
   export type CmsEventListenerOptions = any; // TODO: type properly

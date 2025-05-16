@@ -39,6 +39,7 @@ import type { AnyAction } from 'redux';
 import type { EntryValue } from '../valueObjects/Entry';
 import type { Status } from '../constants/publishModes';
 import type { ThunkDispatch } from 'redux-thunk';
+import type { HookContext } from '../backend';
 
 /*
  * Constant Declarations
@@ -66,6 +67,8 @@ export const UNPUBLISHED_ENTRY_PUBLISH_FAILURE = 'UNPUBLISHED_ENTRY_PUBLISH_FAIL
 export const UNPUBLISHED_ENTRY_DELETE_REQUEST = 'UNPUBLISHED_ENTRY_DELETE_REQUEST';
 export const UNPUBLISHED_ENTRY_DELETE_SUCCESS = 'UNPUBLISHED_ENTRY_DELETE_SUCCESS';
 export const UNPUBLISHED_ENTRY_DELETE_FAILURE = 'UNPUBLISHED_ENTRY_DELETE_FAILURE';
+
+export const EDITORIAL_WORKFLOW_DISMISS_ERROR = 'EDITORIAL_WORKFLOW_DISMISS_ERROR';
 
 /*
  * Simple Action Creators (Internal)
@@ -271,6 +274,7 @@ export function loadUnpublishedEntry(collection: Collection, slug: string) {
       dispatch(unpublishedEntryLoaded(collection, entry));
       dispatch(createDraftFromEntry(entry));
     } catch (error) {
+      if (error.name === EDITORIAL_WORKFLOW_DISMISS_ERROR) return
       if (error.name === EDITORIAL_WORKFLOW_ERROR && error.notUnderEditorialWorkflow) {
         dispatch(unpublishedEntryRedirected(collection, slug));
         dispatch(loadEntry(collection, slug));
@@ -321,38 +325,20 @@ export function loadUnpublishedEntries(collections: Collections) {
   };
 }
 
-export function persistUnpublishedEntry(collection: Collection, existingUnpublishedEntry: boolean) {
+export function persistCustomUnpublishedEntry(
+  collection: Collection,
+  existingUnpublishedEntry: boolean,
+  entryDraft: EntryDraft,
+  context: HookContext,
+) {
   return async (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
     const state = getState();
-    const entryDraft = state.entryDraft;
-    const fieldsErrors = entryDraft.get('fieldsErrors');
     const unpublishedSlugs = selectUnpublishedSlugs(state, collection.get('name'));
     const publishedSlugs = selectPublishedSlugs(state, collection.get('name'));
     const usedSlugs = publishedSlugs.concat(unpublishedSlugs) as List<string>;
     const entriesLoaded = get(state.editorialWorkflow.toJS(), 'pages.ids', false);
 
-    //load unpublishedEntries
     !entriesLoaded && dispatch(loadUnpublishedEntries(state.collections));
-
-    // Early return if draft contains validation errors
-    if (!fieldsErrors.isEmpty()) {
-      const hasPresenceErrors = fieldsErrors.some(errors =>
-        errors.some(error => error.type && error.type === ValidationErrorTypes.PRESENCE),
-      );
-
-      if (hasPresenceErrors) {
-        dispatch(
-          addNotification({
-            message: {
-              key: 'ui.toast.missingRequiredField',
-            },
-            type: 'error',
-            dismissAfter: 8000,
-          }),
-        );
-      }
-      return Promise.reject();
-    }
 
     const backend = currentBackend(state.config);
     const entry = entryDraft.get('entry');
@@ -375,6 +361,7 @@ export function persistUnpublishedEntry(collection: Collection, existingUnpublis
         entryDraft: serializedEntryDraft,
         assetProxies,
         usedSlugs,
+        context,
       });
       dispatch(
         addNotification({
@@ -392,6 +379,7 @@ export function persistUnpublishedEntry(collection: Collection, existingUnpublis
         navigateToEntry(collection.get('name'), newSlug);
       }
     } catch (error) {
+      if (error.name === EDITORIAL_WORKFLOW_DISMISS_ERROR) return;
       dispatch(
         addNotification({
           message: {
@@ -406,6 +394,37 @@ export function persistUnpublishedEntry(collection: Collection, existingUnpublis
         dispatch(unpublishedEntryPersistedFail(error, collection, entry.get('slug'))),
       );
     }
+  };
+}
+
+export function persistUnpublishedEntry(collection: Collection, existingUnpublishedEntry: boolean, context: HookContext) {
+  return async (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
+    const state = getState();
+    const entryDraft = state.entryDraft;
+    const fieldsErrors = entryDraft.get('fieldsErrors');
+
+    // Early return if draft contains validation errors
+    if (!fieldsErrors.isEmpty()) {
+      const hasPresenceErrors = fieldsErrors.some(errors =>
+        errors.some(error => error.type && error.type === ValidationErrorTypes.PRESENCE),
+      );
+
+      if (hasPresenceErrors) {
+        dispatch(
+          addNotification({
+            message: {
+              key: 'ui.toast.missingRequiredField',
+            },
+            type: 'error',
+            dismissAfter: 8000,
+          }),
+        );
+      }
+      return Promise.reject();
+    }
+
+    const persistFunc = persistCustomUnpublishedEntry(collection, existingUnpublishedEntry, entryDraft, context);
+    return persistFunc(dispatch, getState);
   };
 }
 
@@ -483,7 +502,7 @@ export function deleteUnpublishedEntry(collection: string, slug: string) {
 export function publishUnpublishedEntry(
   collectionName: string,
   slug: string,
-  publishStack: boolean,
+  context: HookContext,
 ) {
   return async (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
     const state = getState();
@@ -493,7 +512,7 @@ export function publishUnpublishedEntry(
     const isDeleteWorkflow = entry.get('isDeleteWorkflow');
     dispatch(unpublishedEntryPublishRequest(collectionName, slug));
     try {
-      if (!publishStack && state.stack.status.status) {
+      if (!context.publishStack && state.stack.status.status) {
         dispatch(
           addNotification({
             message: {
@@ -507,7 +526,7 @@ export function publishUnpublishedEntry(
         return dispatch(unpublishedEntryPublishError(collectionName, slug));
       }
 
-      await backend.publishUnpublishedEntry(entry, publishStack);
+      await backend.publishUnpublishedEntry(entry, context);
 
       await dispatch(checkStackStatus());
 
@@ -537,6 +556,7 @@ export function publishUnpublishedEntry(
         return dispatch(loadEntry(collection, slug));
       }
     } catch (error) {
+      if (error.name === EDITORIAL_WORKFLOW_DISMISS_ERROR) return;
       dispatch(
         addNotification({
           message: { key: 'ui.toast.onFailToPublishEntry', details: error },
@@ -549,15 +569,19 @@ export function publishUnpublishedEntry(
   };
 }
 
-export function unpublishPublishedEntry(collection: Collection, slug: string) {
+export function unpublishCustomPublishedEntry(
+  collection: Collection,
+  slug: string,
+  entry: EntryMap,
+  context: HookContext,
+) {
   return (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
     const state = getState();
     const backend = currentBackend(state.config);
-    const entry = selectEntry(state, collection.get('name'), slug);
     const entryDraft = Map().set('entry', entry) as unknown as EntryDraft;
     dispatch(unpublishedEntryPersisting(collection, slug));
     return backend
-      .deleteEntry(state, collection, slug)
+      .deleteEntry(state, collection, slug, context)
       .then(() => {
         if (!backend.implementation.deleteCollectionFiles) {
           backend.persistEntry({
@@ -567,6 +591,7 @@ export function unpublishPublishedEntry(collection: Collection, slug: string) {
             assetProxies: [],
             usedSlugs: List(),
             status: status.get('PENDING_PUBLISH'),
+            context,
           });
         }
       })
@@ -596,5 +621,14 @@ export function unpublishPublishedEntry(collection: Collection, slug: string) {
         );
         dispatch(unpublishedEntryPersistedFail(error, collection, entry.get('slug')));
       });
+  };
+}
+
+export function unpublishPublishedEntry(collection: Collection, slug: string, context: HookContext) {
+  return (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
+    const state = getState();
+    const entry = selectEntry(state, collection.get('name'), slug);
+    const unpublishFunc = unpublishCustomPublishedEntry(collection, slug, entry, context);
+    return unpublishFunc(dispatch, getState);
   };
 }

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import styled from '@emotion/styled';
 import { css } from '@emotion/react';
@@ -56,6 +56,10 @@ function Toggle({
   Handle = ToggleHandle,
 }) {
   const [isActive, setIsActive] = useState(active);
+
+  useEffect(() => {
+    setIsActive(active);
+  }, [active]);
 
   function handleToggle() {
     setIsActive(prevIsActive => !prevIsActive);
