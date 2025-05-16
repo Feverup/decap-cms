@@ -106,13 +106,12 @@ export default class ControlPane extends React.Component {
     selectedLocale: this.props.locale,
   };
 
-  componentValidate = {};
+  childRefs = {};
 
-  controlRef(field, wrappedControl) {
+  controlRef = (field, wrappedControl) => {
     if (!wrappedControl) return;
     const parentName = field.get('parentName');
     const name = field.get('name');
-
     const validateName = parentName ? `${parentName}.${name}` : name;
 
     this.componentValidate[validateName] =
@@ -166,9 +165,13 @@ export default class ControlPane extends React.Component {
 
       const parentName = field.get('parentName');
       const name = field.get('name');
-
       const validateName = parentName ? `${parentName}.${name}` : name;
-      this.componentValidate[validateName]();
+
+      const control = this.childRefs[validateName];
+      const validateFn = control?.innerWrappedControl?.validate ?? control?.validate;
+      if (validateFn) {
+        validateFn();
+      }
     });
   };
 
@@ -180,6 +183,14 @@ export default class ControlPane extends React.Component {
       return Promise.resolve();
     }
   };
+
+  focus(path) {
+    const [fieldName, ...remainingPath] = path.split('.');
+    const control = this.childRefs[fieldName];
+    if (control?.focus) {
+      control.focus(remainingPath.join('.'));
+    }
+  }
 
   render() {
     const { collection, entry, fields, fieldsMetaData, fieldsErrors, onChange, onValidate, t } =
@@ -243,8 +254,7 @@ export default class ControlPane extends React.Component {
                   onChange(field, newValue, newMetadata, i18n);
                 }}
                 onValidate={onValidate}
-                processControlRef={this.controlRef.bind(this)}
-                controlRef={this.controlRef}
+                controlRef={this.getControlRef(field)}
                 entry={entry}
                 collection={collection}
                 isDisabled={isDuplicate}

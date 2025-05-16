@@ -550,6 +550,8 @@ export type EntryObject = {
   slug: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  i18n?: any;
   collection: string;
   mediaFiles: List<MediaFileMap>;
   newRecord: boolean;
@@ -606,7 +608,7 @@ export type CollectionFile = StaticallyTypedRecord<{
 
 export type CollectionFiles = List<CollectionFile>;
 
-type NestedObject = { depth: number };
+type NestedObject = { depth: number; subfolders?: boolean };
 
 type Nested = StaticallyTypedRecord<NestedObject>;
 
