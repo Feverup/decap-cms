@@ -325,20 +325,41 @@ export function loadUnpublishedEntries(collections: Collections) {
   };
 }
 
-export function persistCustomUnpublishedEntry(
+export function persistUnpublishedEntry(
   collection: Collection,
   existingUnpublishedEntry: boolean,
-  entryDraft: EntryDraft,
   context: HookContext,
+  customEntryDraft?: EntryDraft,
 ) {
   return async (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
     const state = getState();
+    const entryDraft = customEntryDraft || state.entryDraft;
+    const fieldsErrors = entryDraft.get('fieldsErrors');
     const unpublishedSlugs = selectUnpublishedSlugs(state, collection.get('name'));
     const publishedSlugs = selectPublishedSlugs(state, collection.get('name'));
     const usedSlugs = publishedSlugs.concat(unpublishedSlugs) as List<string>;
     const entriesLoaded = get(state.editorialWorkflow.toJS(), 'pages.ids', false);
 
     !entriesLoaded && dispatch(loadUnpublishedEntries(state.collections));
+
+    if (fieldsErrors && !fieldsErrors.isEmpty()) {
+      const hasPresenceErrors = fieldsErrors.some(errors =>
+        errors.some(error => error.type && error.type === ValidationErrorTypes.PRESENCE),
+      );
+
+      if (hasPresenceErrors) {
+        dispatch(
+          addNotification({
+            message: {
+              key: 'ui.toast.missingRequiredField',
+            },
+            type: 'error',
+            dismissAfter: 8000,
+          }),
+        );
+      }
+      return Promise.reject();
+    }
 
     const backend = currentBackend(state.config);
     const entry = entryDraft.get('entry');
@@ -361,7 +382,7 @@ export function persistCustomUnpublishedEntry(
         entryDraft: serializedEntryDraft,
         assetProxies,
         usedSlugs,
-        context,
+        context
       });
       dispatch(
         addNotification({
@@ -374,12 +395,15 @@ export function persistCustomUnpublishedEntry(
       );
       dispatch(unpublishedEntryPersisted(collection, serializedEntry));
 
-      if (entry.get('slug') !== newSlug) {
-        await dispatch(loadUnpublishedEntry(collection, newSlug));
-        navigateToEntry(collection.get('name'), newSlug);
+      if (!customEntryDraft) {
+        if (entry.get('slug') !== newSlug) {
+          await dispatch(loadUnpublishedEntry(collection, newSlug));
+          navigateToEntry(collection.get('name'), newSlug);
+        }
       }
+
+      return newSlug;
     } catch (error) {
-      if (error.name === EDITORIAL_WORKFLOW_DISMISS_ERROR) return;
       dispatch(
         addNotification({
           message: {
@@ -394,45 +418,6 @@ export function persistCustomUnpublishedEntry(
         dispatch(unpublishedEntryPersistedFail(error, collection, entry.get('slug'))),
       );
     }
-  };
-}
-
-export function persistUnpublishedEntry(
-  collection: Collection,
-  existingUnpublishedEntry: boolean,
-  context: HookContext,
-) {
-  return async (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
-    const state = getState();
-    const entryDraft = state.entryDraft;
-    const fieldsErrors = entryDraft.get('fieldsErrors');
-
-    // Early return if draft contains validation errors
-    if (!fieldsErrors.isEmpty()) {
-      const hasPresenceErrors = fieldsErrors.some(errors =>
-        errors.some(error => error.type && error.type === ValidationErrorTypes.PRESENCE),
-      );
-
-      if (hasPresenceErrors) {
-        dispatch(
-          addNotification({
-            message: {
-              key: 'ui.toast.missingRequiredField',
-            },
-            type: 'error',
-            dismissAfter: 8000,
-          }),
-        );
-      }
-      return Promise.reject();
-    }
-
-    return persistCustomUnpublishedEntry(
-      collection,
-      existingUnpublishedEntry,
-      entryDraft,
-      context,
-    )(dispatch, getState);
   };
 }
 
@@ -507,16 +492,17 @@ export function deleteUnpublishedEntry(collection: string, slug: string) {
   };
 }
 
-export function publishCustomUnpublishedEntry(
+export function publishUnpublishedEntry(
   collectionName: string,
   slug: string,
-  entry: EntryMap,
   context: HookContext,
+  customEntry?: EntryMap,
 ) {
   return async (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
     const state = getState();
     const collections = state.collections;
     const backend = currentBackend(state.config);
+    const entry = customEntry || selectUnpublishedEntry(state, collectionName, slug);
     const isDeleteWorkflow = entry.get('isDeleteWorkflow');
     dispatch(unpublishedEntryPublishRequest(collectionName, slug));
     try {
@@ -549,19 +535,21 @@ export function publishCustomUnpublishedEntry(
         }),
       );
       dispatch(unpublishedEntryPublished(collectionName, slug));
-      const collection = collections.get(collectionName);
-      if (collection.has('nested')) {
-        dispatch(loadEntries(collection));
-        const newSlug = slugFromCustomPath(collection, entry.get('path'));
-        loadEntry(collection, newSlug);
-        if (slug !== newSlug && selectEditingDraft(state.entryDraft)) {
-          navigateToEntry(collection.get('name'), newSlug);
+      if (!customEntry) {
+        const collection = collections.get(collectionName);
+        if (!collection.has('nested')) {
+          dispatch(loadEntries(collection));
+          const newSlug = slugFromCustomPath(collection, entry.get('path'));
+          loadEntry(collection, newSlug);
+          if (slug !== newSlug && selectEditingDraft(state.entryDraft)) {
+            navigateToEntry(collection.get('name'), newSlug);
+          }
+        } else if (isDeleteWorkflow) {
+          dispatch(unpublishedEntryDeleted(collectionName, slug));
+          return navigateToCollection(collectionName);
+        } else {
+          return dispatch(loadEntry(collection, slug));
         }
-      } else if (isDeleteWorkflow) {
-        dispatch(unpublishedEntryDeleted(collectionName, slug));
-        return navigateToCollection(collectionName);
-      } else {
-        return dispatch(loadEntry(collection, slug));
       }
     } catch (error) {
       if (error.name === EDITORIAL_WORKFLOW_DISMISS_ERROR) return;
@@ -577,31 +565,15 @@ export function publishCustomUnpublishedEntry(
   };
 }
 
-export function publishUnpublishedEntry(
-  collectionName: string,
-  slug: string,
-  context: HookContext,
-) {
-  return (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
-    const state = getState();
-    const entry = selectUnpublishedEntry(state, collectionName, slug);
-    return publishCustomUnpublishedEntry(collectionName, slug, entry, context)(dispatch, getState);
-  };
-}
-
-export function unpublishCustomPublishedEntry(
-  collection: Collection,
-  slug: string,
-  entry: EntryMap,
-  context: HookContext,
-) {
+export function unpublishPublishedEntry(collection: Collection, slug: string, customEntry?: EntryMap) {
   return (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
     const state = getState();
     const backend = currentBackend(state.config);
+    const entry = customEntry || selectEntry(state, collection.get('name'), slug);
     const entryDraft = Map().set('entry', entry) as unknown as EntryDraft;
     dispatch(unpublishedEntryPersisting(collection, slug));
     return backend
-      .deleteEntry(state, collection, slug, context)
+      .deleteEntry(state, collection, slug)
       .then(() => {
         if (!backend.implementation.deleteCollectionFiles) {
           backend.persistEntry({
@@ -611,14 +583,15 @@ export function unpublishCustomPublishedEntry(
             assetProxies: [],
             usedSlugs: List(),
             status: status.get('PENDING_PUBLISH'),
-            context,
           });
         }
       })
       .then(() => {
         dispatch(unpublishedEntryPersisted(collection, entry));
         dispatch(entryDeleted(collection, slug));
-        dispatch(loadUnpublishedEntry(collection, slug));
+        if (!customEntry) {
+          dispatch(loadUnpublishedEntry(collection, slug));
+        }
         dispatch(
           addNotification({
             message: {
@@ -641,17 +614,5 @@ export function unpublishCustomPublishedEntry(
         );
         dispatch(unpublishedEntryPersistedFail(error, collection, entry.get('slug')));
       });
-  };
-}
-
-export function unpublishPublishedEntry(
-  collection: Collection,
-  slug: string,
-  context: HookContext,
-) {
-  return (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
-    const state = getState();
-    const entry = selectEntry(state, collection.get('name'), slug);
-    return unpublishCustomPublishedEntry(collection, slug, entry, context)(dispatch, getState);
   };
 }

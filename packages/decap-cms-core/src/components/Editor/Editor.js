@@ -23,16 +23,13 @@ import {
   // retrieveLocalBackup,
   // deleteLocalBackup,
   removeDraftEntryMediaFiles,
-  persistCustomEntry,
 } from '../../actions/entries';
 import {
   updateUnpublishedEntryStatus,
   publishUnpublishedEntry,
   unpublishPublishedEntry,
   deleteUnpublishedEntry,
-  persistCustomUnpublishedEntry,
-  unpublishCustomPublishedEntry,
-  publishCustomUnpublishedEntry,
+  persistUnpublishedEntry,
 } from '../../actions/editorialWorkflow';
 import { removeAssets } from '../../actions/media';
 import { loadDeployPreview } from '../../actions/deploys';
@@ -55,6 +52,7 @@ export class Editor extends React.Component {
     entryDraft: ImmutablePropTypes.map.isRequired,
     loadEntry: PropTypes.func.isRequired,
     persistEntry: PropTypes.func.isRequired,
+    persistUnpublishedEntry: PropTypes.func.isRequired,
     deleteEntry: PropTypes.func.isRequired,
     showDelete: PropTypes.bool.isRequired,
     fields: ImmutablePropTypes.list.isRequired,
@@ -83,10 +81,6 @@ export class Editor extends React.Component {
     }),
     hasChanged: PropTypes.bool,
     t: PropTypes.func.isRequired,
-    persistCustomEntry: PropTypes.func.isRequired,
-    persistCustomUnpublishedEntry: PropTypes.func.isRequired,
-    unpublishCustomPublishedEntry: PropTypes.func.isRequired,
-    publishCustomUnpublishedEntry: PropTypes.func.isRequired,
     // retrieveLocalBackup: PropTypes.func.isRequired,
     // localBackup: ImmutablePropTypes.map,
     // loadLocalBackup: PropTypes.func,
@@ -220,10 +214,6 @@ export class Editor extends React.Component {
   handleChangeStatus = newStatusName => {
     const { entryDraft, updateUnpublishedEntryStatus, collection, slug, currentStatus, t } =
       this.props;
-    if (currentStatus === status.get('PROCESSING')) {
-      window.alert(t('editor.editor.onProcessingUpdate'));
-      return;
-    }
     if (entryDraft.get('hasChanged')) {
       window.alert(t('editor.editor.onUpdatingWithUnsavedChanges'));
       return;
@@ -244,34 +234,36 @@ export class Editor extends React.Component {
         navigateToCollection,
         searchEntries: this.props.searchEntries,
         handleChangeStatus: this.handleChangeStatus,
+        handleDeleteUnpublishedChanges: this.handleDeleteUnpublishedChanges,
         getCollection: name => {
           return this.props.collections.get(name);
         },
         persistEntry: async (collection, entry, opts = {}) => {
           const context = this.createHookContext(opts);
           const entryDraft = entry || createEmptyDraft(collection);
-          return this.props.persistCustomEntry(collection, entryDraft, context);
+          return this.props.persistEntry(collection, context, entryDraft);
         },
         persistUnpublishedEntry: async (collection, existingUnpublishedEntry, entry, opts = {}) => {
           const context = this.createHookContext(opts);
-          return this.props.persistCustomUnpublishedEntry(collection, existingUnpublishedEntry, entry, context);
+          const entryDraft = entry || createEmptyDraft(collection);
+          return this.props.persistUnpublishedEntry(collection, existingUnpublishedEntry, context, entryDraft);
         },
         publishEntry: async (collection, slug, entry, opts = {}) => {
           const context = this.createHookContext(opts);
-          return this.props.publishCustomUnpublishedEntry(
+          const entryDraft = entry || createEmptyDraft(collection);
+          return this.props.publishUnpublishedEntry(
             collection.get('name'),
             slug,
-            entry,
             context,
+            entryDraft,
           );
         },
-        unpublishEntry: async (collection, slug, entry, opts = {}) => {
-          const context = this.createHookContext(opts);
-          return this.props.unpublishCustomPublishedEntry(collection, slug, entry, context);
+        deleteUnpublishedEntry: async (collection, slug) => {
+          return this.props.deleteUnpublishedEntry(collection, slug);
         },
         unpublishPublishedEntry: async (collection, slug, entry, opts = {}) => {
           const context = this.createHookContext(opts);
-          return this.props.unpublishCustomPublishedEntry(collection, slug, entry, context);
+          return this.props.unpublishPublishedEntry(collection, slug, context, entry);
         },
         deleteEntry: async (collection, slug, entry, opts = {}) => {
           const context = this.createHookContext(opts);
@@ -371,11 +363,7 @@ export class Editor extends React.Component {
   };
 
   handleDeleteEntry = () => {
-    const { entryDraft, newEntry, collection, deleteEntry, slug, currentStatus, t } = this.props;
-    if (currentStatus === status.get('PROCESSING')) {
-      window.alert(t('editor.editor.onProcessingUpdate'));
-      return;
-    }
+    const { entryDraft, newEntry, collection, deleteEntry, slug, t } = this.props;
     if (entryDraft.get('hasChanged')) {
       if (!window.confirm(t('editor.editor.onDeleteWithUnsavedChanges'))) {
         return;
@@ -394,12 +382,12 @@ export class Editor extends React.Component {
     }, 0);
   };
 
-  handleDeleteUnpublishedChanges = async () => {
+  handleDeleteUnpublishedChanges = async (opts = {}) => {
+    const { force = false } = opts;
     const {
       entryDraft,
       collection,
       slug,
-      currentStatus,
       removeAssets,
       removeDraftEntryMediaFiles,
       deleteUnpublishedEntry,
@@ -408,21 +396,20 @@ export class Editor extends React.Component {
       isDeleteWorkflow,
       t,
     } = this.props;
-    if (currentStatus === status.get('PROCESSING')) {
-      window.alert(t('editor.editor.onProcessingUpdate'));
-      return;
+
+    if (!force) {
+      if (
+        entryDraft.get('hasChanged') &&
+        !window.confirm(
+          t('editor.editor.onDeleteUnpublishedChangesWithUnsavedChanges') || isDeleteWorkflow,
+        )
+      ) {
+        return;
+      } else if (!window.confirm(t('editor.editor.onDeleteUnpublishedChanges'))) {
+        return;
+      }
     }
 
-    if (
-      entryDraft.get('hasChanged') &&
-      !window.confirm(
-        t('editor.editor.onDeleteUnpublishedChangesWithUnsavedChanges') || isDeleteWorkflow,
-      )
-    ) {
-      return;
-    } else if (!window.confirm(t('editor.editor.onDeleteUnpublishedChanges'))) {
-      return;
-    }
 
     await deleteUnpublishedEntry(collection.get('name'), slug);
 
@@ -597,6 +584,7 @@ const mapDispatchToProps = {
   createEmptyDraft,
   discardDraft,
   persistEntry,
+  persistUnpublishedEntry,
   deleteEntry,
   updateUnpublishedEntryStatus,
   publishUnpublishedEntry,
@@ -606,10 +594,6 @@ const mapDispatchToProps = {
   removeDraftEntryMediaFiles,
   logoutUser,
   searchEntries,
-  persistCustomEntry,
-  persistCustomUnpublishedEntry,
-  unpublishCustomPublishedEntry,
-  publishCustomUnpublishedEntry,
 };
 
 export default connect(mapStateToProps, mapDispatchToProps)(withWorkflow(translate()(Editor)));

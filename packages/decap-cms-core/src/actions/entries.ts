@@ -887,13 +887,36 @@ export function getSerializedEntry(collection: Collection, entry: Entry) {
   return serializedEntry;
 }
 
-export function persistCustomEntry(
+export function persistEntry(
   collection: Collection,
-  entryDraft: EntryDraft,
   context: HookContext,
+  customEntryDraft?: EntryDraft,
 ) {
   return async (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
     const state = getState();
+    const entryDraft = customEntryDraft || state.entryDraft;
+
+    const fieldsErrors = entryDraft.get('fieldsErrors');
+
+    if (fieldsErrors && !fieldsErrors.isEmpty()) {
+      const hasPresenceErrors = fieldsErrors.some(errors =>
+        errors.some(error => error.type && error.type === ValidationErrorTypes.PRESENCE),
+      );
+
+      if (hasPresenceErrors) {
+        dispatch(
+          addNotification({
+            message: {
+              key: 'ui.toast.missingRequiredField',
+            },
+            type: 'error',
+            dismissAfter: 8000,
+          }),
+        );
+      }
+
+      return Promise.reject();
+    }
 
     const usedSlugs = selectPublishedSlugs(state, collection.get('name'));
 
@@ -931,13 +954,17 @@ export function persistCustomEntry(
           await dispatch(loadMedia());
         }
         dispatch(entryPersisted(collection, serializedEntry, newSlug));
-        if (collection.has('nested')) {
-          await dispatch(loadEntries(collection));
+        if (!customEntryDraft) {
+          if (collection.has('nested')) {
+            await dispatch(loadEntries(collection));
+          }
+          if (entry.get('slug') !== newSlug) {
+            await dispatch(loadEntry(collection, newSlug));
+            navigateToEntry(collection.get('name'), newSlug);
+          }
         }
-        if (entry.get('slug') !== newSlug) {
-          await dispatch(loadEntry(collection, newSlug));
-          navigateToEntry(collection.get('name'), newSlug);
-        }
+
+        return newSlug;
       })
       .catch((error: Error) => {
         console.error(error);
@@ -953,37 +980,6 @@ export function persistCustomEntry(
         );
         return Promise.reject(dispatch(entryPersistFail(collection, serializedEntry, error)));
       });
-  };
-}
-
-export function persistEntry(collection: Collection, context: HookContext) {
-  return async (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
-    const state = getState();
-    const entryDraft = state.entryDraft;
-
-    const fieldsErrors = entryDraft.get('fieldsErrors');
-
-    // Early return if draft contains validation errors
-    if (!fieldsErrors.isEmpty()) {
-      const hasPresenceErrors = fieldsErrors.some(errors =>
-        errors.some(error => error.type && error.type === ValidationErrorTypes.PRESENCE),
-      );
-
-      if (hasPresenceErrors) {
-        dispatch(
-          addNotification({
-            message: {
-              key: 'ui.toast.missingRequiredField',
-            },
-            type: 'error',
-            dismissAfter: 8000,
-          }),
-        );
-      }
-
-      return Promise.reject();
-    }
-    return persistCustomEntry(collection, entryDraft, context)(dispatch, getState);
   };
 }
 
@@ -1013,10 +1009,12 @@ export function deleteEntry(
             dismissAfter: 4000,
           }),
         );
-        if (backend.implementation.deleteCollectionFiles) {
-          dispatch(loadUnpublishedEntry(collection, slug));
-        } else if (!entry) {
-          navigateToCollection(collection.get('name'));
+        if (!entry) {
+          if (backend.implementation.deleteCollectionFiles) {
+            dispatch(loadUnpublishedEntry(collection, slug));
+          } else {
+            navigateToCollection(collection.get('name'));
+          }
         }
       })
       .catch((error: Error) => {
