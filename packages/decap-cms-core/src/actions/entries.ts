@@ -36,7 +36,6 @@ import type {
   ViewGroup,
   Entry,
   EntryDraft,
-  Entries,
 } from '../types/redux';
 import type { EntryValue } from '../valueObjects/Entry';
 import type { Backend, HookContext } from '../backend';
@@ -892,15 +891,11 @@ export function persistCustomEntry(
   collection: Collection,
   entryDraft: EntryDraft,
   context: HookContext,
-  entries?: Entries,
 ) {
   return async (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
     const state = getState();
 
-    const usedSlugs = selectPublishedSlugs(
-      entries ? { ...state, entries: fromJS(entries) } : state,
-      collection.get('name'),
-    );
+    const usedSlugs = selectPublishedSlugs(state, collection.get('name'));
 
     const backend = currentBackend(state.config);
     const entry = entryDraft.get('entry');
@@ -988,19 +983,23 @@ export function persistEntry(collection: Collection, context: HookContext) {
 
       return Promise.reject();
     }
-    const persistFunc = persistCustomEntry(collection, entryDraft, context);
-    return persistFunc(dispatch, getState);
+    return persistCustomEntry(collection, entryDraft, context)(dispatch, getState);
   };
 }
 
-export function deleteEntry(collection: Collection, slug: string, context: HookContext) {
+export function deleteEntry(
+  collection: Collection,
+  slug: string,
+  context: HookContext,
+  entry?: EntryMap,
+) {
   return (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
     const state = getState();
     const backend = currentBackend(state.config);
 
     dispatch(entryDeleting(collection, slug));
     return backend
-      .deleteEntry(state, collection, slug, context)
+      .deleteEntry(state, collection, slug, context, entry)
       .then(async () => {
         dispatch(entryDeleted(collection, slug));
         dispatch(
@@ -1016,7 +1015,7 @@ export function deleteEntry(collection: Collection, slug: string, context: HookC
         );
         if (backend.implementation.deleteCollectionFiles) {
           dispatch(loadUnpublishedEntry(collection, slug));
-        } else {
+        } else if (!entry) {
           navigateToCollection(collection.get('name'));
         }
       })

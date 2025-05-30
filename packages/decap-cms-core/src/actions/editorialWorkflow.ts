@@ -274,7 +274,7 @@ export function loadUnpublishedEntry(collection: Collection, slug: string) {
       dispatch(unpublishedEntryLoaded(collection, entry));
       dispatch(createDraftFromEntry(entry));
     } catch (error) {
-      if (error.name === EDITORIAL_WORKFLOW_DISMISS_ERROR) return
+      if (error.name === EDITORIAL_WORKFLOW_DISMISS_ERROR) return;
       if (error.name === EDITORIAL_WORKFLOW_ERROR && error.notUnderEditorialWorkflow) {
         dispatch(unpublishedEntryRedirected(collection, slug));
         dispatch(loadEntry(collection, slug));
@@ -397,7 +397,11 @@ export function persistCustomUnpublishedEntry(
   };
 }
 
-export function persistUnpublishedEntry(collection: Collection, existingUnpublishedEntry: boolean, context: HookContext) {
+export function persistUnpublishedEntry(
+  collection: Collection,
+  existingUnpublishedEntry: boolean,
+  context: HookContext,
+) {
   return async (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
     const state = getState();
     const entryDraft = state.entryDraft;
@@ -423,8 +427,12 @@ export function persistUnpublishedEntry(collection: Collection, existingUnpublis
       return Promise.reject();
     }
 
-    const persistFunc = persistCustomUnpublishedEntry(collection, existingUnpublishedEntry, entryDraft, context);
-    return persistFunc(dispatch, getState);
+    return persistCustomUnpublishedEntry(
+      collection,
+      existingUnpublishedEntry,
+      entryDraft,
+      context,
+    )(dispatch, getState);
   };
 }
 
@@ -499,16 +507,16 @@ export function deleteUnpublishedEntry(collection: string, slug: string) {
   };
 }
 
-export function publishUnpublishedEntry(
+export function publishCustomUnpublishedEntry(
   collectionName: string,
   slug: string,
+  entry: EntryMap,
   context: HookContext,
 ) {
   return async (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
     const state = getState();
     const collections = state.collections;
     const backend = currentBackend(state.config);
-    const entry = selectUnpublishedEntry(state, collectionName, slug);
     const isDeleteWorkflow = entry.get('isDeleteWorkflow');
     dispatch(unpublishedEntryPublishRequest(collectionName, slug));
     try {
@@ -569,6 +577,18 @@ export function publishUnpublishedEntry(
   };
 }
 
+export function publishUnpublishedEntry(
+  collectionName: string,
+  slug: string,
+  context: HookContext,
+) {
+  return (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
+    const state = getState();
+    const entry = selectUnpublishedEntry(state, collectionName, slug);
+    return publishCustomUnpublishedEntry(collectionName, slug, entry, context)(dispatch, getState);
+  };
+}
+
 export function unpublishCustomPublishedEntry(
   collection: Collection,
   slug: string,
@@ -624,11 +644,14 @@ export function unpublishCustomPublishedEntry(
   };
 }
 
-export function unpublishPublishedEntry(collection: Collection, slug: string, context: HookContext) {
+export function unpublishPublishedEntry(
+  collection: Collection,
+  slug: string,
+  context: HookContext,
+) {
   return (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
     const state = getState();
     const entry = selectEntry(state, collection.get('name'), slug);
-    const unpublishFunc = unpublishCustomPublishedEntry(collection, slug, entry, context);
-    return unpublishFunc(dispatch, getState);
+    return unpublishCustomPublishedEntry(collection, slug, entry, context)(dispatch, getState);
   };
 }

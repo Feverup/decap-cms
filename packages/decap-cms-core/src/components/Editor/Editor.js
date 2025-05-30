@@ -16,7 +16,6 @@ import {
   discardDraft,
   changeDraftField,
   changeDraftFieldValidation,
-  persistCustomEntry,
   persistEntry,
   deleteEntry,
   // persistLocalBackup,
@@ -24,12 +23,16 @@ import {
   // retrieveLocalBackup,
   // deleteLocalBackup,
   removeDraftEntryMediaFiles,
+  persistCustomEntry,
 } from '../../actions/entries';
 import {
   updateUnpublishedEntryStatus,
   publishUnpublishedEntry,
   unpublishPublishedEntry,
   deleteUnpublishedEntry,
+  persistCustomUnpublishedEntry,
+  unpublishCustomPublishedEntry,
+  publishCustomUnpublishedEntry,
 } from '../../actions/editorialWorkflow';
 import { removeAssets } from '../../actions/media';
 import { loadDeployPreview } from '../../actions/deploys';
@@ -51,7 +54,6 @@ export class Editor extends React.Component {
     entry: ImmutablePropTypes.map,
     entryDraft: ImmutablePropTypes.map.isRequired,
     loadEntry: PropTypes.func.isRequired,
-    persistCustomEntry: PropTypes.func.isRequired,
     persistEntry: PropTypes.func.isRequired,
     deleteEntry: PropTypes.func.isRequired,
     showDelete: PropTypes.bool.isRequired,
@@ -81,6 +83,10 @@ export class Editor extends React.Component {
     }),
     hasChanged: PropTypes.bool,
     t: PropTypes.func.isRequired,
+    persistCustomEntry: PropTypes.func.isRequired,
+    persistCustomUnpublishedEntry: PropTypes.func.isRequired,
+    unpublishCustomPublishedEntry: PropTypes.func.isRequired,
+    publishCustomUnpublishedEntry: PropTypes.func.isRequired,
     // retrieveLocalBackup: PropTypes.func.isRequired,
     // localBackup: ImmutablePropTypes.map,
     // loadLocalBackup: PropTypes.func,
@@ -232,46 +238,51 @@ export class Editor extends React.Component {
   //   deleteLocalBackup(collection, !newEntry && slug);
   // }
 
-  createHookContext = (context) => {
+  createHookContext = context => {
     const defaultContext = {
       actions: {
         navigateToCollection,
         searchEntries: this.props.searchEntries,
         handleChangeStatus: this.handleChangeStatus,
-        getCollection: (name) => {
+        getCollection: name => {
           return this.props.collections.get(name);
         },
         persistEntry: async (collection, entry, opts = {}) => {
           const context = this.createHookContext(opts);
-          const { entries } = (await this.props.searchEntries(null, [collection.get('name')])).payload;
-          return this.props.persistCustomEntry(collection, context, entry, entries);
+          const entryDraft = entry || createEmptyDraft(collection);
+          return this.props.persistCustomEntry(collection, entryDraft, context);
         },
         persistUnpublishedEntry: async (collection, existingUnpublishedEntry, entry, opts = {}) => {
           const context = this.createHookContext(opts);
           return this.props.persistCustomUnpublishedEntry(collection, existingUnpublishedEntry, entry, context);
         },
-        publishEntry: async (collection, slug, opts = {}) => {
+        publishEntry: async (collection, slug, entry, opts = {}) => {
           const context = this.createHookContext(opts);
-          return this.props.publishUnpublishedEntry(collection.get('name'), slug, context);
+          return this.props.publishCustomUnpublishedEntry(
+            collection.get('name'),
+            slug,
+            entry,
+            context,
+          );
         },
-        unpublishEntry: async (collection, slug, opts = {}) => {
+        unpublishEntry: async (collection, slug, entry, opts = {}) => {
           const context = this.createHookContext(opts);
-          return this.props.unpublishPublishedEntry(collection, slug, context);
+          return this.props.unpublishCustomPublishedEntry(collection, slug, entry, context);
         },
         unpublishPublishedEntry: async (collection, slug, entry, opts = {}) => {
           const context = this.createHookContext(opts);
           return this.props.unpublishCustomPublishedEntry(collection, slug, entry, context);
         },
-        deleteEntry: async (collection, slug, opts = {}) => {
+        deleteEntry: async (collection, slug, entry, opts = {}) => {
           const context = this.createHookContext(opts);
-          return this.props.deleteEntry(collection, slug, context);
+          return this.props.deleteEntry(collection, slug, context, entry);
         },
-      }
-    }
-    if (!context) return defaultContext
+      },
+    };
+    if (!context) return defaultContext;
 
-    return Object.assign(defaultContext, context)
-  }
+    return Object.assign(defaultContext, context);
+  };
 
   handlePersistEntry = async (opts = {}) => {
     const { createNew = false, duplicate = false, publishStack = false } = opts;
@@ -328,7 +339,11 @@ export class Editor extends React.Component {
       return;
     }
 
-    await publishUnpublishedEntry(collection.get('name'), slug, this.createHookContext({ publishStack }));
+    await publishUnpublishedEntry(
+      collection.get('name'),
+      slug,
+      this.createHookContext({ publishStack }),
+    );
 
     // this.deleteBackup();
 
@@ -581,7 +596,6 @@ const mapDispatchToProps = {
   createDraftDuplicateFromEntry,
   createEmptyDraft,
   discardDraft,
-  persistCustomEntry,
   persistEntry,
   deleteEntry,
   updateUnpublishedEntryStatus,
@@ -592,6 +606,10 @@ const mapDispatchToProps = {
   removeDraftEntryMediaFiles,
   logoutUser,
   searchEntries,
+  persistCustomEntry,
+  persistCustomUnpublishedEntry,
+  unpublishCustomPublishedEntry,
+  publishCustomUnpublishedEntry,
 };
 
 export default connect(mapStateToProps, mapDispatchToProps)(withWorkflow(translate()(Editor)));

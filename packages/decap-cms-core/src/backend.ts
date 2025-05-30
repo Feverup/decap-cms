@@ -1227,7 +1227,7 @@ export class Backend {
     await this.invokePostSaveEvent(entryDraft.get('entry'), context);
 
     if (!useWorkflow) {
-      await this.invokePostPublishEvent(entryDraft.get('entry'));
+      await this.invokePostPublishEvent(entryDraft.get('entry'), context);
     }
 
     return slug;
@@ -1282,10 +1282,17 @@ export class Backend {
     return this.implementation.persistMedia(file, options);
   }
 
-  async deleteEntry(state: State, collection: Collection, slug: string, context?: HookContext) {
+  async deleteEntry(
+    state: State,
+    collection: Collection,
+    slug: string,
+    context?: HookContext,
+    customEntry?: EntryMap,
+  ) {
     const config = state.config;
     const path = selectEntryPath(collection, slug) as string;
     const extension = selectFolderEntryExtension(collection) as string;
+    const entry = customEntry || selectEntry(state.entries, collection.get('name'), slug);
 
     if (!selectAllowDeletion(collection)) {
       throw new Error('Not allowed to delete entries in this collection');
@@ -1305,7 +1312,6 @@ export class Backend {
       user.useOpenAuthoring,
     );
 
-    const entry = selectEntry(state.entries, collection.get('name'), slug);
     await this.invokePreUnpublishEvent(entry, context);
     let paths = [path];
     if (hasI18n(collection)) {
