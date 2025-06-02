@@ -12,6 +12,7 @@ import {
   loadEntry,
   loadEntries,
   createDraftDuplicateFromEntry,
+  createLocalEmptyDraft,
   createEmptyDraft,
   discardDraft,
   changeDraftField,
@@ -46,6 +47,7 @@ export class Editor extends React.Component {
     changeDraftFieldValidation: PropTypes.func.isRequired,
     collection: ImmutablePropTypes.map.isRequired,
     createDraftDuplicateFromEntry: PropTypes.func.isRequired,
+    createLocalEmptyDraft: PropTypes.func.isRequired,
     createEmptyDraft: PropTypes.func.isRequired,
     discardDraft: PropTypes.func.isRequired,
     entry: ImmutablePropTypes.map,
@@ -94,7 +96,7 @@ export class Editor extends React.Component {
       collection,
       slug,
       loadEntry,
-      createEmptyDraft,
+      createLocalEmptyDraft,
       loadEntries,
       // retrieveLocalBackup,
       collectionEntriesLoaded,
@@ -104,7 +106,7 @@ export class Editor extends React.Component {
     // retrieveLocalBackup(collection, slug);
 
     if (newEntry) {
-      createEmptyDraft(collection, this.props.location.search);
+      createLocalEmptyDraft(collection, this.props.location.search);
     } else {
       loadEntry(collection, slug);
     }
@@ -189,7 +191,7 @@ export class Editor extends React.Component {
     const { newEntry, collection } = this.props;
 
     if (newEntry) {
-      prevProps.createEmptyDraft(collection, this.props.location.search);
+      prevProps.createLocalEmptyDraft(collection, this.props.location.search);
     }
   }
 
@@ -235,22 +237,23 @@ export class Editor extends React.Component {
         searchEntries: this.props.searchEntries,
         handleChangeStatus: this.handleChangeStatus,
         handleDeleteUnpublishedChanges: this.handleDeleteUnpublishedChanges,
+        createEmptyDraft: this.props.createEmptyDraft,
         getCollection: name => {
           return this.props.collections.get(name);
         },
         persistEntry: async (collection, entry, opts = {}) => {
           const context = this.createHookContext(opts);
-          const entryDraft = entry || createEmptyDraft(collection);
+          const entryDraft = entry || this.props.createEmptyDraft(collection);
           return this.props.persistEntry(collection, context, entryDraft);
         },
         persistUnpublishedEntry: async (collection, existingUnpublishedEntry, entry, opts = {}) => {
           const context = this.createHookContext(opts);
-          const entryDraft = entry || createEmptyDraft(collection);
+          const entryDraft = entry || this.props.createEmptyDraft(collection);
           return this.props.persistUnpublishedEntry(collection, existingUnpublishedEntry, context, entryDraft);
         },
         publishEntry: async (collection, slug, entry, opts = {}) => {
           const context = this.createHookContext(opts);
-          const entryDraft = entry || createEmptyDraft(collection);
+          const entryDraft = entry || this.props.createEmptyDraft(collection);
           return this.props.publishUnpublishedEntry(
             collection.get('name'),
             slug,
@@ -581,6 +584,7 @@ const mapDispatchToProps = {
   // persistLocalBackup,
   // deleteLocalBackup,
   createDraftDuplicateFromEntry,
+  createLocalEmptyDraft,
   createEmptyDraft,
   discardDraft,
   persistEntry,

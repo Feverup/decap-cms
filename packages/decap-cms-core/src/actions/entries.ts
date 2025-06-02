@@ -768,6 +768,14 @@ export function createEmptyDraft(collection: Collection, search: string) {
       meta: meta as any,
     });
     newEntry = await backend.processEntry(state, collection, newEntry);
+
+    return newEntry;
+  };
+}
+
+export function createLocalEmptyDraft(collection: Collection, search: string) {
+  return async (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
+    const newEntry = await createEmptyDraft(collection, search)(dispatch, getState);
     dispatch(emptyDraftCreated(newEntry));
   };
 }
