@@ -930,13 +930,17 @@ export function persistEntry(
 
     const backend = currentBackend(state.config);
     const entry = entryDraft.get('entry');
+    const isCustomEntry = customEntryDraft && entry.get('isCustomEntry', true);
+    const status = customEntryDraft && entry.get('status');
     const assetProxies = getMediaAssets({
       entry,
     });
 
     const serializedEntry = getSerializedEntry(collection, entry);
     const serializedEntryDraft = entryDraft.set('entry', serializedEntry);
-    dispatch(entryPersisting(collection, serializedEntry));
+    if (!isCustomEntry) {
+      dispatch(entryPersisting(collection, serializedEntry));
+    }
     return backend
       .persistEntry({
         config: state.config,
@@ -945,6 +949,7 @@ export function persistEntry(
         assetProxies,
         usedSlugs,
         context,
+        status,
       })
       .then(async (newSlug: string) => {
         dispatch(
@@ -957,12 +962,12 @@ export function persistEntry(
           }),
         );
 
-        // re-load media library if entry had media files
-        if (assetProxies.length > 0) {
-          await dispatch(loadMedia());
-        }
-        dispatch(entryPersisted(collection, serializedEntry, newSlug));
-        if (!customEntryDraft) {
+        if (!isCustomEntry) {
+          // re-load media library if entry had media files
+          if (assetProxies.length > 0) {
+            await dispatch(loadMedia());
+          }
+          dispatch(entryPersisted(collection, serializedEntry, newSlug));
           if (collection.has('nested')) {
             await dispatch(loadEntries(collection));
           }
@@ -1000,6 +1005,7 @@ export function deleteEntry(
   return (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
     const state = getState();
     const backend = currentBackend(state.config);
+    const isCustomEntry = entry && entry.get('isCustomEntry', true);
 
     dispatch(entryDeleting(collection, slug));
     return backend
@@ -1017,7 +1023,7 @@ export function deleteEntry(
             dismissAfter: 4000,
           }),
         );
-        if (!entry) {
+        if (!isCustomEntry) {
           if (backend.implementation.deleteCollectionFiles) {
             dispatch(loadUnpublishedEntry(collection, slug));
           } else {

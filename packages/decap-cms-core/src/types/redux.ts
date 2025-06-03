@@ -556,6 +556,7 @@ export type EntryObject = {
   mediaFiles: List<MediaFileMap>;
   newRecord: boolean;
   isDeleteWorkflow: boolean;
+  isCustomEntry?: boolean;
   author?: string;
   updatedOn?: string;
   status: string;

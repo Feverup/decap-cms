@@ -334,6 +334,8 @@ export function persistUnpublishedEntry(
   return async (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
     const state = getState();
     const entryDraft = customEntryDraft || state.entryDraft;
+    const isCustomEntry = customEntryDraft && entryDraft.getIn(['entry', 'isCustomEntry'], true);
+    const status = customEntryDraft && customEntryDraft.getIn(['entry', 'status']);
     const fieldsErrors = entryDraft.get('fieldsErrors');
     const unpublishedSlugs = selectUnpublishedSlugs(state, collection.get('name'));
     const publishedSlugs = selectPublishedSlugs(state, collection.get('name'));
@@ -382,7 +384,8 @@ export function persistUnpublishedEntry(
         entryDraft: serializedEntryDraft,
         assetProxies,
         usedSlugs,
-        context
+        context,
+        status
       });
       dispatch(
         addNotification({
@@ -393,9 +396,9 @@ export function persistUnpublishedEntry(
           dismissAfter: 4000,
         }),
       );
-      dispatch(unpublishedEntryPersisted(collection, serializedEntry));
 
-      if (!customEntryDraft) {
+      if (!isCustomEntry) {
+        dispatch(unpublishedEntryPersisted(collection, serializedEntry));
         if (entry.get('slug') !== newSlug) {
           await dispatch(loadUnpublishedEntry(collection, newSlug));
           navigateToEntry(collection.get('name'), newSlug);
@@ -503,6 +506,7 @@ export function publishUnpublishedEntry(
     const collections = state.collections;
     const backend = currentBackend(state.config);
     const entry = customEntry || selectUnpublishedEntry(state, collectionName, slug);
+    const isCustomEntry = customEntry && customEntry.get('isCustomEntry', true);
     const isDeleteWorkflow = entry.get('isDeleteWorkflow');
     dispatch(unpublishedEntryPublishRequest(collectionName, slug));
     try {
@@ -535,7 +539,7 @@ export function publishUnpublishedEntry(
         }),
       );
       dispatch(unpublishedEntryPublished(collectionName, slug));
-      if (!customEntry) {
+      if (!isCustomEntry) {
         const collection = collections.get(collectionName);
         if (!collection.has('nested')) {
           dispatch(loadEntries(collection));
@@ -570,6 +574,7 @@ export function unpublishPublishedEntry(collection: Collection, slug: string, cu
     const state = getState();
     const backend = currentBackend(state.config);
     const entry = customEntry || selectEntry(state, collection.get('name'), slug);
+    const isCustomEntry = customEntry && customEntry.get('isCustomEntry', true);
     const entryDraft = Map().set('entry', entry) as unknown as EntryDraft;
     dispatch(unpublishedEntryPersisting(collection, slug));
     return backend
@@ -582,14 +587,14 @@ export function unpublishPublishedEntry(collection: Collection, slug: string, cu
             entryDraft,
             assetProxies: [],
             usedSlugs: List(),
-            status: status.get('PENDING_PUBLISH'),
+            status: customEntry ? customEntry.get('status'): status.get('PENDING_PUBLISH'),
           });
         }
       })
       .then(() => {
-        dispatch(unpublishedEntryPersisted(collection, entry));
         dispatch(entryDeleted(collection, slug));
-        if (!customEntry) {
+        if (!isCustomEntry) {
+          dispatch(unpublishedEntryPersisted(collection, entry));
           dispatch(loadUnpublishedEntry(collection, slug));
         }
         dispatch(
