@@ -115,8 +115,9 @@ const en = {
         'All changes to this entry will be deleted.\n\n Do you still want to delete?',
       loadingEntry: 'Loading entry...',
       confirmLoadBackup: 'A local backup was recovered for this entry, would you like to use it?',
-      onProcessingUpdate:
-        "Entry can't change the status while processing!\n\n Please wait until the process end.",
+      onProcessingStatusChange: "Are you sure you want to change the status to %{newStatus} while the entry is processing?",
+      onProcessingDeleteUnpublishedChanges: "Are you sure you want to delete unpublished changes while the entry is processing?",
+      onProcessingDeleteEntry: "Are you sure you want to delete this entry while it is processing?",
       onStackPublishing: 'Are you sure you want to publish all changes?',
       onStackClosing: 'Are you sure you want to discard all changes?',
     },
@@ -327,8 +328,6 @@ const en = {
       inReviewHeader: 'In Review',
       readyHeader: 'Ready',
       inProcessingHeader: 'Processing',
-      onProcessingUpdate:
-        "Entry can't change the status while processing!\n\n Please wait until the process end.",
       inStaleHeader: 'Stale',
       onStaleUpdate:
         "Entry can't be manually updated to stale status! Please discard changes insted of using stale status.",

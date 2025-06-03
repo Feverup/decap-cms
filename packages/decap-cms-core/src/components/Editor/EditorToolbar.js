@@ -396,10 +396,17 @@ export class EditorToolbar extends React.Component {
       onChangeStatus,
       t
     } = this.props;
+
     if (currentStatus === status.get('PROCESSING')) {
-      window.alert(t('editor.editor.onProcessingUpdate'));
-      return;
+      const newStatusLabel = t(`editor.editorToolbar.${newStatusName.toLowerCase()}`);
+
+      if (!window.confirm(t('editor.editor.onProcessingStatusChange', {
+        newStatus: newStatusLabel
+      }))) {
+        return;
+      }
     }
+
     onChangeStatus(newStatusName);
   }
 
@@ -412,8 +419,12 @@ export class EditorToolbar extends React.Component {
       t
     } = this.props;
     if (currentStatus === status.get('PROCESSING')) {
-      window.alert(t('editor.editor.onProcessingUpdate'));
-      return;
+      const translationKey = hasUnpublishedChanges
+        ? 'editor.editor.onProcessingDeleteUnpublishedChanges'
+        : 'editor.editor.onProcessingDeleteEntry';
+      if (!window.confirm(t(translationKey))) {
+        return;
+      }
     }
     return hasUnpublishedChanges ? onDeleteUnpublishedChanges() : onDelete();
   }

@@ -305,7 +305,7 @@ export function loadUnpublishedEntries(collections: Collections) {
     }
 
     dispatch(unpublishedEntriesLoading());
-    backend
+    return backend
       .unpublishedEntries(collections)
       .then(response => dispatch(unpublishedEntriesLoaded(response.entries, response.pagination)))
       .catch((error: Error) => {
@@ -385,7 +385,7 @@ export function persistUnpublishedEntry(
         assetProxies,
         usedSlugs,
         context,
-        status
+        status,
       });
       dispatch(
         addNotification({
@@ -569,7 +569,11 @@ export function publishUnpublishedEntry(
   };
 }
 
-export function unpublishPublishedEntry(collection: Collection, slug: string, customEntry?: EntryMap) {
+export function unpublishPublishedEntry(
+  collection: Collection,
+  slug: string,
+  customEntry?: EntryMap,
+) {
   return (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
     const state = getState();
     const backend = currentBackend(state.config);
@@ -587,7 +591,7 @@ export function unpublishPublishedEntry(collection: Collection, slug: string, cu
             entryDraft,
             assetProxies: [],
             usedSlugs: List(),
-            status: customEntry ? customEntry.get('status'): status.get('PENDING_PUBLISH'),
+            status: customEntry ? customEntry.get('status') : status.get('PENDING_PUBLISH'),
           });
         }
       })
@@ -619,5 +623,22 @@ export function unpublishPublishedEntry(collection: Collection, slug: string, cu
         );
         dispatch(unpublishedEntryPersistedFail(error, collection, entry.get('slug')));
       });
+  };
+}
+
+export function getUnpublishedEntries(collectionName?: string) {
+  return async (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
+    const state = getState();
+    const entriesLoaded = get(state.editorialWorkflow.toJS(), 'pages.ids', false);
+
+    if (!entriesLoaded) {
+      await dispatch(loadUnpublishedEntries(state.collections));
+    }
+
+    const unpublishedEntries = state.editorialWorkflow.get('entities');
+    const entries = collectionName
+      ? unpublishedEntries.filter(entry => entry.get('collection') === collectionName)
+      : unpublishedEntries;
+    return List(entries.valueSeq());
   };
 }

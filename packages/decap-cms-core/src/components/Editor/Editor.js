@@ -26,6 +26,7 @@ import {
   removeDraftEntryMediaFiles,
 } from '../../actions/entries';
 import {
+  getUnpublishedEntries,
   updateUnpublishedEntryStatus,
   publishUnpublishedEntry,
   unpublishPublishedEntry,
@@ -52,6 +53,7 @@ export class Editor extends React.Component {
     discardDraft: PropTypes.func.isRequired,
     entry: ImmutablePropTypes.map,
     entryDraft: ImmutablePropTypes.map.isRequired,
+    getUnpublishedEntries: PropTypes.func.isRequired,
     loadEntry: PropTypes.func.isRequired,
     persistEntry: PropTypes.func.isRequired,
     persistUnpublishedEntry: PropTypes.func.isRequired,
@@ -238,6 +240,7 @@ export class Editor extends React.Component {
         handleChangeStatus: this.handleChangeStatus,
         handleDeleteUnpublishedChanges: this.handleDeleteUnpublishedChanges,
         createEmptyDraft: this.props.createEmptyDraft,
+        getUnpublishedEntries: this.props.getUnpublishedEntries,
         getCollection: name => {
           return this.props.collections.get(name);
         },
@@ -576,6 +579,7 @@ function mapStateToProps(state, ownProps) {
 const mapDispatchToProps = {
   changeDraftField,
   changeDraftFieldValidation,
+  getUnpublishedEntries,
   loadEntry,
   loadEntries,
   loadDeployPreview,
