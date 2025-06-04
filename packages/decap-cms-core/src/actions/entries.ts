@@ -324,6 +324,7 @@ export function entryPersisted(collection: Collection, entry: EntryMap, slug: st
        * Pass slug from backend for newly created entries.
        */
       slug,
+      entry,
     },
   };
 }
