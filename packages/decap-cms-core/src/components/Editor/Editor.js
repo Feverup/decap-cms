@@ -232,18 +232,19 @@ export class Editor extends React.Component {
   //   deleteLocalBackup(collection, !newEntry && slug);
   // }
 
-  createHookContext = context => {
+  createHookContext = (context) => {
     const defaultContext = {
-      actions: {
-        navigateToCollection,
-        searchEntries: this.props.searchEntries,
-        handleChangeStatus: this.handleChangeStatus,
+      editor: {
+        props: this.props,
+        handlePersistEntry: this.handlePersistEntry,
+        handlePublishEntry: this.handlePublishEntry,
+        handleUnpublishEntry: this.handleUnpublishEntry,
+        handleDeleteEntry: this.handleDeleteEntry,
         handleDeleteUnpublishedChanges: this.handleDeleteUnpublishedChanges,
-        createEmptyDraft: this.props.createEmptyDraft,
-        getUnpublishedEntries: this.props.getUnpublishedEntries,
-        getCollection: name => {
-          return this.props.collections.get(name);
-        },
+        handleDuplicateEntry: this.handleDuplicateEntry,
+        handleChangeStatus: this.handleChangeStatus,
+      },
+      actions: {
         persistEntry: async (collection, entry, opts = {}) => {
           const context = this.createHookContext(opts);
           const entryDraft = entry || this.props.createEmptyDraft(collection);
@@ -254,7 +255,7 @@ export class Editor extends React.Component {
           const entryDraft = entry || this.props.createEmptyDraft(collection);
           return this.props.persistUnpublishedEntry(collection, existingUnpublishedEntry, context, entryDraft);
         },
-        publishEntry: async (collection, slug, entry, opts = {}) => {
+        publishUnpublishedEntry: async (collection, slug, entry, opts = {}) => {
           const context = this.createHookContext(opts);
           const entryDraft = entry || this.props.createEmptyDraft(collection);
           return this.props.publishUnpublishedEntry(

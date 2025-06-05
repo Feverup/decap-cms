@@ -20,7 +20,7 @@ import { selectCustomPath } from '../reducers/entryDraft';
 import { navigateToCollection, navigateToEntry } from '../routing/history';
 import { getProcessSegment } from '../lib/formatters';
 import { hasI18n, duplicateDefaultI18nFields, serializeI18n, I18N, I18N_FIELD } from '../lib/i18n';
-import { loadUnpublishedEntry } from './editorialWorkflow';
+import { loadUnpublishedEntry, UNPUBLISHED_ENTRY_DISMISS_ERROR } from './editorialWorkflow';
 import { addNotification } from './notifications';
 
 import type { ImplementationMediaFile } from 'decap-cms-lib-util';
@@ -981,17 +981,20 @@ export function persistEntry(
         return newSlug;
       })
       .catch((error: Error) => {
-        console.error(error);
-        dispatch(
-          addNotification({
-            message: {
-              details: error,
-              key: 'ui.toast.onFailToPersist',
-            },
-            type: 'error',
-            dismissAfter: 8000,
-          }),
-        );
+        if (error.name !== UNPUBLISHED_ENTRY_DISMISS_ERROR) {
+          console.error(error);
+          dispatch(
+            addNotification({
+              message: {
+                details: error,
+                key: 'ui.toast.onFailToPersist',
+              },
+              type: 'error',
+              dismissAfter: 8000,
+            }),
+          );
+        }
+
         return Promise.reject(dispatch(entryPersistFail(collection, serializedEntry, error)));
       });
   };
@@ -1033,17 +1036,20 @@ export function deleteEntry(
         }
       })
       .catch((error: Error) => {
-        dispatch(
-          addNotification({
-            message: {
-              details: error,
-              key: 'ui.toast.onFailToDelete',
-            },
-            type: 'error',
-            dismissAfter: 8000,
-          }),
-        );
-        console.error(error);
+        if (error.name !== UNPUBLISHED_ENTRY_DISMISS_ERROR) {
+          console.error(error);
+          dispatch(
+            addNotification({
+              message: {
+                details: error,
+                key: 'ui.toast.onFailToDelete',
+              },
+              type: 'error',
+              dismissAfter: 8000,
+            }),
+          );
+        }
+
         return Promise.reject(dispatch(entryDeleteFail(collection, slug, error)));
       });
   };

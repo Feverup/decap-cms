@@ -68,7 +68,7 @@ export const UNPUBLISHED_ENTRY_DELETE_REQUEST = 'UNPUBLISHED_ENTRY_DELETE_REQUES
 export const UNPUBLISHED_ENTRY_DELETE_SUCCESS = 'UNPUBLISHED_ENTRY_DELETE_SUCCESS';
 export const UNPUBLISHED_ENTRY_DELETE_FAILURE = 'UNPUBLISHED_ENTRY_DELETE_FAILURE';
 
-export const EDITORIAL_WORKFLOW_DISMISS_ERROR = 'EDITORIAL_WORKFLOW_DISMISS_ERROR';
+export const UNPUBLISHED_ENTRY_DISMISS_ERROR = 'UNPUBLISHED_ENTRY_DISMISS_ERROR';
 
 /*
  * Simple Action Creators (Internal)
@@ -274,7 +274,7 @@ export function loadUnpublishedEntry(collection: Collection, slug: string) {
       dispatch(unpublishedEntryLoaded(collection, entry));
       dispatch(createDraftFromEntry(entry));
     } catch (error) {
-      if (error.name === EDITORIAL_WORKFLOW_DISMISS_ERROR) return;
+      if (error.name === UNPUBLISHED_ENTRY_DISMISS_ERROR) return;
       if (error.name === EDITORIAL_WORKFLOW_ERROR && error.notUnderEditorialWorkflow) {
         dispatch(unpublishedEntryRedirected(collection, slug));
         dispatch(loadEntry(collection, slug));
@@ -556,7 +556,7 @@ export function publishUnpublishedEntry(
         }
       }
     } catch (error) {
-      if (error.name === EDITORIAL_WORKFLOW_DISMISS_ERROR) return;
+      if (error.name === UNPUBLISHED_ENTRY_DISMISS_ERROR) return;
       dispatch(
         addNotification({
           message: { key: 'ui.toast.onFailToPublishEntry', details: error },
