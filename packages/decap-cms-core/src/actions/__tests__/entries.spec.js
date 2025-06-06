@@ -3,7 +3,7 @@ import configureMockStore from 'redux-mock-store';
 import thunk from 'redux-thunk';
 
 import {
-  createEmptyDraft,
+  createLocalEmptyDraft,
   createEmptyDraftData,
   retrieveLocalBackup,
   persistLocalBackup,
@@ -40,7 +40,7 @@ describe('entries', () => {
         fields: [{ name: 'title' }],
       });
 
-      return store.dispatch(createEmptyDraft(collection, '')).then(() => {
+      return store.dispatch(createLocalEmptyDraft(collection, '')).then(() => {
         const actions = store.getActions();
         expect(actions).toHaveLength(1);
 
@@ -73,7 +73,7 @@ describe('entries', () => {
         fields: [{ name: 'title' }, { name: 'boolean' }],
       });
 
-      return store.dispatch(createEmptyDraft(collection, '?title=title&boolean=True')).then(() => {
+      return store.dispatch(createLocalEmptyDraft(collection, '?title=title&boolean=True')).then(() => {
         const actions = store.getActions();
         expect(actions).toHaveLength(1);
 
@@ -107,7 +107,7 @@ describe('entries', () => {
       });
 
       return store
-        .dispatch(createEmptyDraft(collection, "?title=<script>alert('hello')</script>"))
+        .dispatch(createLocalEmptyDraft(collection, "?title=<script>alert('hello')</script>"))
         .then(() => {
           const actions = store.getActions();
           expect(actions).toHaveLength(1);

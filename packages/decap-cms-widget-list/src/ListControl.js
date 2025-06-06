@@ -6,7 +6,6 @@ import { css, ClassNames } from '@emotion/react';
 import { List, Map, fromJS } from 'immutable';
 import { partial, isEmpty, uniqueId } from 'lodash';
 import { v4 as uuid } from 'uuid';
-import DecapCmsWidgetObject from 'decap-cms-widget-object';
 import {
   DndContext,
   MouseSensor,
@@ -33,8 +32,6 @@ import {
   resolveFieldKeyType,
   getErrorMessageForTypedFieldAndValue,
 } from './typedListHelpers';
-
-const ObjectControl = DecapCmsWidgetObject.controlComponent;
 
 const ListItem = styled.div();
 
@@ -171,7 +168,7 @@ function LabelComponent({ field, isActive, hasErrors, uniqueFieldId, isFieldOpti
 }
 
 export default class ListControl extends React.Component {
-  validations = [];
+  childRefs = {};
 
   static propTypes = {
     metadata: ImmutablePropTypes.map,
@@ -195,8 +192,6 @@ export default class ListControl extends React.Component {
     resolveWidget: PropTypes.func.isRequired,
     clearFieldErrors: PropTypes.func.isRequired,
     fieldsErrors: ImmutablePropTypes.map.isRequired,
-    isFieldUnused: PropTypes.func,
-    setFieldUnused: PropTypes.func,
     entry: ImmutablePropTypes.map.isRequired,
     t: PropTypes.func,
   };
@@ -367,16 +362,18 @@ export default class ListControl extends React.Component {
   processControlRef = ref => {
     if (!ref) return;
     const {
-      validate,
       props: { validationKey: key },
     } = ref;
-    this.validations.push({ key, validate });
+    this.childRefs[key] = ref;
+    this.props.controlRef?.(this);
   };
 
   validate = () => {
-    if (this.getValueType()) {
-      this.validations.forEach(item => {
-        item.validate();
+    // First validate child widgets if this is a complex list
+    const hasChildWidgets = this.getValueType() && Object.keys(this.childRefs).length > 0;
+    if (hasChildWidgets) {
+      Object.values(this.childRefs).forEach(widget => {
+        widget?.validate?.();
       });
     } else {
       this.props.validate();
@@ -412,7 +409,7 @@ export default class ListControl extends React.Component {
    */
   getObjectValue = idx => this.props.value.get(idx) || Map();
 
-  handleChangeFor(index) {
+  handleFieldChangeFor(index) {
     return (f, newValue, newMetadata) => {
       const { value, metadata, onChange, field } = this.props;
       const collectionName = field.get('name');
@@ -433,10 +430,55 @@ export default class ListControl extends React.Component {
     };
   }
 
+  handleChangeFor(index) {
+    return (newValue, newMetadata) => {
+      const { value, metadata, onChange, field } = this.props;
+      const collectionName = field.get('name');
+      const parsedMetadata = {
+        [collectionName]: Object.assign(metadata ? metadata.toJS() : {}, newMetadata || {}),
+      };
+      onChange(value.set(index, newValue), parsedMetadata);
+    };
+  }
+
+  handleDuplicate = (index, event) => {
+    event.preventDefault();
+    const { value, onChange } = this.props;
+
+    const listValue = value.get(index);
+    if (!listValue) return
+
+    const { itemsCollapsed } = this.state;
+
+    // Create new arrays with the item inserted at index + 1
+    const newItemsCollapsed = [...itemsCollapsed];
+    const newKeys = [...this.state.keys];
+
+    newItemsCollapsed.splice(index + 1, 0, false); // Insert expanded state
+    newKeys.splice(index + 1, 0, uuid()); // Insert new key
+
+    this.setState({
+      itemsCollapsed: newItemsCollapsed,
+      keys: newKeys
+    });
+
+    onChange(value.insert(index + 1, listValue));
+  };
+
   handleRemove = (index, event) => {
     event.preventDefault();
     const { itemsCollapsed } = this.state;
-    const { value, metadata, onChange, field, clearFieldErrors } = this.props;
+    const {
+      value,
+      metadata,
+      onChange,
+      field,
+      clearFieldErrors,
+      onValidateObject,
+      forID,
+      fieldsErrors,
+    } = this.props;
+
     const collectionName = field.get('name');
     const isSingleField = this.getValueType() === valueTypes.SINGLE;
 
@@ -446,17 +488,41 @@ export default class ListControl extends React.Component {
         ? { [collectionName]: metadata.removeIn(metadataRemovePath) }
         : metadata;
 
+    // Get the key of the item being removed
+    const removedKey = this.state.keys[index];
+
+    // Update state while preserving keys for remaining items
+    const newKeys = [...this.state.keys];
+    newKeys.splice(index, 1);
     itemsCollapsed.splice(index, 1);
-    // clear validations
-    this.validations = [];
 
     this.setState({
       itemsCollapsed: [...itemsCollapsed],
-      keys: Array.from({ length: value.size - 1 }, () => uuid()),
+      keys: newKeys,
     });
 
-    onChange(value.remove(index), parsedMetadata);
-    clearFieldErrors();
+    // Clear the ref for the removed item
+    delete this.childRefs[removedKey];
+
+    const newValue = value.delete(index);
+
+    // Clear errors for the removed item and its children
+    if (fieldsErrors) {
+      Object.entries(fieldsErrors.toJS()).forEach(([fieldId, errors]) => {
+        if (errors.some(err => err.parentIds?.includes(removedKey))) {
+          clearFieldErrors(fieldId);
+        }
+      });
+    }
+
+    // If list is empty, mark it as valid
+    if (newValue.size === 0) {
+      clearFieldErrors(forID);
+      onValidateObject(forID, []);
+    }
+
+    // Update the value last to ensure all error states are cleared
+    onChange(newValue, parsedMetadata);
   };
 
   handleItemCollapseToggle = (index, event) => {
@@ -532,7 +598,7 @@ export default class ListControl extends React.Component {
   }
 
   onSortEnd = ({ oldIndex, newIndex }) => {
-    const { value, clearFieldErrors } = this.props;
+    const { value } = this.props;
     const { itemsCollapsed, keys } = this.state;
 
     // Update value
@@ -546,18 +612,13 @@ export default class ListControl extends React.Component {
     const updatedItemsCollapsed = [...itemsCollapsed];
     updatedItemsCollapsed.splice(newIndex, 0, collapsed);
 
-    // Reset item to ensure updated state
-    const updatedKeys = keys.map((key, keyIndex) => {
-      if (keyIndex === oldIndex || keyIndex === newIndex) {
-        return uuid();
-      }
-      return key;
-    });
-    this.setState({ itemsCollapsed: updatedItemsCollapsed, keys: updatedKeys });
+    // Move keys to maintain relationships
+    const movedKey = keys[oldIndex];
+    const updatedKeys = [...keys];
+    updatedKeys.splice(oldIndex, 1);
+    updatedKeys.splice(newIndex, 0, movedKey);
 
-    //clear error fields and remove old validations
-    clearFieldErrors();
-    this.validations = this.validations.filter(item => updatedKeys.includes(item.key));
+    this.setState({ itemsCollapsed: updatedItemsCollapsed, keys: updatedKeys });
   };
 
   hasError = index => {
@@ -569,6 +630,34 @@ export default class ListControl extends React.Component {
     }
   };
 
+  focus(path) {
+    const [index, ...remainingPath] = path.split('.');
+
+    if (this.state.listCollapsed || this.state.itemsCollapsed[index]) {
+      const newItemsCollapsed = [...this.state.itemsCollapsed];
+      newItemsCollapsed[index] = false;
+      this.setState(
+        {
+          listCollapsed: false,
+          itemsCollapsed: newItemsCollapsed,
+        },
+        () => {
+          const key = this.state.keys[index];
+          const control = this.childRefs[key];
+          if (control?.focus) {
+            control.focus(remainingPath.join('.'));
+          }
+        },
+      );
+    } else {
+      const key = this.state.keys[index];
+      const control = this.childRefs[key];
+      if (control?.focus) {
+        control.focus(remainingPath.join('.'));
+      }
+    }
+  }
+
   // eslint-disable-next-line react/display-name
   renderItem = (item, index) => {
     const {
@@ -578,13 +667,12 @@ export default class ListControl extends React.Component {
       metadata,
       clearFieldErrors,
       fieldsErrors,
-      controlRef,
       resolveWidget,
       parentIds,
       forID,
       t,
-      isFieldUnused,
-      setFieldUnused,
+      collection,
+      collections,
     } = this.props;
 
     const { itemsCollapsed, keys } = this.state;
@@ -599,6 +687,8 @@ export default class ListControl extends React.Component {
         return this.renderErroneousTypedItem(index, item);
       }
     }
+
+    const ObjectControl = (this.props.getWidget('object')).control;
 
     return (
       <SortableListItem
@@ -623,6 +713,7 @@ export default class ListControl extends React.Component {
           onCollapseToggle={partial(this.handleItemCollapseToggle, index)}
           dragHandle={DragHandle}
           id={key}
+          onDuplicate={partial(this.handleDuplicate, index)}
           onRemove={partial(this.handleRemove, index)}
           data-testid={`styled-list-item-top-bar-${key}`}
         />
@@ -639,7 +730,10 @@ export default class ListControl extends React.Component {
               })}
               value={item}
               field={field}
-              onChangeObject={this.handleChangeFor(index)}
+              collection={collection}
+              collections={collections}
+              onChange={this.handleChangeFor(index)}
+              onChangeObject={this.handleFieldChangeFor(index)}
               editorControl={editorControl}
               resolveWidget={resolveWidget}
               metadata={metadata}
@@ -647,15 +741,12 @@ export default class ListControl extends React.Component {
               onValidateObject={onValidateObject}
               clearFieldErrors={clearFieldErrors}
               fieldsErrors={fieldsErrors}
-              ref={this.processControlRef}
-              controlRef={controlRef}
+              controlRef={this.processControlRef}
               validationKey={key}
               collapsed={collapsed}
               data-testid={`object-control-${key}`}
               hasError={hasError}
               parentIds={[...parentIds, forID, key]}
-              isFieldUnused={isFieldUnused}
-              setFieldUnused={setFieldUnused}
             />
           )}
         </ClassNames>
@@ -675,7 +766,7 @@ export default class ListControl extends React.Component {
       >
         <StyledListItemTopBar
           onCollapseToggle={null}
-          onRemove={partial(this.handleRemove, index, key)}
+          onRemove={partial(this.handleRemove, index)}
           dragHandle={DragHandle}
           id={key}
         />

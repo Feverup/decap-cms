@@ -20,7 +20,7 @@ import { selectCustomPath } from '../reducers/entryDraft';
 import { navigateToCollection, navigateToEntry } from '../routing/history';
 import { getProcessSegment } from '../lib/formatters';
 import { hasI18n, duplicateDefaultI18nFields, serializeI18n, I18N, I18N_FIELD } from '../lib/i18n';
-import { loadUnpublishedEntry } from './editorialWorkflow';
+import { loadUnpublishedEntry, UNPUBLISHED_ENTRY_DISMISS_ERROR } from './editorialWorkflow';
 import { addNotification } from './notifications';
 
 import type { ImplementationMediaFile } from 'decap-cms-lib-util';
@@ -35,9 +35,10 @@ import type {
   ViewFilter,
   ViewGroup,
   Entry,
+  EntryDraft,
 } from '../types/redux';
 import type { EntryValue } from '../valueObjects/Entry';
-import type { Backend } from '../backend';
+import type { Backend, HookContext } from '../backend';
 import type AssetProxy from '../valueObjects/AssetProxy';
 import type { Set } from 'immutable';
 
@@ -323,6 +324,7 @@ export function entryPersisted(collection: Collection, entry: EntryMap, slug: st
        * Pass slug from backend for newly created entries.
        */
       slug,
+      entry,
     },
   };
 }
@@ -391,6 +393,7 @@ export function draftDuplicateEntry(entry: EntryMap) {
     type: DRAFT_CREATE_DUPLICATE_FROM_ENTRY,
     payload: createEntry(entry.get('collection'), '', '', {
       data: entry.get('data'),
+      i18n: entry.get('i18n'),
       mediaFiles: entry.get('mediaFiles').toJS(),
     }),
   };
@@ -766,6 +769,14 @@ export function createEmptyDraft(collection: Collection, search: string) {
       meta: meta as any,
     });
     newEntry = await backend.processEntry(state, collection, newEntry);
+
+    return newEntry;
+  };
+}
+
+export function createLocalEmptyDraft(collection: Collection, search: string) {
+  return async (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
+    const newEntry = await createEmptyDraft(collection, search)(dispatch, getState);
     dispatch(emptyDraftCreated(newEntry));
   };
 }
@@ -885,15 +896,18 @@ export function getSerializedEntry(collection: Collection, entry: Entry) {
   return serializedEntry;
 }
 
-export function persistEntry(collection: Collection, publishStack?: boolean) {
+export function persistEntry(
+  collection: Collection,
+  context: HookContext,
+  customEntryDraft?: EntryDraft,
+) {
   return async (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
     const state = getState();
-    const entryDraft = state.entryDraft;
-    const fieldsErrors = entryDraft.get('fieldsErrors');
-    const usedSlugs = selectPublishedSlugs(state, collection.get('name'));
+    const entryDraft = customEntryDraft || state.entryDraft;
 
-    // Early return if draft contains validation errors
-    if (!fieldsErrors.isEmpty()) {
+    const fieldsErrors = entryDraft.get('fieldsErrors');
+
+    if (fieldsErrors && !fieldsErrors.isEmpty()) {
       const hasPresenceErrors = fieldsErrors.some(errors =>
         errors.some(error => error.type && error.type === ValidationErrorTypes.PRESENCE),
       );
@@ -913,15 +927,21 @@ export function persistEntry(collection: Collection, publishStack?: boolean) {
       return Promise.reject();
     }
 
+    const usedSlugs = selectPublishedSlugs(state, collection.get('name'));
+
     const backend = currentBackend(state.config);
     const entry = entryDraft.get('entry');
+    const isCustomEntry = customEntryDraft && entry.get('isCustomEntry', true);
+    const status = customEntryDraft && entry.get('status');
     const assetProxies = getMediaAssets({
       entry,
     });
 
     const serializedEntry = getSerializedEntry(collection, entry);
     const serializedEntryDraft = entryDraft.set('entry', serializedEntry);
-    dispatch(entryPersisting(collection, serializedEntry));
+    if (!isCustomEntry) {
+      dispatch(entryPersisting(collection, serializedEntry));
+    }
     return backend
       .persistEntry({
         config: state.config,
@@ -929,7 +949,8 @@ export function persistEntry(collection: Collection, publishStack?: boolean) {
         entryDraft: serializedEntryDraft,
         assetProxies,
         usedSlugs,
-        publishStack,
+        context,
+        status,
       })
       .then(async (newSlug: string) => {
         dispatch(
@@ -942,44 +963,57 @@ export function persistEntry(collection: Collection, publishStack?: boolean) {
           }),
         );
 
-        // re-load media library if entry had media files
-        if (assetProxies.length > 0) {
-          await dispatch(loadMedia());
+        if (!isCustomEntry) {
+          // re-load media library if entry had media files
+          if (assetProxies.length > 0) {
+            await dispatch(loadMedia());
+          }
+          dispatch(entryPersisted(collection, serializedEntry, newSlug));
+          if (collection.has('nested')) {
+            await dispatch(loadEntries(collection));
+          }
+          if (entry.get('slug') !== newSlug) {
+            await dispatch(loadEntry(collection, newSlug));
+            navigateToEntry(collection.get('name'), newSlug);
+          }
         }
-        dispatch(entryPersisted(collection, serializedEntry, newSlug));
-        if (collection.has('nested')) {
-          await dispatch(loadEntries(collection));
-        }
-        if (entry.get('slug') !== newSlug) {
-          await dispatch(loadEntry(collection, newSlug));
-          navigateToEntry(collection.get('name'), newSlug);
-        }
+
+        return newSlug;
       })
       .catch((error: Error) => {
-        console.error(error);
-        dispatch(
-          addNotification({
-            message: {
-              details: error,
-              key: 'ui.toast.onFailToPersist',
-            },
-            type: 'error',
-            dismissAfter: 8000,
-          }),
-        );
+        if (error.name !== UNPUBLISHED_ENTRY_DISMISS_ERROR) {
+          console.error(error);
+          dispatch(
+            addNotification({
+              message: {
+                details: error,
+                key: 'ui.toast.onFailToPersist',
+              },
+              type: 'error',
+              dismissAfter: 8000,
+            }),
+          );
+        }
+
         return Promise.reject(dispatch(entryPersistFail(collection, serializedEntry, error)));
       });
   };
 }
 
-export function deleteEntry(collection: Collection, slug: string) {
+export function deleteEntry(
+  collection: Collection,
+  slug: string,
+  context: HookContext,
+  entry?: EntryMap,
+) {
   return (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
     const state = getState();
     const backend = currentBackend(state.config);
+    const isCustomEntry = entry && entry.get('isCustomEntry', true);
 
     dispatch(entryDeleting(collection, slug));
     return backend
-      .deleteEntry(state, collection, slug)
+      .deleteEntry(state, collection, slug, context, entry)
       .then(async () => {
         dispatch(entryDeleted(collection, slug));
         dispatch(
@@ -993,24 +1027,29 @@ export function deleteEntry(collection: Collection, slug: string) {
             dismissAfter: 4000,
           }),
         );
-        if (backend.implementation.deleteCollectionFiles) {
-          dispatch(loadUnpublishedEntry(collection, slug));
-        } else {
-          navigateToCollection(collection.get('name'));
+        if (!isCustomEntry) {
+          if (backend.implementation.deleteCollectionFiles) {
+            dispatch(loadUnpublishedEntry(collection, slug));
+          } else {
+            navigateToCollection(collection.get('name'));
+          }
         }
       })
       .catch((error: Error) => {
-        dispatch(
-          addNotification({
-            message: {
-              details: error,
-              key: 'ui.toast.onFailToDelete',
-            },
-            type: 'error',
-            dismissAfter: 8000,
-          }),
-        );
-        console.error(error);
+        if (error.name !== UNPUBLISHED_ENTRY_DISMISS_ERROR) {
+          console.error(error);
+          dispatch(
+            addNotification({
+              message: {
+                details: error,
+                key: 'ui.toast.onFailToDelete',
+              },
+              type: 'error',
+              dismissAfter: 8000,
+            }),
+          );
+        }
+
         return Promise.reject(dispatch(entryDeleteFail(collection, slug, error)));
       });
   };

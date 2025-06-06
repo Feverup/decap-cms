@@ -227,15 +227,12 @@ export default class RelationControl extends React.Component {
     return (
       this.props.value !== nextProps.value ||
       this.props.hasActiveStyle !== nextProps.hasActiveStyle ||
-      this.props.queryHits !== nextProps.queryHits
+      this.props.queryHits !== nextProps.queryHits ||
+      this.props.field.get('collection') !== nextProps.field.get('collection')
     );
   }
 
-  async componentDidMount() {
-    this.mounted = true;
-    // if the field has a previous value perform an initial search based on the value field
-    // this is required since each search is limited by optionsLength so the selected value
-    // might not show up on the search
+  async loadInitialOptions() {
     const { forID, field, value, query, onChange } = this.props;
     const collection = field.get('collection');
     const file = field.get('file');
@@ -269,6 +266,17 @@ export default class RelationControl extends React.Component {
             },
           },
         );
+    }
+  }
+
+  async componentDidMount() {
+    this.mounted = true;
+    await this.loadInitialOptions();
+  }
+
+  async componentDidUpdate(prevProps) {
+    if (this.props.field.get('collection') !== prevProps.field.get('collection')) {
+      await this.loadInitialOptions();
     }
   }
 
@@ -424,7 +432,7 @@ export default class RelationControl extends React.Component {
         value={selectedValue}
         inputId={forID}
         cacheOptions
-        defaultOptions
+        defaultOptions={options?.length ? options : true}
         loadOptions={this.loadOptions}
         onChange={this.handleChange}
         className={classNameWrapper}

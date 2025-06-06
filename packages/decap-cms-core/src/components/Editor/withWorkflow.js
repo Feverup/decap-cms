@@ -26,7 +26,7 @@ function mapStateToProps(state, ownProps) {
 }
 
 function mergeProps(stateProps, dispatchProps, ownProps) {
-  const { isEditorialWorkflow, unpublishedEntry } = stateProps;
+  const { isEditorialWorkflow } = stateProps;
   const { dispatch } = dispatchProps;
   const returnObj = {};
 
@@ -35,8 +35,10 @@ function mergeProps(stateProps, dispatchProps, ownProps) {
     returnObj.loadEntry = (collection, slug) => dispatch(loadUnpublishedEntry(collection, slug));
 
     // Overwrite persistEntry to persistUnpublishedEntry
-    returnObj.persistEntry = collection =>
-      dispatch(persistUnpublishedEntry(collection, unpublishedEntry));
+    returnObj.persistEntry = (collection, context, entryDraft) => {
+      const { unpublished = stateProps.unpublishedEntry } = context;
+      return dispatch(persistUnpublishedEntry(collection, unpublished, context, entryDraft));
+    }
   }
 
   return {

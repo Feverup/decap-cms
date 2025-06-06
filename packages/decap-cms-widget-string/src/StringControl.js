@@ -29,9 +29,11 @@ export default class StringControl extends React.Component {
   // The input element ref
   _el = null;
 
-  shouldComponentUpdate(nextProps, nextState) {
+  shouldComponentUpdate(nextProps, nextState = {}) {
     return Boolean(
-      nextState && (this.state.value !== nextState.value || nextProps.value !== nextState.value),
+      this.props.classNameWrapper !== nextProps.classNameWrapper ||
+      this.state.value !== nextState.value ||
+      nextProps.value !== nextState.value
     );
   }
 

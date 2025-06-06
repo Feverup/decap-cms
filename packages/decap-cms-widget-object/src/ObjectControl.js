@@ -22,7 +22,18 @@ const styleStrings = {
 };
 
 export default class ObjectControl extends React.Component {
-  componentValidate = {};
+  childRefs = {};
+
+  processControlRef = ref => {
+    if (!ref) return;
+    const parentId = ref.props.parentIds[ref.props.parentIds.length - 1];
+    const belongsToDifferentParent = parentId && this.props.forID && parentId !== this.props.forID;
+    if (!belongsToDifferentParent) {
+      const name = ref.props.field.get('name');
+      this.childRefs[name] = ref;
+    }
+    this.props.controlRef?.(this);
+  };
 
   static propTypes = {
     onChangeObject: PropTypes.func.isRequired,
@@ -80,12 +91,20 @@ export default class ObjectControl extends React.Component {
     fields = List.isList(fields) ? fields : List([fields]);
     fields.forEach(field => {
       const widget = field.get('widget');
+
       if (widget === 'hidden' || (widget === 'object' && field.has('flat'))) return;
+
       const parentName = field.get('parentName');
       const name = field.get('name');
 
       const validateName = parentName ? `${parentName}.${name}` : name;
-      this.componentValidate[validateName]();
+      const control = this.childRefs[validateName];
+
+      if (control?.innerWrappedControl?.validate) {
+        control.innerWrappedControl.validate();
+      } else {
+        control?.validate?.();
+      }
     });
   };
 
@@ -145,7 +164,6 @@ export default class ObjectControl extends React.Component {
       metadata,
       fieldsErrors,
       editorControl: EditorControl,
-      controlRef,
       parentIds,
       isFieldDuplicate,
       isFieldHidden,
@@ -173,8 +191,7 @@ export default class ObjectControl extends React.Component {
         fieldsMetaData={metadata}
         fieldsErrors={fieldsErrors}
         onValidate={onValidateObject}
-        processControlRef={controlRef && controlRef.bind(this)}
-        controlRef={controlRef}
+        controlRef={this.processControlRef}
         parentIds={[...parentIds, forID]}
         isDisabled={isDuplicate}
         isHidden={isHidden}
@@ -189,6 +206,26 @@ export default class ObjectControl extends React.Component {
   handleCollapseToggle = () => {
     this.setState({ collapsed: !this.state.collapsed });
   };
+
+  focus(path) {
+    if (this.state.collapsed) {
+      this.setState({ collapsed: false }, () => {
+        if (path) {
+          const [fieldName, ...remainingPath] = path.split('.');
+          const field = this.childRefs[fieldName];
+          if (field?.focus) {
+            field.focus(remainingPath.join('.'));
+          }
+        }
+      });
+    } else if (path) {
+      const [fieldName, ...remainingPath] = path.split('.');
+      const field = this.childRefs[fieldName];
+      if (field?.focus) {
+        field.focus(remainingPath.join('.'));
+      }
+    }
+  }
 
   orderRenderedFields = (renderedFields, field) => {
     const order = field.get('order').toJS();
@@ -229,7 +266,9 @@ export default class ObjectControl extends React.Component {
             ?.map(field => field.set('parentName', fieldParentName));
           const singleField = f.get('field')?.set('parentName', fieldParentName);
 
-          return mappedMultiFields.push(...this.renderFields(multiFields, singleField, f));
+          const renderedFields = this.renderFields(multiFields, singleField, f);
+          if (Array.isArray(renderedFields)) return mappedMultiFields.push(...renderedFields);
+          return mappedMultiFields.push(renderedFields);
         }
         return mappedMultiFields.push(this.controlFor(f, idx));
       });

@@ -146,7 +146,7 @@ export function extractSearchFields(searchFields: string[]) {
     searchFields.reduce((acc, field) => {
       const value = getEntryField(field, entry);
       if (value) {
-        return `${acc} ${value}`;
+        return acc ? `${acc} ${value}` : value;
       } else {
         return acc;
       }
@@ -276,9 +276,9 @@ interface PersistArgs {
   entryDraft: EntryDraft;
   assetProxies: AssetProxy[];
   usedSlugs: List<string>;
-  publishStack?: boolean;
   unpublished?: boolean;
   status?: string;
+  context?: HookContext;
 }
 
 interface ImplementationInitOptions {
@@ -290,6 +290,11 @@ interface ImplementationInitOptions {
 type Implementation = BackendImplementation & {
   init: (config: CmsConfig, options: ImplementationInitOptions) => Implementation;
 };
+
+export interface HookContext {
+  publishStack?: boolean;
+  actions?: Record<string, Function>;
+}
 
 function prepareMetaPath(path: string, collection: Collection) {
   if (!selectHasMetaPath(collection)) {
@@ -617,6 +622,17 @@ export class Backend {
     // Perform a local search by requesting all entries. For each
     // collection, load it, search, and call onCollectionResults with
     // its results.
+
+    if (searchTerm === null) {
+      const allEntries = await Promise.all(
+        collections.map(async collection => {
+          const entries = await this.listAllEntries(collection);
+          return entries;
+        }),
+      );
+      return { entries: flatten(allEntries) };
+    }
+
     const errors: Error[] = [];
     const collectionEntriesRequests = collections
       .map(async collection => {
@@ -703,7 +719,7 @@ export class Backend {
     }
 
     const merged = mergeExpandedEntries(hits);
-    return { query: searchTerm, hits: merged };
+    return { query: searchTerm, hits: merged, collection };
   }
 
   traverseCursor(cursor: Cursor, action: string) {
@@ -949,7 +965,7 @@ export class Backend {
         data,
         dataFile.path,
         dataFile.newFile,
-        dataFile.deletedFile,
+        dataFile.deleteFile,
       );
       return entryWithFormat;
     };
@@ -1103,11 +1119,11 @@ export class Backend {
     entryDraft: draft,
     assetProxies,
     usedSlugs,
-    publishStack = false,
     unpublished = false,
     status,
+    context,
   }: PersistArgs) {
-    const updatedEntity = await this.invokePreSaveEvent(draft.get('entry'));
+    const updatedEntity = await this.invokePreSaveEvent(draft.get('entry'), context);
 
     let entryDraft;
     if (updatedEntity.get('data') === undefined) {
@@ -1144,12 +1160,13 @@ export class Backend {
       updateAssetProxies(assetProxies, config, collection, entryDraft, path);
     } else {
       const slug = entryDraft.getIn(['entry', 'slug']);
+      const path = entryDraft.getIn(['entry', 'path']);
       dataFile = {
-        path: entryDraft.getIn(['entry', 'path']),
+        path,
         // for workflow entries we refresh the slug on publish
         slug: customPath && !useWorkflow ? slugFromCustomPath(collection, customPath) : slug,
         raw: await this.entryToRaw(collection, entryDraft.get('entry')),
-        newPath: customPath,
+        newPath: customPath === path ? undefined : customPath,
       };
     }
 
@@ -1191,12 +1208,12 @@ export class Backend {
       commitMessage,
       collectionName,
       useWorkflow,
-      publishStack,
+      publishStack: context?.publishStack || false,
       ...updatedOptions,
     };
 
     if (!useWorkflow) {
-      await this.invokePrePublishEvent(entryDraft.get('entry'));
+      await this.invokePrePublishEvent(entryDraft.get('entry'), context);
     }
 
     await this.implementation.persistEntry(
@@ -1207,42 +1224,45 @@ export class Backend {
       opts,
     );
 
-    await this.invokePostSaveEvent(entryDraft.get('entry'));
+    await this.invokePostSaveEvent(entryDraft.get('entry'), context);
 
     if (!useWorkflow) {
-      await this.invokePostPublishEvent(entryDraft.get('entry'));
+      await this.invokePostPublishEvent(entryDraft.get('entry'), context);
     }
 
     return slug;
   }
 
-  async invokeEventWithEntry(event: string, entry: EntryMap) {
+  async invokeEventWithEntry(event: string, entry: EntryMap, context: HookContext = {}) {
     const { login, name } = (await this.currentUser()) as User;
-    return await invokeEvent({ name: event, data: { entry, author: { login, name } } });
+    return await invokeEvent({
+      name: event,
+      data: { entry, author: { login, name }, context },
+    });
   }
 
-  async invokePrePublishEvent(entry: EntryMap) {
-    await this.invokeEventWithEntry('prePublish', entry);
+  async invokePrePublishEvent(entry: EntryMap, context?: HookContext) {
+    await this.invokeEventWithEntry('prePublish', entry, context);
   }
 
-  async invokePostPublishEvent(entry: EntryMap) {
-    await this.invokeEventWithEntry('postPublish', entry);
+  async invokePostPublishEvent(entry: EntryMap, context?: HookContext) {
+    await this.invokeEventWithEntry('postPublish', entry, context);
   }
 
-  async invokePreUnpublishEvent(entry: EntryMap) {
-    await this.invokeEventWithEntry('preUnpublish', entry);
+  async invokePreUnpublishEvent(entry: EntryMap, context?: HookContext) {
+    await this.invokeEventWithEntry('preUnpublish', entry, context);
   }
 
-  async invokePostUnpublishEvent(entry: EntryMap) {
-    await this.invokeEventWithEntry('postUnpublish', entry);
+  async invokePostUnpublishEvent(entry: EntryMap, context?: HookContext) {
+    await this.invokeEventWithEntry('postUnpublish', entry, context);
   }
 
-  async invokePreSaveEvent(entry: EntryMap) {
-    return await this.invokeEventWithEntry('preSave', entry);
+  async invokePreSaveEvent(entry: EntryMap, context?: HookContext) {
+    return await this.invokeEventWithEntry('preSave', entry, context);
   }
 
-  async invokePostSaveEvent(entry: EntryMap) {
-    await this.invokeEventWithEntry('postSave', entry);
+  async invokePostSaveEvent(entry: EntryMap, context?: HookContext) {
+    await this.invokeEventWithEntry('postSave', entry, context);
   }
 
   async persistMedia(config: CmsConfig, file: AssetProxy) {
@@ -1262,10 +1282,17 @@ export class Backend {
     return this.implementation.persistMedia(file, options);
   }
 
-  async deleteEntry(state: State, collection: Collection, slug: string) {
+  async deleteEntry(
+    state: State,
+    collection: Collection,
+    slug: string,
+    context?: HookContext,
+    customEntry?: EntryMap,
+  ) {
     const config = state.config;
     const path = selectEntryPath(collection, slug) as string;
     const extension = selectFolderEntryExtension(collection) as string;
+    const entry = customEntry || selectEntry(state.entries, collection.get('name'), slug);
 
     if (!selectAllowDeletion(collection)) {
       throw new Error('Not allowed to delete entries in this collection');
@@ -1285,8 +1312,7 @@ export class Backend {
       user.useOpenAuthoring,
     );
 
-    const entry = selectEntry(state.entries, collection.get('name'), slug);
-    await this.invokePreUnpublishEvent(entry);
+    await this.invokePreUnpublishEvent(entry, context);
     let paths = [path];
     if (hasI18n(collection)) {
       paths = getFilePaths(collection, extension, path, slug);
@@ -1303,7 +1329,7 @@ export class Backend {
       await this.implementation.deleteFiles(paths, commitMessage);
     }
 
-    await this.invokePostUnpublishEvent(entry);
+    await this.invokePostUnpublishEvent(entry, context);
   }
 
   async deleteMedia(config: CmsConfig, path: string) {
@@ -1329,11 +1355,11 @@ export class Backend {
     return this.implementation.updateUnpublishedEntryStatus!(collection, slug, newStatus);
   }
 
-  async publishUnpublishedEntry(entry: EntryMap, publishStack?: boolean) {
+  async publishUnpublishedEntry(entry: EntryMap, context: HookContext) {
     const collection = entry.get('collection');
     const slug = entry.get('slug');
 
-    await this.invokePrePublishEvent(entry);
+    await this.invokePrePublishEvent(entry, context);
 
     const config = this.config;
     if (config.backend.stack) {
@@ -1350,13 +1376,13 @@ export class Backend {
       );
       await this.implementation.publishUnpublishedEntryStack!(collection, slug, {
         stackCommitMessage,
-        publishStack,
+        publishStack: context.publishStack,
       });
     } else {
       await this.implementation.publishUnpublishedEntry!(collection, slug);
     }
 
-    await this.invokePostPublishEvent(entry);
+    await this.invokePostPublishEvent(entry, context);
   }
 
   deleteUnpublishedEntry(collection: string, slug: string) {

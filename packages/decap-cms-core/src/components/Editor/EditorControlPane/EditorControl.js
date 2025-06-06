@@ -12,7 +12,7 @@ import ReactMarkdown from 'react-markdown';
 import gfm from 'remark-gfm';
 import { List, Map } from 'immutable';
 
-import { resolveWidget, getEditorComponents } from '../../../lib/registry';
+import { resolveWidget, getEditorComponents, getWidget } from '../../../lib/registry';
 import { clearFieldErrors, tryLoadEntry, validateMetaField } from '../../../actions/entries';
 import { addAsset, boundGetAsset } from '../../../actions/media';
 import { selectIsLoadingAsset } from '../../../reducers/medias';
@@ -70,6 +70,9 @@ const styleStrings = {
   unused: `
     opacity: 0.5;
   `,
+  flat: `
+    margin-top: 0 !important;
+  `
 };
 
 const ControlContainer = styled.div`
@@ -143,7 +146,6 @@ class EditorControl extends React.Component {
     removeInsertedMedia: PropTypes.func.isRequired,
     persistMedia: PropTypes.func.isRequired,
     onValidate: PropTypes.func,
-    processControlRef: PropTypes.func,
     controlRef: PropTypes.func,
     query: PropTypes.func.isRequired,
     queryHits: PropTypes.object,
@@ -205,6 +207,7 @@ class EditorControl extends React.Component {
       value,
       entry,
       collection,
+      collections,
       config,
       field,
       fieldsMetaData,
@@ -219,7 +222,6 @@ class EditorControl extends React.Component {
       removeInsertedMedia,
       persistMedia,
       onValidate,
-      processControlRef,
       controlRef,
       query,
       queryHits,
@@ -270,6 +272,7 @@ class EditorControl extends React.Component {
             css={css`
               ${!this.state.use && unused && styleStrings.unused}
               ${isHidden && styleStrings.hidden};
+              ${isFlat && styleStrings.flat}
             `}
           >
             {widgetTitle && <h1>{widgetTitle}</h1>}
@@ -337,6 +340,7 @@ class EditorControl extends React.Component {
               controlComponent={widget.control}
               entry={entry}
               collection={collection}
+              collections={collections}
               config={config}
               field={field}
               uniqueFieldId={this.uniqueFieldId}
@@ -362,7 +366,7 @@ class EditorControl extends React.Component {
               resolveWidget={resolveWidget}
               widget={widget}
               getEditorComponents={getEditorComponents}
-              ref={processControlRef && partial(processControlRef, field)}
+              getWidget={getWidget}
               controlRef={controlRef}
               editorControl={ConnectedEditorControl}
               query={query}
@@ -439,6 +443,7 @@ function mapStateToProps(state) {
     config: state.config,
     entry,
     collection,
+    collections: state.collections,
     isLoadingAsset,
     loadEntry,
     validateMetaField: (field, value, t) => validateMetaField(state, collection, field, value, t),
