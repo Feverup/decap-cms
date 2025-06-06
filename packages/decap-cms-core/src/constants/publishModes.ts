@@ -8,6 +8,7 @@ export const Statues = {
   DRAFT: 'draft',
   PENDING_REVIEW: 'pending_review',
   PENDING_PUBLISH: 'pending_publish',
+  PROCESSING: 'processing',
   STALE: 'stale',
 };
 

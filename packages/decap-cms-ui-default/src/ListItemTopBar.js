@@ -28,6 +28,10 @@ const TopBarButton = styled.button`
   align-items: center;
 `;
 
+const TopBarButtonGroups = styled.div`
+  display: flex;
+`;
+
 const TopBarButtonSpan = TopBarButton.withComponent('span');
 
 const DragIconContainer = styled(TopBarButtonSpan)`
@@ -46,7 +50,7 @@ function DragHandle({ Wrapper, id }) {
 }
 
 function ListItemTopBar(props) {
-  const { className, collapsed, onCollapseToggle, onRemove, dragHandle, id } = props;
+  const { className, collapsed, onCollapseToggle, onDuplicate, onRemove, dragHandle, id } = props;
   return (
     <TopBar className={className}>
       {onCollapseToggle ? (
@@ -55,11 +59,18 @@ function ListItemTopBar(props) {
         </TopBarButton>
       ) : null}
       {dragHandle ? <DragHandle Wrapper={dragHandle} id={id} /> : null}
-      {onRemove ? (
-        <TopBarButton onClick={onRemove}>
-          <Icon type="close" size="small" />
-        </TopBarButton>
-      ) : null}
+      <TopBarButtonGroups>
+        {onDuplicate ? (
+          <TopBarButton onClick={onDuplicate}>
+            <Icon type="pages-alt" size="small" />
+          </TopBarButton>
+        ) : null}
+        {onRemove ? (
+          <TopBarButton onClick={onRemove}>
+            <Icon type="close" size="small" />
+          </TopBarButton>
+        ) : null}
+      </TopBarButtonGroups>
     </TopBar>
   );
 }

@@ -26,9 +26,13 @@ export default class ObjectControl extends React.Component {
 
   processControlRef = ref => {
     if (!ref) return;
-    const name = ref.props.field.get('name');
-    this.childRefs[name] = ref;
-    this.props.controlRef?.(ref);
+    const parentId = ref.props.parentIds[ref.props.parentIds.length - 1];
+    const belongsToDifferentParent = parentId && this.props.forID && parentId !== this.props.forID;
+    if (!belongsToDifferentParent) {
+      const name = ref.props.field.get('name');
+      this.childRefs[name] = ref;
+    }
+    this.props.controlRef?.(this);
   };
 
   static propTypes = {
@@ -87,7 +91,9 @@ export default class ObjectControl extends React.Component {
     fields = List.isList(fields) ? fields : List([fields]);
     fields.forEach(field => {
       const widget = field.get('widget');
+
       if (widget === 'hidden' || (widget === 'object' && field.has('flat'))) return;
+
       const parentName = field.get('parentName');
       const name = field.get('name');
 
@@ -260,7 +266,9 @@ export default class ObjectControl extends React.Component {
             ?.map(field => field.set('parentName', fieldParentName));
           const singleField = f.get('field')?.set('parentName', fieldParentName);
 
-          return mappedMultiFields.push(...this.renderFields(multiFields, singleField, f));
+          const renderedFields = this.renderFields(multiFields, singleField, f);
+          if (Array.isArray(renderedFields)) return mappedMultiFields.push(...renderedFields);
+          return mappedMultiFields.push(renderedFields);
         }
         return mappedMultiFields.push(this.controlFor(f, idx));
       });

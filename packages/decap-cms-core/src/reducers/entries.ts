@@ -230,7 +230,7 @@ function entries(
       const payload = action.payload as EntryDeletePayload;
       return state.withMutations(map => {
         map.deleteIn(['entities', `${payload.collectionName}.${payload.entrySlug}`]);
-        map.updateIn(['pages', payload.collectionName, 'ids'], (ids: string[]) =>
+        map.updateIn(['pages', payload.collectionName, 'ids'], (ids: string[] = []) =>
           ids.filter(id => id !== payload.entrySlug),
         );
       });
