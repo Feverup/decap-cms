@@ -673,6 +673,8 @@ export default class ListControl extends React.Component {
       t,
       collection,
       collections,
+      isFieldUnused,
+      setFieldUnused,
     } = this.props;
 
     const { itemsCollapsed, keys } = this.state;
@@ -747,6 +749,8 @@ export default class ListControl extends React.Component {
               data-testid={`object-control-${key}`}
               hasError={hasError}
               parentIds={[...parentIds, forID, key]}
+              isFieldUnused={isFieldUnused}
+              setFieldUnused={setFieldUnused}
             />
           )}
         </ClassNames>
