@@ -72,7 +72,7 @@ const styleStrings = {
   `,
   flat: `
     margin-top: 0 !important;
-  `
+  `,
 };
 
 const ControlContainer = styled.div`

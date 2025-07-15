@@ -110,7 +110,7 @@ const ColumnHeader = styled.h2`
     css`
       background-color: ${colors.processingBackground};
       color: ${colors.processingText};
-   `}
+    `}
 
   ${props =>
     props.name === 'stale' &&
@@ -162,7 +162,7 @@ class WorkflowList extends React.Component {
     const collection = dragProps.collection;
     const oldStatus = dragProps.ownStatus;
     if (oldStatus === 'processing') {
-      window.alert(this.props.t('workflow.workflowList.onProcessingUpdate'))
+      window.alert(this.props.t('workflow.workflowList.onProcessingUpdate'));
       return;
     }
     if (newStatus === 'stale') {
@@ -174,7 +174,7 @@ class WorkflowList extends React.Component {
 
   requestDelete = (collection, slug, ownStatus) => {
     if (ownStatus === 'processing') {
-      window.alert(this.props.t('workflow.workflowList.onProcessingUpdate'))
+      window.alert(this.props.t('workflow.workflowList.onProcessingUpdate'));
       return;
     }
     if (window.confirm(this.props.t('workflow.workflowList.onDeleteEntry'))) {

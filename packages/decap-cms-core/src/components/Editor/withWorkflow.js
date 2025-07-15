@@ -38,7 +38,7 @@ function mergeProps(stateProps, dispatchProps, ownProps) {
     returnObj.persistEntry = (collection, context, entryDraft) => {
       const { unpublished = stateProps.unpublishedEntry } = context;
       return dispatch(persistUnpublishedEntry(collection, unpublished, context, entryDraft));
-    }
+    };
   }
 
   return {

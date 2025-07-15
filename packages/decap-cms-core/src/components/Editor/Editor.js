@@ -232,7 +232,7 @@ export class Editor extends React.Component {
   //   deleteLocalBackup(collection, !newEntry && slug);
   // }
 
-  createHookContext = (context) => {
+  createHookContext = context => {
     const defaultContext = {
       editor: {
         props: this.props,
@@ -253,7 +253,12 @@ export class Editor extends React.Component {
         persistUnpublishedEntry: async (collection, existingUnpublishedEntry, entry, opts = {}) => {
           const context = this.createHookContext(opts);
           const entryDraft = entry || this.props.createEmptyDraft(collection);
-          return this.props.persistUnpublishedEntry(collection, existingUnpublishedEntry, context, entryDraft);
+          return this.props.persistUnpublishedEntry(
+            collection,
+            existingUnpublishedEntry,
+            context,
+            entryDraft,
+          );
         },
         publishUnpublishedEntry: async (collection, slug, entry, opts = {}) => {
           const context = this.createHookContext(opts);
@@ -416,7 +421,6 @@ export class Editor extends React.Component {
         return;
       }
     }
-
 
     await deleteUnpublishedEntry(collection.get('name'), slug);
 

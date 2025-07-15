@@ -80,7 +80,7 @@ const en = {
       widget: {
         required: '%{fieldLabel} is required.',
         regexPattern: "%{fieldLabel} didn't match the pattern: %{pattern}.",
-        regexNegativePattern: "%{fieldLabel} should not contain pattern: %{pattern}.",
+        regexNegativePattern: '%{fieldLabel} should not contain pattern: %{pattern}.',
         processing: '%{fieldLabel} is processing.',
         range: '%{fieldLabel} must be between %{minValue} and %{maxValue}.',
         min: '%{fieldLabel} must be at least %{minValue}.',
@@ -115,9 +115,11 @@ const en = {
         'All changes to this entry will be deleted.\n\n Do you still want to delete?',
       loadingEntry: 'Loading entry...',
       confirmLoadBackup: 'A local backup was recovered for this entry, would you like to use it?',
-      onProcessingStatusChange: "Are you sure you want to change the status to %{newStatus} while the entry is processing?",
-      onProcessingDeleteUnpublishedChanges: "Are you sure you want to delete unpublished changes while the entry is processing?",
-      onProcessingDeleteEntry: "Are you sure you want to delete this entry while it is processing?",
+      onProcessingStatusChange:
+        'Are you sure you want to change the status to %{newStatus} while the entry is processing?',
+      onProcessingDeleteUnpublishedChanges:
+        'Are you sure you want to delete unpublished changes while the entry is processing?',
+      onProcessingDeleteEntry: 'Are you sure you want to delete this entry while it is processing?',
       onStackPublishing: 'Are you sure you want to publish all changes?',
       onStackClosing: 'Are you sure you want to discard all changes?',
     },

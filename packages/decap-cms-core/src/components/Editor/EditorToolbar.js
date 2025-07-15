@@ -224,7 +224,7 @@ const StatusButton = styled(DropdownButton)`
     css`
       background-color: ${colors.processingBackground};
       color: ${colors.processingText};
-   `}
+    `}
 
   ${props =>
     props.label === 'stale' &&
@@ -390,34 +390,29 @@ export class EditorToolbar extends React.Component {
     );
   };
 
-  handleStatusChange = (newStatusName) => {
-    const {
-      currentStatus,
-      onChangeStatus,
-      t
-    } = this.props;
+  handleStatusChange = newStatusName => {
+    const { currentStatus, onChangeStatus, t } = this.props;
 
     if (currentStatus === status.get('PROCESSING')) {
       const newStatusLabel = t(`editor.editorToolbar.${newStatusName.toLowerCase()}`);
 
-      if (!window.confirm(t('editor.editor.onProcessingStatusChange', {
-        newStatus: newStatusLabel
-      }))) {
+      if (
+        !window.confirm(
+          t('editor.editor.onProcessingStatusChange', {
+            newStatus: newStatusLabel,
+          }),
+        )
+      ) {
         return;
       }
     }
 
     onChangeStatus(newStatusName);
-  }
+  };
 
   handleDelete = () => {
-    const {
-      currentStatus,
-      hasUnpublishedChanges,
-      onDeleteUnpublishedChanges,
-      onDelete,
-      t
-    } = this.props;
+    const { currentStatus, hasUnpublishedChanges, onDeleteUnpublishedChanges, onDelete, t } =
+      this.props;
     if (currentStatus === status.get('PROCESSING')) {
       const translationKey = hasUnpublishedChanges
         ? 'editor.editor.onProcessingDeleteUnpublishedChanges'
@@ -427,7 +422,7 @@ export class EditorToolbar extends React.Component {
       }
     }
     return hasUnpublishedChanges ? onDeleteUnpublishedChanges() : onDelete();
-  }
+  };
 
   renderWorkflowStatusControls = () => {
     const { isUpdatingStatus, currentStatus, t, useOpenAuthoring } = this.props;
@@ -681,26 +676,23 @@ export class EditorToolbar extends React.Component {
       </SaveButton>,
       currentStatus
         ? [
-          <React.Fragment key="workflow-status-controls">
-            {this.renderWorkflowStatusControls()}
-            {currentStatus === status.get('PENDING_PUBLISH') &&
-              this.renderNewEntryWorkflowPublishControls({ canCreate, canPublish })}
-          </React.Fragment>,
-        ]
+            <React.Fragment key="workflow-status-controls">
+              {this.renderWorkflowStatusControls()}
+              {currentStatus === status.get('PENDING_PUBLISH') &&
+                this.renderNewEntryWorkflowPublishControls({ canCreate, canPublish })}
+            </React.Fragment>,
+          ]
         : !isNewEntry && (
-          <React.Fragment key="existing-entry-workflow-publish-controls">
-            {this.renderExistingEntryWorkflowPublishControls({
-              canCreate,
-              canPublish,
-              canDelete,
-            })}
-          </React.Fragment>
-        ),
+            <React.Fragment key="existing-entry-workflow-publish-controls">
+              {this.renderExistingEntryWorkflowPublishControls({
+                canCreate,
+                canPublish,
+                canDelete,
+              })}
+            </React.Fragment>
+          ),
       !hasUnpublishedChanges && !isModification ? null : (
-        <DeleteButton
-          key="delete-button"
-          onClick={this.handleDelete}
-        >
+        <DeleteButton key="delete-button" onClick={this.handleDelete}>
           {isDeleting ? t('editor.editorToolbar.discarding') : deleteLabel}
         </DeleteButton>
       ),

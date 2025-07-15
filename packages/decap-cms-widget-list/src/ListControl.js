@@ -446,7 +446,7 @@ export default class ListControl extends React.Component {
     const { value, onChange } = this.props;
 
     const listValue = value.get(index);
-    if (!listValue) return
+    if (!listValue) return;
 
     const { itemsCollapsed } = this.state;
 
@@ -459,7 +459,7 @@ export default class ListControl extends React.Component {
 
     this.setState({
       itemsCollapsed: newItemsCollapsed,
-      keys: newKeys
+      keys: newKeys,
     });
 
     onChange(value.insert(index + 1, listValue));
@@ -690,7 +690,7 @@ export default class ListControl extends React.Component {
       }
     }
 
-    const ObjectControl = (this.props.getWidget('object')).control;
+    const ObjectControl = this.props.getWidget('object').control;
 
     return (
       <SortableListItem
