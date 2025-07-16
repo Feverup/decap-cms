@@ -20,7 +20,7 @@ allowedEvents.forEach(e => {
 
 const lib = {
   immutable,
-}
+};
 
 /**
  * Global Registry Object
@@ -321,4 +321,3 @@ export function getCustomFormatsFormatters() {
 export function getFormatter(name) {
   return registry.formats[name]?.formatter;
 }
-

@@ -301,7 +301,10 @@ export default class Widget extends Component {
 
   setInactiveStyle = () => {
     this.props.setInactiveStyle();
-    if ((this.props.field.has('pattern') || this.props.field.has('negative_pattern')) && !isEmpty(this.getValidateValue())) {
+    if (
+      (this.props.field.has('pattern') || this.props.field.has('negative_pattern')) &&
+      !isEmpty(this.getValidateValue())
+    ) {
       this.validate();
     }
   };

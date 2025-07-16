@@ -95,7 +95,7 @@ const StatusButton = styled(DropdownButton)`
     css`
       background-color: ${colors.processingBackground};
       color: ${colors.processingText};
-   `}
+    `}
 
   ${props =>
     props.label === 'stale' &&

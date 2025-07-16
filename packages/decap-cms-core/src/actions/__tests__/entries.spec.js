@@ -73,30 +73,32 @@ describe('entries', () => {
         fields: [{ name: 'title' }, { name: 'boolean' }],
       });
 
-      return store.dispatch(createLocalEmptyDraft(collection, '?title=title&boolean=True')).then(() => {
-        const actions = store.getActions();
-        expect(actions).toHaveLength(1);
+      return store
+        .dispatch(createLocalEmptyDraft(collection, '?title=title&boolean=True'))
+        .then(() => {
+          const actions = store.getActions();
+          expect(actions).toHaveLength(1);
 
-        expect(actions[0]).toEqual({
-          payload: {
-            author: '',
-            collection: undefined,
-            data: { title: 'title', boolean: true },
-            meta: {},
-            i18n: {},
-            isModification: null,
-            label: null,
-            mediaFiles: [],
-            partial: false,
-            path: '',
-            raw: '',
-            slug: '',
-            status: '',
-            updatedOn: '',
-          },
-          type: 'DRAFT_CREATE_EMPTY',
+          expect(actions[0]).toEqual({
+            payload: {
+              author: '',
+              collection: undefined,
+              data: { title: 'title', boolean: true },
+              meta: {},
+              i18n: {},
+              isModification: null,
+              label: null,
+              mediaFiles: [],
+              partial: false,
+              path: '',
+              raw: '',
+              slug: '',
+              status: '',
+              updatedOn: '',
+            },
+            type: 'DRAFT_CREATE_EMPTY',
+          });
         });
-      });
     });
 
     it('should html escape URL params', () => {
