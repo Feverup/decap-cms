@@ -932,7 +932,7 @@ export function persistEntry(
     const backend = currentBackend(state.config);
     const entry = entryDraft.get('entry');
     const isCustomEntry = customEntryDraft && entry.get('isCustomEntry', true);
-    const status = customEntryDraft && entry.get('status');
+    const customEntryStatus = customEntryDraft && entry.get('status');
     const assetProxies = getMediaAssets({
       entry,
     });
@@ -950,7 +950,7 @@ export function persistEntry(
         assetProxies,
         usedSlugs,
         context,
-        status,
+        status: customEntryStatus,
       })
       .then(async (newSlug: string) => {
         dispatch(
@@ -1004,16 +1004,16 @@ export function deleteEntry(
   collection: Collection,
   slug: string,
   context: HookContext,
-  entry?: EntryMap,
+  customEntry?: EntryMap,
 ) {
   return (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
     const state = getState();
     const backend = currentBackend(state.config);
-    const isCustomEntry = entry && entry.get('isCustomEntry', true);
+    const isCustomEntry = customEntry && customEntry.get('isCustomEntry', true);
 
     dispatch(entryDeleting(collection, slug));
     return backend
-      .deleteEntry(state, collection, slug, context, entry)
+      .deleteEntry(state, collection, slug, context, customEntry)
       .then(async () => {
         dispatch(entryDeleted(collection, slug));
         dispatch(

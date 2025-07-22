@@ -335,7 +335,7 @@ export function persistUnpublishedEntry(
     const state = getState();
     const entryDraft = customEntryDraft || state.entryDraft;
     const isCustomEntry = customEntryDraft && entryDraft.getIn(['entry', 'isCustomEntry'], true);
-    const status = customEntryDraft && customEntryDraft.getIn(['entry', 'status']);
+    const customEntryStatus = customEntryDraft && customEntryDraft.getIn(['entry', 'status']);
     const fieldsErrors = entryDraft.get('fieldsErrors');
     const unpublishedSlugs = selectUnpublishedSlugs(state, collection.get('name'));
     const publishedSlugs = selectPublishedSlugs(state, collection.get('name'));
@@ -385,7 +385,7 @@ export function persistUnpublishedEntry(
         assetProxies,
         usedSlugs,
         context,
-        status,
+        status: customEntryStatus,
       });
       dispatch(
         addNotification({
@@ -572,6 +572,7 @@ export function publishUnpublishedEntry(
 export function unpublishPublishedEntry(
   collection: Collection,
   slug: string,
+  context: HookContext,
   customEntry?: EntryMap,
 ) {
   return (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
@@ -582,7 +583,7 @@ export function unpublishPublishedEntry(
     const entryDraft = Map().set('entry', entry) as unknown as EntryDraft;
     dispatch(unpublishedEntryPersisting(collection, slug));
     return backend
-      .deleteEntry(state, collection, slug)
+      .deleteEntry(state, collection, slug, context, customEntry)
       .then(() => {
         if (!backend.implementation.deleteCollectionFiles) {
           backend.persistEntry({
