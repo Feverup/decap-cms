@@ -845,8 +845,7 @@ export default class API {
     }
 
     console.log(
-      `Done migrating Pull Request '${
-        number === newNumber ? newNumber : `${number} => ${newNumber}`
+      `Done migrating Pull Request '${number === newNumber ? newNumber : `${number} => ${newNumber}`
       }'`,
     );
   }
@@ -856,6 +855,26 @@ export default class API {
       `${this.repoURL}/git/refs/heads/cms/${this.repo}`,
     ).catch(() => [] as Octokit.GitListMatchingRefsResponseItem[]);
     return cmsBranches;
+  }
+
+  async getCmsRefs() {
+    const cmsPullRequestsNoLabel: GitHubPull[] = [];
+    const cmsPullRequests = await this.getPullRequests(undefined, PullRequestState.Open, pr => {
+      const hasRefSuffix = withCmsRefSuffix(pr);
+      if (!hasRefSuffix) return false;
+
+      const prLabeled = withCmsLabel(pr, this.cmsLabelPrefix)
+      if (!prLabeled) {
+        cmsPullRequestsNoLabel.push(pr);
+      }
+      return true;
+    });
+
+    for (const pr of cmsPullRequestsNoLabel) {
+      await this.setPullRequestStatus(pr, this.initialWorkflowStatus);
+    }
+
+    return cmsPullRequests.map(pr => pr.head.ref);
   }
 
   async listUnpublishedBranches() {
@@ -895,10 +914,8 @@ export default class API {
       //     prCount = prCount + 1;
       //     await this.migratePullRequest(pr, `${prCount} of ${pullRequests.length}`);
       //   }
-      const cmsPullRequests = await this.getPullRequests(undefined, PullRequestState.Open, pr =>
-        withCmsLabel(pr, this.cmsLabelPrefix),
-      );
-      branches = cmsPullRequests.map(pr => pr.head.ref);
+
+      branches = await this.getCmsRefs();
     }
 
     return branches;
@@ -1175,6 +1192,8 @@ export default class API {
   }
 
   async setPullRequestStatus(pullRequest: GitHubPull, newStatus: string) {
+    if (!newStatus) return;
+
     const labels = [
       ...pullRequest.labels
         .filter(label => !isCMSLabel(label.name, this.cmsLabelPrefix))
@@ -1655,6 +1674,14 @@ export default class API {
     this.useStack = false;
   }
 
+  async getStackLabel(pullRequest: GitHubPull): Promise<{ name: string }> {
+    const label = pullRequest.labels.find(l => isCMSLabel(l.name, this.cmsLabelPrefix));
+    if (label) return label;
+    const initialStatus = this.initialWorkflowStatus;
+    await this.updateStackStatus(initialStatus);
+    return { name: statusToLabel(initialStatus, this.cmsLabelPrefix) };
+  }
+
   async fetchStack() {
     if (!this.stack) return;
 
@@ -1665,9 +1692,7 @@ export default class API {
     const pullRequest = await this.getStackPullRequest();
     if (!pullRequest) return;
 
-    const label = pullRequest.labels.find(l => isCMSLabel(l.name, this.cmsLabelPrefix)) as {
-      name: string;
-    };
+    const label = await this.getStackLabel(pullRequest);
     const status = labelToStatus(label.name, this.cmsLabelPrefix);
     const updatedAt = pullRequest.updated_at;
     return {
