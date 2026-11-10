@@ -965,7 +965,7 @@ export class Backend {
         data,
         dataFile.path,
         dataFile.newFile,
-        dataFile.deleteFile,
+        !!dataFile.deletedFile,
       );
       return entryWithFormat;
     };
