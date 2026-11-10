@@ -369,9 +369,9 @@ describe('turbo gitlab backend delegations', () => {
     backend.cache.entriesByFiles = jest.fn().mockResolvedValue(['files']);
     backend.cache.getEntry = jest.fn().mockResolvedValue('entry');
 
-    await expect(backend.allEntriesByFolder('posts', 'md', 1, undefined, regex, 'q', regex)).resolves.toEqual([
-      'folder',
-    ]);
+    await expect(
+      backend.allEntriesByFolder('posts', 'md', 1, undefined, regex, 'q', regex),
+    ).resolves.toEqual(['folder']);
     await expect(backend.entriesByFolder('posts', 'md', 2)).resolves.toEqual(['folder']);
     await expect(backend.entriesByFiles([{ path: 'a.md' }])).resolves.toEqual(['files']);
     await expect(backend.getEntry('a.md')).resolves.toBe('entry');
