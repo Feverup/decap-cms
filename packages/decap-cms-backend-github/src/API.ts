@@ -846,7 +846,8 @@ export default class API {
     }
 
     console.log(
-      `Done migrating Pull Request '${number === newNumber ? newNumber : `${number} => ${newNumber}`
+      `Done migrating Pull Request '${
+        number === newNumber ? newNumber : `${number} => ${newNumber}`
       }'`,
     );
   }
@@ -874,7 +875,7 @@ export default class API {
       const hasRefSuffix = withCmsRefSuffix(pr);
       if (!hasRefSuffix) return false;
 
-      const prLabeled = withCmsLabel(pr, this.cmsLabelPrefix)
+      const prLabeled = withCmsLabel(pr, this.cmsLabelPrefix);
       if (!prLabeled) {
         cmsPullRequestsNoLabel.push(pr);
       }
