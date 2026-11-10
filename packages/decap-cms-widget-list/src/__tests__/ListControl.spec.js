@@ -860,4 +860,66 @@ describe('ListControl', () => {
 
     expect(props.onChange).toHaveBeenCalledTimes(1);
   });
+
+  // PNW-3165 (#27): Fever's plain-value handler must follow its item as well.
+  it('handleValueChangeFor writes to the item it was created for after an earlier item is removed', () => {
+    const value = fromJS([
+      { type: 'type_one', text: 'one' },
+      { type: 'type_one', text: 'two' },
+      { type: 'type_one', text: 'three' },
+    ]);
+
+    let control;
+    const { getAllByText, rerender } = render(
+      <ListControl ref={ref => (control = ref)} {...props} field={typedField} value={value} />,
+    );
+
+    const changeThirdItem = control.handleValueChangeFor(control.state.keys[2]);
+
+    fireEvent.click(getAllByText('Remove')[0]);
+    const afterRemoval = props.onChange.mock.calls[0][0];
+    rerender(
+      <ListControl
+        ref={ref => (control = ref)}
+        {...props}
+        field={typedField}
+        value={afterRemoval}
+      />,
+    );
+
+    changeThirdItem(fromJS({ type: 'type_one', text: 'three edited' }));
+
+    const written = props.onChange.mock.calls[1][0].toJS();
+    expect(written).toHaveLength(2);
+    expect(written[1]).toEqual({ type: 'type_one', text: 'three edited' });
+  });
+
+  it('handleValueChangeFor drops a change for an item that has since been removed', () => {
+    const value = fromJS([
+      { type: 'type_one', text: 'one' },
+      { type: 'type_one', text: 'two' },
+    ]);
+
+    let control;
+    const { getAllByText, rerender } = render(
+      <ListControl ref={ref => (control = ref)} {...props} field={typedField} value={value} />,
+    );
+
+    const changeSecondItem = control.handleValueChangeFor(control.state.keys[1]);
+
+    fireEvent.click(getAllByText('Remove')[1]);
+    const afterRemoval = props.onChange.mock.calls[0][0];
+    rerender(
+      <ListControl
+        ref={ref => (control = ref)}
+        {...props}
+        field={typedField}
+        value={afterRemoval}
+      />,
+    );
+
+    changeSecondItem(fromJS({ type: 'type_one', text: 'for a removed item' }));
+
+    expect(props.onChange).toHaveBeenCalledTimes(1);
+  });
 });

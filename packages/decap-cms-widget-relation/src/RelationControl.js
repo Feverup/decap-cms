@@ -364,17 +364,6 @@ export default class RelationControl extends Component {
     }
   }
 
-  async componentDidUpdate(prevProps) {
-    const { field, value } = this.props;
-    if (
-      field.get('collection') !== prevProps.field.get('collection') &&
-      value &&
-      this.hasInitialValues(value)
-    ) {
-      await this.loadInitialOptions();
-    }
-  }
-
   componentWillUnmount() {
     this.mounted = false;
   }
