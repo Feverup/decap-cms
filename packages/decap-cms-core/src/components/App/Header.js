@@ -1,5 +1,5 @@
+import { Component } from 'react';
 import PropTypes from 'prop-types';
-import React from 'react';
 import ImmutablePropTypes from 'react-immutable-proptypes';
 import styled from '@emotion/styled';
 import { css } from '@emotion/react';
@@ -11,7 +11,6 @@ import {
   DropdownItem,
   StyledDropdownButton,
   colors,
-  lengths,
   shadows,
   buttons,
   zIndex,
@@ -19,7 +18,11 @@ import {
 import { connect } from 'react-redux';
 
 import { SettingsDropdown } from '../UI';
+import { StatusDot, deployIndicator } from './deployStatusIndicator';
 import { checkBackendStatus } from '../../actions/status';
+import { selectCanCreateNewEntry } from '../../reducers';
+import { selectDeployStatusVisible } from '../../reducers/deployStatus';
+import { selectUserIdentity } from '../../lib/userHelper';
 import { checkStackStatus } from '../../actions/stack';
 import StackToolbar from './StackToolbar.js';
 
@@ -34,12 +37,14 @@ function AppHeader(props) {
     <header
       css={css`
         ${shadows.dropMain};
-        position: sticky;
         width: 100%;
-        top: 0;
         background-color: ${colors.foreground};
         z-index: ${zIndex.zIndex300};
-        height: ${lengths.topBarHeight};
+
+        @media (min-height: 500px) {
+          position: sticky;
+          top: 0;
+        }
       `}
       {...props}
     />
@@ -48,11 +53,15 @@ function AppHeader(props) {
 
 const AppHeaderContent = styled.div`
   display: flex;
-  justify-content: space-between;
-  min-width: 800px;
-  max-width: 1440px;
+  flex-direction: column-reverse;
   padding: 0 12px;
   margin: 0 auto;
+
+  @media (min-width: 800px) {
+    max-width: 1440px;
+    flex-direction: row;
+    justify-content: space-between;
+  }
 `;
 
 const AppHeaderButton = styled.button`
@@ -60,14 +69,27 @@ const AppHeaderButton = styled.button`
   background: none;
   color: #7b8290;
   font-family: inherit;
-  font-size: 16px;
+  font-size: 13px;
+  line-height: 1;
   font-weight: 500;
   display: inline-flex;
-  padding: 16px 20px;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 10px 10px;
   align-items: center;
+  text-align: center;
+
+  @media (min-width: 400px) {
+    flex-direction: row;
+    gap: 4px;
+  }
+
+  @media (min-width: 500px) {
+    font-size: 16px;
+    padding: 16px 20px;
+  }
 
   ${Icon} {
-    margin-right: 4px;
     color: #b3b9c4;
   }
 
@@ -95,14 +117,16 @@ const AppHeaderButton = styled.button`
 const AppHeaderNavLink = AppHeaderButton.withComponent(NavLink);
 
 const AppHeaderActions = styled.div`
-  display: inline-flex;
+  display: flex;
   align-items: center;
+  justify-content: space-between;
 `;
 
 const AppHeaderQuickNewButton = styled(StyledDropdownButton)`
   ${buttons.button};
   ${buttons.medium};
   ${buttons.gray};
+  white-space: nowrap;
   margin-right: 8px;
 
   &:after {
@@ -114,17 +138,41 @@ const AppHeaderNavList = styled.ul`
   display: flex;
   margin: 0;
   list-style: none;
+  justify-content: space-around;
+
+  @media (min-width: 800px) {
+    justify-content: flex-start;
+  }
 `;
 
-class Header extends React.Component {
+const AppHeaderLogo = styled.li`
+  display: flex;
+  align-items: center;
+
+  img {
+    padding: 12px 20px;
+    max-height: 56px;
+    max-width: 300px;
+    object-fit: contain;
+    object-position: center;
+  }
+`;
+
+class Header extends Component {
   static propTypes = {
     user: PropTypes.object.isRequired,
     collections: ImmutablePropTypes.map.isRequired,
+    creatableCollections: ImmutablePropTypes.list.isRequired,
     onCreateEntryClick: PropTypes.func.isRequired,
     onLogoutClick: PropTypes.func.isRequired,
     openMediaLibrary: PropTypes.func.isRequired,
     hasWorkflow: PropTypes.bool.isRequired,
     displayUrl: PropTypes.string,
+    logoUrl: PropTypes.string, // Deprecated, replaced by `logo.src`
+    logo: PropTypes.shape({
+      src: PropTypes.string.isRequired,
+      show_in_header: PropTypes.bool,
+    }),
     isTestRepo: PropTypes.bool,
     t: PropTypes.func.isRequired,
     checkBackendStatus: PropTypes.func.isRequired,
@@ -134,6 +182,9 @@ class Header extends React.Component {
   intervalId;
 
   componentDidMount() {
+    // Manually validate PropTypes - React 19 breaking change
+    PropTypes.checkPropTypes(Header.propTypes, this.props, 'prop', 'Header');
+
     this.intervalId = setInterval(() => {
       this.props.checkBackendStatus();
       this.props.checkStackStatus();
@@ -154,25 +205,35 @@ class Header extends React.Component {
   render() {
     const {
       user,
-      collections,
+      creatableCollections,
       onLogoutClick,
       openMediaLibrary,
       hasWorkflow,
       displayUrl,
+      logoUrl, // Deprecated, replaced by `logo.src`
+      logo,
       isTestRepo,
       t,
       showMediaButton,
+      hasDeployStatus,
+      deployPendingCount,
+      deployLatest,
     } = this.props;
 
-    const creatableCollections = collections
-      .filter(collection => collection.get('create'))
-      .toList();
+    const deployPill = deployIndicator(deployPendingCount, deployLatest);
+
+    const shouldShowLogo = logo?.show_in_header && logo?.src;
 
     return (
       <AppHeader>
         <AppHeaderContent>
           <nav>
             <AppHeaderNavList>
+              {shouldShowLogo && (
+                <AppHeaderLogo>
+                  <img src={logo?.src || logoUrl} alt="Logo" />
+                </AppHeaderLogo>
+              )}
               <li>
                 <AppHeaderNavLink
                   to="/"
@@ -199,6 +260,14 @@ class Header extends React.Component {
                   </AppHeaderButton>
                 </li>
               )}
+              {hasDeployStatus && (
+                <li>
+                  <AppHeaderNavLink to="/deploys" activeClassName="header-link-active">
+                    <StatusDot color={deployPill.color} />
+                    {t(deployPill.key)}
+                  </AppHeaderNavLink>
+                </li>
+              )}
             </AppHeaderNavList>
           </nav>
           <AppHeaderActions>
@@ -215,7 +284,7 @@ class Header extends React.Component {
                   <AppHeaderQuickNewButton> {t('app.header.quickAdd')}</AppHeaderQuickNewButton>
                 )}
                 dropdownTopOverlap="30px"
-                dropdownWidth="160px"
+                dropdownWidth="max-content"
                 dropdownPosition="left"
               >
                 {creatableCollections.map(collection => (
@@ -231,6 +300,7 @@ class Header extends React.Component {
               displayUrl={displayUrl}
               isTestRepo={isTestRepo}
               imageUrl={user?.avatar_url}
+              identity={selectUserIdentity(user)}
               onLogoutClick={onLogoutClick}
             />
           </AppHeaderActions>
@@ -245,4 +315,16 @@ const mapDispatchToProps = {
   checkStackStatus,
 };
 
-export default connect(null, mapDispatchToProps)(translate()(Header));
+function mapStateToProps(state, ownProps) {
+  const { deployStatus } = state;
+  return {
+    creatableCollections: ownProps.collections
+      .filter(collection => selectCanCreateNewEntry(state, collection.get('name')))
+      .toList(),
+    hasDeployStatus: selectDeployStatusVisible(deployStatus),
+    deployPendingCount: deployStatus.pendingCount,
+    deployLatest: deployStatus.latest,
+  };
+}
+
+export default connect(mapStateToProps, mapDispatchToProps)(translate()(Header));

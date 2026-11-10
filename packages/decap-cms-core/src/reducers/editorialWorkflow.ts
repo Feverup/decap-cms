@@ -1,5 +1,6 @@
 import { Map, List, fromJS } from 'immutable';
-import { startsWith } from 'lodash';
+import startsWith from 'lodash/startsWith';
+import { generateContentKey } from 'decap-cms-lib-util';
 
 import { EDITORIAL_WORKFLOW } from '../constants/publishModes';
 import {
@@ -8,6 +9,8 @@ import {
   UNPUBLISHED_ENTRY_SUCCESS,
   UNPUBLISHED_ENTRIES_REQUEST,
   UNPUBLISHED_ENTRIES_SUCCESS,
+  UNPUBLISHED_ENTRIES_FAILURE,
+  UNPUBLISHED_KEYS_SUCCESS,
   UNPUBLISHED_ENTRY_PERSIST_REQUEST,
   UNPUBLISHED_ENTRY_PERSIST_SUCCESS,
   UNPUBLISHED_ENTRY_PERSIST_FAILURE,
@@ -22,6 +25,11 @@ import {
 import { CONFIG_SUCCESS } from '../actions/config';
 
 import type { EditorialWorkflowAction, EditorialWorkflow, Entities } from '../types/redux';
+
+function unionKeys(state: Map<unknown, unknown>, fetchedKeys: List<string>) {
+  const previousKeys = (state.getIn(['pages', 'keys']) as List<string>) || List<string>();
+  return fetchedKeys.concat(previousKeys.filter(key => !fetchedKeys.includes(key)));
+}
 
 function unpublishedEntries(state = Map(), action: EditorialWorkflowAction) {
   switch (action.type) {
@@ -49,14 +57,25 @@ function unpublishedEntries(state = Map(), action: EditorialWorkflowAction) {
       );
 
     case UNPUBLISHED_ENTRIES_REQUEST:
-      return state.setIn(['pages', 'isFetching'], true);
+      return state.withMutations(map => {
+        map.setIn(['pages', 'isFetching'], true);
+        map.deleteIn(['pages', 'error']);
+      });
 
-    case UNPUBLISHED_ENTRIES_SUCCESS:
+    case UNPUBLISHED_ENTRIES_SUCCESS: {
+      const fetchedKeys = List(
+        action.payload!.entries.map(entry => generateContentKey(entry.collection, entry.slug)),
+      );
+      // Union, not replace: the listing may predate a commit this session made,
+      // and dropping its key makes loadUnpublishedEntry treat a live draft as
+      // published. Publishing and deleting prune keys explicitly.
+      const keys = unionKeys(state, fetchedKeys);
+
       return state.withMutations(map => {
         action.payload!.entries.forEach(entry =>
           map.setIn(
             ['entities', `${entry.collection}.${entry.slug}`],
-            fromJS(entry).set('isFetching', false),
+            fromJS({ ...entry, isFetching: false }),
           ),
         );
         map.set(
@@ -64,9 +83,28 @@ function unpublishedEntries(state = Map(), action: EditorialWorkflowAction) {
           Map({
             ...action.payload!.pages,
             ids: List(action.payload!.entries.map(entry => entry.slug)),
+            // Collection-qualified content keys; loadUnpublishedEntry treats an
+            // absent key as proof the entry is not under editorial workflow.
+            keys,
           }),
         );
       });
+    }
+
+    // The key set on its own, unioned as above. Leaves `ids` alone: that means
+    // "the entries themselves are loaded", and claiming it would suppress the load.
+    case UNPUBLISHED_KEYS_SUCCESS:
+      return state.setIn(['pages', 'keys'], unionKeys(state, List(action.payload!.keys)));
+
+    // `pages.error` stops the collection view retrying a failed load on every
+    // re-render. A new request or a success clears it.
+    case UNPUBLISHED_ENTRIES_FAILURE: {
+      const error = action.payload as unknown as Error | undefined;
+      return state.withMutations(map => {
+        map.setIn(['pages', 'isFetching'], false);
+        map.setIn(['pages', 'error'], error?.message || 'Failed to load entries');
+      });
+    }
 
     case UNPUBLISHED_ENTRY_PERSIST_REQUEST: {
       return state.setIn(
@@ -88,8 +126,19 @@ function unpublishedEntries(state = Map(), action: EditorialWorkflowAction) {
           'isPersisting',
         ]);
         map.updateIn(['pages', 'ids'], List(), list =>
-          list.push(action.payload!.entry.get('slug')),
+          (list as List<string>).push(action.payload!.entry.get('slug')),
         );
+        // Keyed on payload.slug, the slug the backend committed under: a new
+        // entry's draft has none, and `<collection>/` would read as published.
+        map.updateIn(['pages', 'keys'], List(), list => {
+          const slug = action.payload!.slug || action.payload!.entry.get('slug');
+          const keys = list as List<string>;
+          if (!slug) {
+            return keys;
+          }
+          const key = generateContentKey(action.payload!.collection, slug);
+          return keys.includes(key) ? keys : keys.push(key);
+        });
       });
 
     case UNPUBLISHED_ENTRY_PERSIST_FAILURE:
@@ -129,11 +178,16 @@ function unpublishedEntries(state = Map(), action: EditorialWorkflowAction) {
         true,
       );
 
+    // Publishing and deleting close the workflow branch, so the key goes too.
     case UNPUBLISHED_ENTRY_PUBLISH_SUCCESS:
-      return state.deleteIn(['entities', `${action.payload!.collection}.${action.payload!.slug}`]);
-
     case UNPUBLISHED_ENTRY_DELETE_SUCCESS:
-      return state.deleteIn(['entities', `${action.payload!.collection}.${action.payload!.slug}`]);
+      return state.withMutations(map => {
+        map.deleteIn(['entities', `${action.payload!.collection}.${action.payload!.slug}`]);
+        map.updateIn(['pages', 'keys'], List(), list => {
+          const key = generateContentKey(action.payload!.collection, action.payload!.slug);
+          return (list as List<string>).filter(existing => existing !== key);
+        });
+      });
 
     case UNPUBLISHED_ENTRY_PUBLISH_FAILURE:
     default:

@@ -1,4 +1,4 @@
-import React from 'react';
+import { Component } from 'react';
 import { fromJS } from 'immutable';
 import { render, fireEvent, waitFor, act } from '@testing-library/react';
 
@@ -12,6 +12,23 @@ jest.mock('react-window', () => {
   return {
     FixedSizeList,
   };
+});
+
+jest.mock('../RelationCache', () => {
+  return {
+    __esModule: true,
+    default: {
+      getOptions: jest.fn((collection, searchFields, term, file, queryFn) => {
+        return queryFn();
+      }),
+      clear: jest.fn(),
+      invalidateCollection: jest.fn(),
+    },
+  };
+});
+
+beforeEach(() => {
+  jest.clearAllMocks();
 });
 
 const RelationControl = DecapCmsWidgetRelation.controlComponent;
@@ -57,7 +74,7 @@ const filterBooleanFieldConfig = {
   value_field: 'title',
   filters: [
     {
-      field: 'draft',
+      field: 'featured',
       values: [false],
     },
   ],
@@ -103,7 +120,7 @@ const multipleFiltersFieldConfig = {
       values: ['Post # 1', 'Post # 2', 'Post # 7', 'Post # 9', 'Post # 15'],
     },
     {
-      field: 'draft',
+      field: 'featured',
       values: [true],
     },
   ],
@@ -117,7 +134,7 @@ const emptyFilterFieldConfig = {
   value_field: 'title',
   filters: [
     {
-      field: 'draft',
+      field: 'featured',
       values: [],
     },
   ],
@@ -137,14 +154,28 @@ const nestedFilterFieldConfig = {
   ],
 };
 
+const filterListFieldConfig = {
+  name: 'owner',
+  collection: 'owners_collection',
+  display_fields: ['name'],
+  search_fields: ['name'],
+  value_field: 'name',
+  filters: [
+    {
+      field: 'pets',
+      values: ['cats', 'dogs'],
+    },
+  ],
+};
+
 function generateHits(length) {
   const hits = Array.from({ length }, (val, idx) => {
     const title = `Post # ${idx + 1}`;
     const slug = `post-number-${idx + 1}`;
-    const draft = idx % 2 === 0;
+    const featured = idx % 2 === 0;
     const num = idx + 1;
     const path = `posts/${slug}.md`;
-    return { collection: 'posts', data: { title, slug, draft, num }, slug, path };
+    return { collection: 'posts', data: { title, slug, featured, num }, slug, path };
   });
 
   return [
@@ -224,7 +255,37 @@ const numberFieldsHits = [
     },
   },
 ];
-class RelationController extends React.Component {
+const listFieldHits = [
+  {
+    collection: 'owners_collection',
+    data: {
+      name: 'Owner A',
+      pets: ['cats', 'birds'],
+      years: [2023],
+      household: { pets: ['cats'] },
+      vets: [{ name: 'Dr Smith' }, { name: 'Dr Jones' }],
+    },
+    i18n: { fr: { data: { name: 'Owner A', pets: ['chats', 'oiseaux'] } } },
+  },
+  {
+    collection: 'owners_collection',
+    data: {
+      name: 'Owner B',
+      pets: ['birds'],
+      years: [2024],
+      household: null,
+      vets: [{ name: 'Dr Jones' }],
+    },
+    i18n: { fr: { data: { name: 'Owner B', pets: ['chats'] } } },
+  },
+  {
+    collection: 'owners_collection',
+    data: { name: 'Owner C', pets: ['dogs'], years: [], household: { pets: ['dogs'] }, vets: [] },
+  },
+  { collection: 'owners_collection', data: { name: 'Owner D', pets: [], household: { pets: [] } } },
+];
+
+class RelationController extends Component {
   state = {
     value: this.props.value,
     queryHits: [],
@@ -261,6 +322,8 @@ class RelationController extends React.Component {
     let hits = queryHits;
     if (collection === 'numbers_collection') {
       hits = numberFieldsHits;
+    } else if (collection === 'owners_collection') {
+      hits = listFieldHits;
     } else if (file === 'nested_file') {
       hits = nestedFileCollectionHits;
     } else if (file === 'simple_file') {
@@ -293,7 +356,7 @@ class RelationController extends React.Component {
   }
 }
 
-function setup({ field, value }) {
+function setup({ field, value, locale }) {
   let renderArgs;
   const setActiveSpy = jest.fn();
   const setInactiveSpy = jest.fn();
@@ -306,6 +369,7 @@ function setup({ field, value }) {
           <RelationControl
             field={field}
             value={value}
+            locale={locale}
             query={query}
             queryHits={queryHits}
             onChange={handleOnChange}
@@ -361,6 +425,28 @@ describe('Relation widget', () => {
     });
   });
 
+  it('should surface a search match even when the unfiltered initial load already fills options_length', async () => {
+    // Loading an initial value (e.g. a previously-saved entry) triggers an
+    // empty-term "load everything" query that populates initialOptions with
+    // every hit, unfiltered — on a collection larger than options_length,
+    // that alone can already exceed the cap. 'YAML post' sits past position
+    // 10 in file order, so it only surfaces if a real search match is put
+    // ahead of the stale initialOptions before truncating to options_length.
+    const field = fromJS(customizedOptionsLengthConfig);
+    const value = 'Post # 1';
+    const { getByText, input } = setup({ field, value });
+
+    await waitFor(() => {
+      expect(input).toBeInTheDocument();
+    });
+
+    fireEvent.change(input, { target: { value: 'YAML' } });
+
+    await waitFor(() => {
+      expect(getByText('YAML post post-yaml')).toBeInTheDocument();
+    });
+  });
+
   it('should call onChange with correct selectedItem value and metadata', async () => {
     const field = fromJS(fieldConfig);
     const { getByText, input, onChangeSpy } = setup({ field });
@@ -368,7 +454,7 @@ describe('Relation widget', () => {
     const label = 'Post # 1 post-number-1';
     const metadata = {
       post: {
-        posts: { 'Post # 1': { title: 'Post # 1', draft: true, num: 1, slug: 'post-number-1' } },
+        posts: { 'Post # 1': { title: 'Post # 1', featured: true, num: 1, slug: 'post-number-1' } },
       },
     };
 
@@ -381,24 +467,33 @@ describe('Relation widget', () => {
     });
   });
 
-  it('should update metadata for initial preview', async () => {
+  it('should update metadata for initial preview 1', async () => {
     const field = fromJS(fieldConfig);
     const value = 'Post # 1';
-    const { getByText, onChangeSpy, setQueryHitsSpy } = setup({ field, value });
+    const { getByText, onChangeSpy } = setup({ field, value });
     const label = 'Post # 1 post-number-1';
     const metadata = {
       post: {
-        posts: { 'Post # 1': { title: 'Post # 1', draft: true, num: 1, slug: 'post-number-1' } },
+        posts: { 'Post # 1': { title: 'Post # 1', featured: true, num: 1, slug: 'post-number-1' } },
       },
     };
 
-    setQueryHitsSpy(generateHits(1));
+    // The component will automatically trigger a query for initial load
+    // Wait for it to process and call onChange
+    await waitFor(
+      () => {
+        expect(getByText(label)).toBeInTheDocument();
+      },
+      { timeout: 3000 },
+    );
 
-    await waitFor(() => {
-      expect(getByText(label)).toBeInTheDocument();
-      expect(onChangeSpy).toHaveBeenCalledTimes(1);
-      expect(onChangeSpy).toHaveBeenCalledWith(value, metadata);
-    });
+    await waitFor(
+      () => {
+        expect(onChangeSpy).toHaveBeenCalledTimes(1);
+        expect(onChangeSpy).toHaveBeenCalledWith(value, metadata);
+      },
+      { timeout: 3000 },
+    );
   });
 
   it('should update option list based on nested search term', async () => {
@@ -439,7 +534,7 @@ describe('Relation widget', () => {
     const metadata = {
       post: {
         posts: {
-          'post-number-1': { title: 'Post # 1', draft: true, num: 1, slug: 'post-number-1' },
+          'post-number-1': { title: 'Post # 1', featured: true, num: 1, slug: 'post-number-1' },
         },
       },
     };
@@ -498,12 +593,16 @@ describe('Relation widget', () => {
       const { getByText, input, onChangeSpy } = setup({ field });
       const metadata1 = {
         post: {
-          posts: { 'Post # 1': { title: 'Post # 1', draft: true, num: 1, slug: 'post-number-1' } },
+          posts: {
+            'Post # 1': { title: 'Post # 1', featured: true, num: 1, slug: 'post-number-1' },
+          },
         },
       };
       const metadata2 = {
         post: {
-          posts: { 'Post # 2': { title: 'Post # 2', draft: false, num: 2, slug: 'post-number-2' } },
+          posts: {
+            'Post # 2': { title: 'Post # 2', featured: false, num: 2, slug: 'post-number-2' },
+          },
         },
       };
 
@@ -522,7 +621,7 @@ describe('Relation widget', () => {
       expect(onChangeSpy).toHaveBeenCalledWith(fromJS(['Post # 1', 'Post # 2']), metadata2);
     });
 
-    it('should update metadata for initial preview', async () => {
+    it('should update metadata for initial preview 2', async () => {
       const field = fromJS({ ...fieldConfig, multiple: true });
       const value = fromJS(['YAML post', 'JSON post']);
       const { getByText, onChangeSpy } = setup({ field, value });
@@ -535,13 +634,23 @@ describe('Relation widget', () => {
         },
       };
 
-      await waitFor(() => {
-        expect(getByText('YAML post post-yaml')).toBeInTheDocument();
-        expect(getByText('JSON post post-json')).toBeInTheDocument();
+      // Wait for both labels to appear
+      await waitFor(
+        () => {
+          expect(getByText('YAML post post-yaml')).toBeInTheDocument();
+          expect(getByText('JSON post post-json')).toBeInTheDocument();
+        },
+        { timeout: 3000 },
+      );
 
-        expect(onChangeSpy).toHaveBeenCalledTimes(1);
-        expect(onChangeSpy).toHaveBeenCalledWith(value, metadata);
-      });
+      // Wait for onChange to be called
+      await waitFor(
+        () => {
+          expect(onChangeSpy).toHaveBeenCalledTimes(1);
+          expect(onChangeSpy).toHaveBeenCalledWith(value, metadata);
+        },
+        { timeout: 3000 },
+      );
     });
   });
 
@@ -698,6 +807,70 @@ describe('Relation widget', () => {
         expect(() => getAllByText(/^Post # (\d{1,2}) post-number-\1$/)).toThrow(Error);
         expect(getAllByText('Deeply nested post post-deeply-nested')).toHaveLength(1);
       });
+    });
+
+    it('should list option hits whose list field contains any of the filter values', async () => {
+      const field = fromJS(filterListFieldConfig);
+      const { getAllByText, queryByText, input } = setup({ field });
+      fireEvent.keyDown(input, { key: 'ArrowDown' });
+
+      await waitFor(() => {
+        expect(getAllByText(/^Owner [A-D]$/)).toHaveLength(2);
+        expect(getAllByText('Owner A')).toHaveLength(1);
+        expect(getAllByText('Owner C')).toHaveLength(1);
+        expect(queryByText('Owner B')).toBeNull();
+        expect(queryByText('Owner D')).toBeNull();
+      });
+    });
+
+    function setupOwners({ filters, locale }) {
+      const field = fromJS({ ...filterListFieldConfig, filters });
+      const helpers = setup({ field, locale });
+      fireEvent.keyDown(helpers.input, { key: 'ArrowDown' });
+      return helpers;
+    }
+
+    async function expectOwners(getAllByText, expected) {
+      await waitFor(() => {
+        expect(getAllByText(/^Owner [A-D]$/).map(el => el.textContent)).toEqual(expected);
+      });
+    }
+
+    it('should match list fields at a nested path and skip hits with a null parent', async () => {
+      const { getAllByText } = setupOwners({
+        filters: [{ field: 'household.pets', values: ['cats', 'dogs'] }],
+      });
+      await expectOwners(getAllByText, ['Owner A', 'Owner C']);
+    });
+
+    it('should match lists of objects using a wildcard path', async () => {
+      const { getAllByText } = setupOwners({
+        filters: [{ field: 'vets.*.name', values: ['Dr Jones'] }],
+      });
+      await expectOwners(getAllByText, ['Owner A', 'Owner B']);
+    });
+
+    it('should match list items regardless of string or number type', async () => {
+      const { getAllByText } = setupOwners({
+        filters: [{ field: 'years', values: ['2024'] }],
+      });
+      await expectOwners(getAllByText, ['Owner B']);
+    });
+
+    it('should apply filters to the locale specific data', async () => {
+      const { getAllByText } = setupOwners({
+        filters: [{ field: 'pets', values: ['chats'] }],
+        locale: 'fr',
+      });
+      await expectOwners(getAllByText, ['Owner A', 'Owner B']);
+    });
+
+    it('should apply filters on untranslated fields to the default locale data', async () => {
+      const { getAllByText } = setupOwners({
+        filters: [{ field: 'years', values: ['2024'] }],
+        locale: 'fr',
+      });
+      await expectOwners(getAllByText, ['Owner B']);
     });
   });
 });

@@ -1,4 +1,3 @@
-import React from 'react';
 import { fireEvent, render } from '@testing-library/react';
 import { fromJS } from 'immutable';
 
@@ -34,7 +33,6 @@ jest.mock('decap-cms-ui-default', () => {
     ListItemTopBar,
   };
 });
-jest.mock('uuid');
 
 describe('ListControl', () => {
   const props = {
@@ -52,6 +50,7 @@ describe('ListControl', () => {
     setInactiveStyle: jest.fn(),
     editorControl: jest.fn(),
     resolveWidget: jest.fn(),
+    getWidget: () => ({ control: require('decap-cms-widget-object').controlComponent }),
     clearFieldErrors: jest.fn(),
     fieldsErrors: fromJS({}),
     entry: fromJS({
@@ -63,9 +62,8 @@ describe('ListControl', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    const uuid = require('uuid');
     let id = 0;
-    uuid.v4.mockImplementation(() => {
+    global.crypto.randomUUID = jest.fn(() => {
       return id++;
     });
   });
@@ -104,11 +102,11 @@ describe('ListControl', () => {
       />,
     );
 
-    expect(getByTestId('styled-list-item-top-bar-0')).toHaveAttribute('collapsed', 'true');
-    expect(getByTestId('styled-list-item-top-bar-1')).toHaveAttribute('collapsed', 'true');
+    expect(getByTestId('styled-list-item-top-bar-0')).toHaveAttribute('collapsed');
+    expect(getByTestId('styled-list-item-top-bar-1')).toHaveAttribute('collapsed');
 
-    expect(getByTestId('object-control-0')).toHaveAttribute('collapsed', 'true');
-    expect(getByTestId('object-control-1')).toHaveAttribute('collapsed', 'true');
+    expect(getByTestId('object-control-0')).toHaveAttribute('collapsed');
+    expect(getByTestId('object-control-1')).toHaveAttribute('collapsed');
 
     expect(asFragment()).toMatchSnapshot();
   });
@@ -133,11 +131,11 @@ describe('ListControl', () => {
       />,
     );
 
-    expect(getByTestId('styled-list-item-top-bar-0')).toHaveAttribute('collapsed', 'false');
-    expect(getByTestId('styled-list-item-top-bar-1')).toHaveAttribute('collapsed', 'false');
+    expect(getByTestId('styled-list-item-top-bar-0')).not.toHaveAttribute('collapsed');
+    expect(getByTestId('styled-list-item-top-bar-1')).not.toHaveAttribute('collapsed');
 
-    expect(getByTestId('object-control-0')).toHaveAttribute('collapsed', 'false');
-    expect(getByTestId('object-control-1')).toHaveAttribute('collapsed', 'false');
+    expect(getByTestId('object-control-0')).not.toHaveAttribute('collapsed');
+    expect(getByTestId('object-control-1')).not.toHaveAttribute('collapsed');
 
     expect(asFragment()).toMatchSnapshot();
   });
@@ -162,19 +160,19 @@ describe('ListControl', () => {
       />,
     );
 
-    expect(getByTestId('styled-list-item-top-bar-0')).toHaveAttribute('collapsed', 'false');
-    expect(getByTestId('styled-list-item-top-bar-1')).toHaveAttribute('collapsed', 'false');
+    expect(getByTestId('styled-list-item-top-bar-0')).not.toHaveAttribute('collapsed');
+    expect(getByTestId('styled-list-item-top-bar-1')).not.toHaveAttribute('collapsed');
 
-    expect(getByTestId('object-control-0')).toHaveAttribute('collapsed', 'false');
-    expect(getByTestId('object-control-1')).toHaveAttribute('collapsed', 'false');
+    expect(getByTestId('object-control-0')).not.toHaveAttribute('collapsed');
+    expect(getByTestId('object-control-1')).not.toHaveAttribute('collapsed');
 
     fireEvent.click(getByTestId('expand-button'));
 
-    expect(getByTestId('styled-list-item-top-bar-0')).toHaveAttribute('collapsed', 'true');
-    expect(getByTestId('styled-list-item-top-bar-1')).toHaveAttribute('collapsed', 'true');
+    expect(getByTestId('styled-list-item-top-bar-0')).toHaveAttribute('collapsed');
+    expect(getByTestId('styled-list-item-top-bar-1')).toHaveAttribute('collapsed');
 
-    expect(getByTestId('object-control-0')).toHaveAttribute('collapsed', 'true');
-    expect(getByTestId('object-control-1')).toHaveAttribute('collapsed', 'true');
+    expect(getByTestId('object-control-0')).toHaveAttribute('collapsed');
+    expect(getByTestId('object-control-1')).toHaveAttribute('collapsed');
   });
 
   it('should collapse a single item on collapse item click', () => {
@@ -197,19 +195,19 @@ describe('ListControl', () => {
       />,
     );
 
-    expect(getByTestId('styled-list-item-top-bar-0')).toHaveAttribute('collapsed', 'false');
-    expect(getByTestId('styled-list-item-top-bar-1')).toHaveAttribute('collapsed', 'false');
+    expect(getByTestId('styled-list-item-top-bar-0')).not.toHaveAttribute('collapsed');
+    expect(getByTestId('styled-list-item-top-bar-1')).not.toHaveAttribute('collapsed');
 
-    expect(getByTestId('object-control-0')).toHaveAttribute('collapsed', 'false');
-    expect(getByTestId('object-control-1')).toHaveAttribute('collapsed', 'false');
+    expect(getByTestId('object-control-0')).not.toHaveAttribute('collapsed');
+    expect(getByTestId('object-control-1')).not.toHaveAttribute('collapsed');
 
     fireEvent.click(getByTestId('styled-list-item-top-bar-0'));
 
-    expect(getByTestId('styled-list-item-top-bar-0')).toHaveAttribute('collapsed', 'true');
-    expect(getByTestId('styled-list-item-top-bar-1')).toHaveAttribute('collapsed', 'false');
+    expect(getByTestId('styled-list-item-top-bar-0')).toHaveAttribute('collapsed');
+    expect(getByTestId('styled-list-item-top-bar-1')).not.toHaveAttribute('collapsed');
 
-    expect(getByTestId('object-control-0')).toHaveAttribute('collapsed', 'true');
-    expect(getByTestId('object-control-1')).toHaveAttribute('collapsed', 'false');
+    expect(getByTestId('object-control-0')).toHaveAttribute('collapsed');
+    expect(getByTestId('object-control-1')).not.toHaveAttribute('collapsed');
   });
 
   it('should expand all items on top bar expand click', () => {
@@ -232,19 +230,19 @@ describe('ListControl', () => {
       />,
     );
 
-    expect(getByTestId('styled-list-item-top-bar-0')).toHaveAttribute('collapsed', 'true');
-    expect(getByTestId('styled-list-item-top-bar-1')).toHaveAttribute('collapsed', 'true');
+    expect(getByTestId('styled-list-item-top-bar-0')).toHaveAttribute('collapsed');
+    expect(getByTestId('styled-list-item-top-bar-1')).toHaveAttribute('collapsed');
 
-    expect(getByTestId('object-control-0')).toHaveAttribute('collapsed', 'true');
-    expect(getByTestId('object-control-1')).toHaveAttribute('collapsed', 'true');
+    expect(getByTestId('object-control-0')).toHaveAttribute('collapsed');
+    expect(getByTestId('object-control-1')).toHaveAttribute('collapsed');
 
     fireEvent.click(getByTestId('expand-button'));
 
-    expect(getByTestId('styled-list-item-top-bar-0')).toHaveAttribute('collapsed', 'false');
-    expect(getByTestId('styled-list-item-top-bar-1')).toHaveAttribute('collapsed', 'false');
+    expect(getByTestId('styled-list-item-top-bar-0')).not.toHaveAttribute('collapsed');
+    expect(getByTestId('styled-list-item-top-bar-1')).not.toHaveAttribute('collapsed');
 
-    expect(getByTestId('object-control-0')).toHaveAttribute('collapsed', 'false');
-    expect(getByTestId('object-control-1')).toHaveAttribute('collapsed', 'false');
+    expect(getByTestId('object-control-0')).not.toHaveAttribute('collapsed');
+    expect(getByTestId('object-control-1')).not.toHaveAttribute('collapsed');
   });
 
   it('should expand a single item on expand item click', () => {
@@ -267,19 +265,19 @@ describe('ListControl', () => {
       />,
     );
 
-    expect(getByTestId('styled-list-item-top-bar-0')).toHaveAttribute('collapsed', 'true');
-    expect(getByTestId('styled-list-item-top-bar-1')).toHaveAttribute('collapsed', 'true');
+    expect(getByTestId('styled-list-item-top-bar-0')).toHaveAttribute('collapsed');
+    expect(getByTestId('styled-list-item-top-bar-1')).toHaveAttribute('collapsed');
 
-    expect(getByTestId('object-control-0')).toHaveAttribute('collapsed', 'true');
-    expect(getByTestId('object-control-1')).toHaveAttribute('collapsed', 'true');
+    expect(getByTestId('object-control-0')).toHaveAttribute('collapsed');
+    expect(getByTestId('object-control-1')).toHaveAttribute('collapsed');
 
     fireEvent.click(getByTestId('styled-list-item-top-bar-0'));
 
-    expect(getByTestId('styled-list-item-top-bar-0')).toHaveAttribute('collapsed', 'false');
-    expect(getByTestId('styled-list-item-top-bar-1')).toHaveAttribute('collapsed', 'true');
+    expect(getByTestId('styled-list-item-top-bar-0')).not.toHaveAttribute('collapsed');
+    expect(getByTestId('styled-list-item-top-bar-1')).toHaveAttribute('collapsed');
 
-    expect(getByTestId('object-control-0')).toHaveAttribute('collapsed', 'false');
-    expect(getByTestId('object-control-1')).toHaveAttribute('collapsed', 'true');
+    expect(getByTestId('object-control-0')).not.toHaveAttribute('collapsed');
+    expect(getByTestId('object-control-1')).toHaveAttribute('collapsed');
   });
 
   it('should use widget name when no summary or label are configured for mixed types', () => {
@@ -477,11 +475,11 @@ describe('ListControl', () => {
       />,
     );
 
-    expect(getByTestId('styled-list-item-top-bar-0')).toHaveAttribute('collapsed', 'true');
-    expect(getByTestId('styled-list-item-top-bar-1')).toHaveAttribute('collapsed', 'true');
+    expect(getByTestId('styled-list-item-top-bar-0')).toHaveAttribute('collapsed');
+    expect(getByTestId('styled-list-item-top-bar-1')).toHaveAttribute('collapsed');
 
-    expect(getByTestId('object-control-0')).toHaveAttribute('collapsed', 'true');
-    expect(getByTestId('object-control-1')).toHaveAttribute('collapsed', 'true');
+    expect(getByTestId('object-control-0')).toHaveAttribute('collapsed');
+    expect(getByTestId('object-control-1')).toHaveAttribute('collapsed');
 
     expect(asFragment()).toMatchSnapshot();
   });
@@ -501,11 +499,11 @@ describe('ListControl', () => {
       />,
     );
 
-    expect(getByTestId('styled-list-item-top-bar-0')).toHaveAttribute('collapsed', 'false');
-    expect(getByTestId('styled-list-item-top-bar-1')).toHaveAttribute('collapsed', 'false');
+    expect(getByTestId('styled-list-item-top-bar-0')).not.toHaveAttribute('collapsed');
+    expect(getByTestId('styled-list-item-top-bar-1')).not.toHaveAttribute('collapsed');
 
-    expect(getByTestId('object-control-0')).toHaveAttribute('collapsed', 'false');
-    expect(getByTestId('object-control-1')).toHaveAttribute('collapsed', 'false');
+    expect(getByTestId('object-control-0')).not.toHaveAttribute('collapsed');
+    expect(getByTestId('object-control-1')).not.toHaveAttribute('collapsed');
 
     expect(asFragment()).toMatchSnapshot();
   });
@@ -535,11 +533,11 @@ describe('ListControl', () => {
 
     fireEvent.click(getByTestId('expand-button'));
 
-    expect(getByTestId('styled-list-item-top-bar-0')).toHaveAttribute('collapsed', 'true');
-    expect(getByTestId('styled-list-item-top-bar-1')).toHaveAttribute('collapsed', 'true');
+    expect(getByTestId('styled-list-item-top-bar-0')).toHaveAttribute('collapsed');
+    expect(getByTestId('styled-list-item-top-bar-1')).toHaveAttribute('collapsed');
 
-    expect(getByTestId('object-control-0')).toHaveAttribute('collapsed', 'true');
-    expect(getByTestId('object-control-1')).toHaveAttribute('collapsed', 'true');
+    expect(getByTestId('object-control-0')).toHaveAttribute('collapsed');
+    expect(getByTestId('object-control-1')).toHaveAttribute('collapsed');
   });
 
   it('should render list with fields with collapse = "false" and default minimize_collapsed = "true"', () => {
@@ -558,11 +556,11 @@ describe('ListControl', () => {
       />,
     );
 
-    expect(getByTestId('styled-list-item-top-bar-0')).toHaveAttribute('collapsed', 'false');
-    expect(getByTestId('styled-list-item-top-bar-1')).toHaveAttribute('collapsed', 'false');
+    expect(getByTestId('styled-list-item-top-bar-0')).not.toHaveAttribute('collapsed');
+    expect(getByTestId('styled-list-item-top-bar-1')).not.toHaveAttribute('collapsed');
 
-    expect(getByTestId('object-control-0')).toHaveAttribute('collapsed', 'false');
-    expect(getByTestId('object-control-1')).toHaveAttribute('collapsed', 'false');
+    expect(getByTestId('object-control-0')).not.toHaveAttribute('collapsed');
+    expect(getByTestId('object-control-1')).not.toHaveAttribute('collapsed');
 
     expect(asFragment()).toMatchSnapshot();
 
@@ -594,8 +592,8 @@ describe('ListControl', () => {
 
     rerender(<ListControl {...props} field={field} value={fromJS([{}])} />);
 
-    expect(getByTestId('styled-list-item-top-bar-0')).toHaveAttribute('collapsed', 'false');
-    expect(getByTestId('object-control-0')).toHaveAttribute('collapsed', 'false');
+    expect(getByTestId('styled-list-item-top-bar-0')).not.toHaveAttribute('collapsed');
+    expect(getByTestId('object-control-0')).not.toHaveAttribute('collapsed');
 
     expect(asFragment()).toMatchSnapshot();
   });
@@ -788,5 +786,78 @@ describe('ListControl', () => {
 
     listControl.validate();
     expect(props.onValidateObject).toHaveBeenCalledWith('forID', []);
+  });
+
+  const typedField = fromJS({
+    name: 'list',
+    label: 'List',
+    types: [
+      {
+        name: 'type_one',
+        widget: 'object',
+        fields: [{ name: 'text', widget: 'markdown', label: 'Text' }],
+      },
+    ],
+  });
+
+  it('should apply a change to the item it was made on after an earlier item is removed', () => {
+    const value = fromJS([
+      { type: 'type_one', text: 'one' },
+      { type: 'type_one', text: 'two' },
+      { type: 'type_one', text: 'three' },
+    ]);
+
+    let control;
+    const { getAllByText, rerender } = render(
+      <ListControl ref={ref => (control = ref)} {...props} field={typedField} value={value} />,
+    );
+
+    const changeThirdItem = control.handleChangeFor(control.state.keys[2]);
+
+    fireEvent.click(getAllByText('Remove')[0]);
+    const afterRemoval = props.onChange.mock.calls[0][0];
+    rerender(
+      <ListControl
+        ref={ref => (control = ref)}
+        {...props}
+        field={typedField}
+        value={afterRemoval}
+      />,
+    );
+
+    changeThirdItem(fromJS({ name: 'text' }), 'three edited');
+
+    const written = props.onChange.mock.calls[1][0].toJS();
+    expect(written).toHaveLength(2);
+    expect(written[1]).toEqual({ type: 'type_one', text: 'three edited' });
+  });
+
+  it('should discard a change made on an item that has since been removed', () => {
+    const value = fromJS([
+      { type: 'type_one', text: 'one' },
+      { type: 'type_one', text: 'two' },
+    ]);
+
+    let control;
+    const { getAllByText, rerender } = render(
+      <ListControl ref={ref => (control = ref)} {...props} field={typedField} value={value} />,
+    );
+
+    const changeSecondItem = control.handleChangeFor(control.state.keys[1]);
+
+    fireEvent.click(getAllByText('Remove')[1]);
+    const afterRemoval = props.onChange.mock.calls[0][0];
+    rerender(
+      <ListControl
+        ref={ref => (control = ref)}
+        {...props}
+        field={typedField}
+        value={afterRemoval}
+      />,
+    );
+
+    changeSecondItem(fromJS({ name: 'text' }), 'text for a removed item');
+
+    expect(props.onChange).toHaveBeenCalledTimes(1);
   });
 });

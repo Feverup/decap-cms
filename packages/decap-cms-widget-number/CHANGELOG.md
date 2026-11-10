@@ -3,6 +3,40 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [3.4.4](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-number@3.4.3...decap-cms-widget-number@3.4.4) (2026-10-14)
+
+**Note:** Version bump only for package decap-cms-widget-number
+
+## [3.4.3](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-number@3.4.3-beta.0...decap-cms-widget-number@3.4.3) (2026-10-14)
+
+**Note:** Version bump only for package decap-cms-widget-number
+
+## [3.4.3-beta.0](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-number@3.4.2...decap-cms-widget-number@3.4.3-beta.0) (2026-09-10)
+
+**Note:** Version bump only for package decap-cms-widget-number
+
+## [3.4.2](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-number@3.4.1...decap-cms-widget-number@3.4.2) (2026-09-10)
+
+**Note:** Version bump only for package decap-cms-widget-number
+
+## [3.4.1](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-number@3.4.0...decap-cms-widget-number@3.4.1) (2026-09-08)
+
+**Note:** Version bump only for package decap-cms-widget-number
+
+# [3.4.0](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-number@3.3.0...decap-cms-widget-number@3.4.0) (2026-07-23)
+
+**Note:** Version bump only for package decap-cms-widget-number
+
+# [3.3.0](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-number@3.2.0...decap-cms-widget-number@3.3.0) (2026-06-08)
+
+### Bug Fixes
+
+- remove unused dependencies and specify missing dependencies ([#7833](https://github.com/decaporg/decap-cms/issues/7833)) ([e324a14](https://github.com/decaporg/decap-cms/commit/e324a142f7f0ba63c760b2e8524d971c35200f87))
+
+# [3.2.0](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-number@3.1.3...decap-cms-widget-number@3.2.0) (2025-06-26)
+
+**Note:** Version bump only for package decap-cms-widget-number
+
 ## [3.1.3](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-number@3.1.2...decap-cms-widget-number@3.1.3) (2024-08-13)
 
 ### Reverts

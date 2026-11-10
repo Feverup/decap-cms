@@ -3,6 +3,98 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [3.9.2](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-github@3.9.1...decap-cms-backend-github@3.9.2) (2026-10-26)
+
+### Bug Fixes
+
+- **github:** list deep trees with REST when using GraphQL ([#8039](https://github.com/decaporg/decap-cms/issues/8039)) ([141b360](https://github.com/decaporg/decap-cms/commit/141b3600701333b370b015693614f375d908e384)), closes [#7460](https://github.com/decaporg/decap-cms/issues/7460)
+
+## [3.9.1](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-github@3.9.0...decap-cms-backend-github@3.9.1) (2026-10-14)
+
+**Note:** Version bump only for package decap-cms-backend-github
+
+# [3.9.0](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-github@3.9.0-beta.4...decap-cms-backend-github@3.9.0) (2026-10-14)
+
+**Note:** Version bump only for package decap-cms-backend-github
+
+# [3.9.0-beta.4](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-github@3.9.0-beta.2...decap-cms-backend-github@3.9.0-beta.4) (2026-10-13)
+
+### Bug Fixes
+
+- **turbo-github,turbo-gitlab:** send site_id on login and drop the GraphQL deep import ([c779d90](https://github.com/decaporg/decap-cms/commit/c779d90b180efa2dd2a03755766b563d23c33008))
+
+# [3.9.0-beta.3](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-github@3.9.0-beta.2...decap-cms-backend-github@3.9.0-beta.3) (2026-10-12)
+
+### Bug Fixes
+
+- **turbo-github,turbo-gitlab:** send site_id on login and drop the GraphQL deep import ([c779d90](https://github.com/decaporg/decap-cms/commit/c779d90b180efa2dd2a03755766b563d23c33008))
+
+# [3.9.0-beta.2](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-github@3.9.0-beta.1...decap-cms-backend-github@3.9.0-beta.2) (2026-10-08)
+
+### Bug Fixes
+
+- **github:** find notes issues by label instead of search ([4573989](https://github.com/decaporg/decap-cms/commit/457398989434e8c743225c63b6ef573c49be8bb8))
+
+# [3.9.0-beta.1](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-github@3.9.0-beta.0...decap-cms-backend-github@3.9.0-beta.1) (2026-09-22)
+
+### Features
+
+- attribute Turbo notes to signed-in editor and fix github issue lookup ([2414aca](https://github.com/decaporg/decap-cms/commit/2414aca6e024ad8e3d417ac7b547491592cca66e))
+
+## [3.8.3](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-github@3.8.2...decap-cms-backend-github@3.8.3) (2026-09-22)
+
+**Note:** Version bump only for package decap-cms-backend-github
+
+# [3.9.0-beta.0](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-github@3.8.2...decap-cms-backend-github@3.9.0-beta.0) (2026-09-10)
+
+### Features
+
+- **proxy:** wip - first draft / caching allEntriesByFolder ([56ca436](https://github.com/decaporg/decap-cms/commit/56ca436725668a997ba4ee24122d1e10bbb2ed3c))
+
+### Performance Improvements
+
+- **turbo-github,turbo-gitlab,backend-github:** cut redundant and duplicate reads ([133dd26](https://github.com/decaporg/decap-cms/commit/133dd267c28f50a4d324b8a8d2575e76cc8ffefc))
+
+## [3.8.2](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-github@3.8.1...decap-cms-backend-github@3.8.2) (2026-09-10)
+
+**Note:** Version bump only for package decap-cms-backend-github
+
+## [3.8.1](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-github@3.8.0...decap-cms-backend-github@3.8.1) (2026-09-08)
+
+**Note:** Version bump only for package decap-cms-backend-github
+
+# [3.8.0](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-github@3.7.0...decap-cms-backend-github@3.8.0) (2026-07-23)
+
+**Note:** Version bump only for package decap-cms-backend-github
+
+# [3.7.0](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-github@3.6.0...decap-cms-backend-github@3.7.0) (2026-06-01)
+
+**Note:** Version bump only for package decap-cms-backend-github
+
+# [3.6.0](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-github@3.5.0...decap-cms-backend-github@3.6.0) (2026-04-16)
+
+### Features
+
+- add config option to enable Signed-off-by in commit messages ([#7766](https://github.com/decaporg/decap-cms/issues/7766)) ([4b9ea40](https://github.com/decaporg/decap-cms/commit/4b9ea4040f3b858793052cee287caa3cce2f3af3))
+
+# [3.5.0](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-github@3.4.0...decap-cms-backend-github@3.5.0) (2025-12-18)
+
+**Note:** Version bump only for package decap-cms-backend-github
+
+# [3.4.0](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-github@3.3.1...decap-cms-backend-github@3.4.0) (2025-07-15)
+
+### Features
+
+- add logo to header ([#7487](https://github.com/decaporg/decap-cms/issues/7487)) ([b540ace](https://github.com/decaporg/decap-cms/commit/b540acec943eb231df6aac7b1d515d9b4b84fa5d))
+
+## [3.3.1](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-github@3.3.0...decap-cms-backend-github@3.3.1) (2025-07-10)
+
+**Note:** Version bump only for package decap-cms-backend-github
+
+# [3.3.0](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-github@3.2.2...decap-cms-backend-github@3.3.0) (2025-06-26)
+
+**Note:** Version bump only for package decap-cms-backend-github
+
 ## [3.2.2](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-github@3.2.1...decap-cms-backend-github@3.2.2) (2024-08-13)
 
 ### Reverts

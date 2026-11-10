@@ -1,5 +1,8 @@
 import { Base64 } from 'js-base64';
-import { partial, result, trim, trimStart } from 'lodash';
+import partial from 'lodash/partial';
+import result from 'lodash/result';
+import trim from 'lodash/trim';
+import trimStart from 'lodash/trimStart';
 import {
   localForage,
   APIError,
@@ -19,7 +22,7 @@ import {
   readFileMetadata,
   branchFromContentKey,
 } from 'decap-cms-lib-util';
-import { dirname, basename } from 'path';
+import { basename, dirname } from 'path';
 
 import type { ApiRequest, AssetProxy, PersistOptions, DataFile } from 'decap-cms-lib-util';
 import type { Map } from 'immutable';
@@ -28,7 +31,12 @@ export const API_NAME = 'Azure DevOps';
 
 const API_VERSION = 'api-version';
 
+// https://learn.microsoft.com/en-us/rest/api/azure/devops/profile/profiles/get?view=azure-devops-rest-6.1
+// Without `details=true` the documented response has top-level fields instead of coreAttributes,
+// so both shapes are read.
 type AzureUser = {
+  displayName?: string;
+  emailAddress?: string;
   coreAttributes?: {
     Avatar?: { value?: { value?: string } };
     DisplayName?: { value?: string };
@@ -301,12 +309,13 @@ export default class API {
       params: { [API_VERSION]: '6.1-preview.2' },
     });
 
-    const name = result.coreAttributes?.DisplayName?.value;
-    const email = result.coreAttributes?.EmailAddress?.value;
+    const name = result.coreAttributes?.DisplayName?.value || result.displayName;
+    const email = result.coreAttributes?.EmailAddress?.value || result.emailAddress;
     const url = result.coreAttributes?.Avatar?.value?.value;
     const user = {
       name: name || email || '',
-      avatar_url: `data:image/png;base64,${url}`,
+      login: email || name || '',
+      avatar_url: url ? `data:image/png;base64,${url}` : undefined,
       email,
     };
     return user;
@@ -500,7 +509,11 @@ export default class API {
     }));
   }
 
-  async getCommitItems(files: { path: string; newPath?: string }[], branch: string) {
+  async getCommitItems(
+    files: { path: string; newPath?: string }[],
+    branch: string,
+    subfolders = true,
+  ) {
     const items = await Promise.all(
       files.map(async file => {
         const [base64Content, fileExists] = await Promise.all([
@@ -523,20 +536,24 @@ export default class API {
       }),
     );
 
-    // move children
-    for (const item of items.filter(i => i.oldPath && i.action === AzureCommitChangeType.RENAME)) {
-      const sourceDir = dirname(item.oldPath as string);
-      const destDir = dirname(item.path);
-      const children = await this.listFiles(sourceDir, true, branch);
-      children
-        .filter(file => file.path !== item.oldPath)
-        .forEach(file => {
-          items.push({
-            action: AzureCommitChangeType.RENAME,
-            path: file.path.replace(sourceDir, destDir),
-            oldPath: file.path,
+    // move children when subfolders is true (legacy/default behavior)
+    if (subfolders) {
+      for (const item of items.filter(
+        i => i.oldPath && i.action === AzureCommitChangeType.RENAME,
+      )) {
+        const sourceDir = dirname(item.oldPath as string);
+        const destDir = dirname(item.path);
+        const children = await this.listFiles(sourceDir, true, branch);
+        children
+          .filter(file => file.path !== item.oldPath)
+          .forEach(file => {
+            items.push({
+              action: AzureCommitChangeType.RENAME,
+              path: file.path.replace(sourceDir, destDir),
+              oldPath: file.path,
+            });
           });
-        });
+      }
     }
 
     return items;
@@ -544,11 +561,12 @@ export default class API {
 
   async persistFiles(dataFiles: DataFile[], mediaFiles: AssetProxy[], options: PersistOptions) {
     const files = [...dataFiles, ...mediaFiles];
+    const subfolders = options.hasSubfolders !== false; // default to true
     if (options.useWorkflow) {
       const slug = dataFiles[0].slug;
       return this.editorialWorkflowGit(files, slug, options);
     } else {
-      const items = await this.getCommitItems(files, this.branch);
+      const items = await this.getCommitItems(files, this.branch, subfolders);
 
       return this.uploadAndCommit(items, options.commitMessage, this.branch, true);
     }
@@ -589,7 +607,8 @@ export default class API {
     });
 
     const filtered = pullRequests.filter(pr => {
-      return pr.labels.some(label => isCMSLabel(label.name, this.cmsLabelPrefix));
+      const labels = pr.labels ?? [];
+      return labels.some(label => isCMSLabel(label.name, this.cmsLabelPrefix));
     });
     return filtered;
   }
@@ -673,9 +692,10 @@ export default class API {
     const contentKey = generateContentKey(options.collectionName as string, slug);
     const branch = branchFromContentKey(contentKey);
     const unpublished = options.unpublished || false;
+    const subfolders = options.hasSubfolders !== false; // default to true
 
     if (!unpublished) {
-      const items = await this.getCommitItems(files, this.branch);
+      const items = await this.getCommitItems(files, this.branch, subfolders);
 
       await this.uploadAndCommit(items, options.commitMessage, branch, true);
       await this.createPullRequest(
@@ -684,7 +704,7 @@ export default class API {
         options.status || this.initialWorkflowStatus,
       );
     } else {
-      const items = await this.getCommitItems(files, branch);
+      const items = await this.getCommitItems(files, branch, subfolders);
       await this.uploadAndCommit(items, options.commitMessage, branch, false);
     }
   }

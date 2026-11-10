@@ -1,11 +1,13 @@
-import React from 'react';
+import { Component } from 'react';
 import PropTypes from 'prop-types';
 import ImmutablePropTypes from 'react-immutable-proptypes';
 import styled from '@emotion/styled';
 import { css, ClassNames } from '@emotion/react';
 import { List, Map, fromJS } from 'immutable';
-import { partial, isEmpty, uniqueId } from 'lodash';
-import { v4 as uuid } from 'uuid';
+import partial from 'lodash/partial';
+import isEmpty from 'lodash/isEmpty';
+import memoize from 'lodash/memoize';
+import uniqueId from 'lodash/uniqueId';
 import {
   DndContext,
   MouseSensor,
@@ -167,7 +169,7 @@ function LabelComponent({ field, isActive, hasErrors, uniqueFieldId, isFieldOpti
   );
 }
 
-export default class ListControl extends React.Component {
+export default class ListControl extends Component {
   childRefs = {};
 
   static propTypes = {
@@ -206,7 +208,7 @@ export default class ListControl extends React.Component {
     const { field, value } = props;
     const listCollapsed = field.get('collapsed', true);
     const itemsCollapsed = (value && Array(value.size).fill(listCollapsed)) || [];
-    const keys = (value && Array.from({ length: value.size }, () => uuid())) || [];
+    const keys = (value && Array.from({ length: value.size }, () => crypto.randomUUID())) || [];
 
     this.state = {
       listCollapsed,
@@ -214,6 +216,11 @@ export default class ListControl extends React.Component {
       value: this.valueToString(value),
       keys,
     };
+  }
+
+  componentDidMount() {
+    // Manually validate PropTypes - React 19 breaking change
+    PropTypes.checkPropTypes(ListControl.propTypes, this.props, 'prop', 'ListControl');
   }
 
   valueToString = value => {
@@ -246,10 +253,18 @@ export default class ListControl extends React.Component {
 
   uniqueFieldId = uniqueId(`${this.props.field.get('name')}-field-`);
   /**
+   * Old comment:
+   *
    * Always update so that each nested widget has the option to update. This is
    * required because ControlHOC provides a default `shouldComponentUpdate`
    * which only updates if the value changes, but every widget must be allowed
    * to override this.
+   *
+   * New comment:
+   *
+   * Each Widget is wrapped with EditorControl which already tries to update every time.
+   * Is there a specific reason we need to always rerender the list?
+   * This seems overkill.
    */
   shouldComponentUpdate() {
     return true;
@@ -343,7 +358,7 @@ export default class ListControl extends React.Component {
     const { value, onChange, field } = this.props;
     const addToTop = field.get('add_to_top', false);
 
-    const itemKey = uuid();
+    const itemKey = crypto.randomUUID();
     this.setState({
       itemsCollapsed: addToTop
         ? [false, ...this.state.itemsCollapsed]
@@ -409,9 +424,24 @@ export default class ListControl extends React.Component {
    */
   getObjectValue = idx => this.props.value.get(idx) || Map();
 
-  handleFieldChangeFor(index) {
+  /**
+   * Memoized on the item's key rather than its position, so each item keeps a
+   * stable `onChangeObject` reference across renders and reorders.
+   */
+  handleChangeFor = memoize(key => {
     return (f, newValue, newMetadata) => {
       const { value, metadata, onChange, field } = this.props;
+
+      // Resolve the item's position when the change fires rather than when this
+      // handler was created. If the item has been removed or moved in between,
+      // its old position now points at a different item, or past the end of the
+      // list.
+      const currentIndex = this.state.keys.indexOf(key);
+
+      if (currentIndex === -1) {
+        return;
+      }
+
       const collectionName = field.get('name');
       const listFieldObjectWidget = field.getIn(['field', 'widget']) === 'object';
       const withNameKey =
@@ -420,26 +450,36 @@ export default class ListControl extends React.Component {
       const parentName = f.get('parentName');
       const newObjectValue = withNameKey
         ? parentName
-          ? this.getObjectValue(index).setIn([...parentName.split('.'), f.get('name')], newValue)
-          : this.getObjectValue(index).set(f.get('name'), newValue)
+          ? this.getObjectValue(currentIndex).setIn(
+              [...parentName.split('.'), f.get('name')],
+              newValue,
+            )
+          : this.getObjectValue(currentIndex).set(f.get('name'), newValue)
         : newValue;
       const parsedMetadata = {
         [collectionName]: Object.assign(metadata ? metadata.toJS() : {}, newMetadata || {}),
       };
-      onChange(value.set(index, newObjectValue), parsedMetadata);
+      onChange(value.set(currentIndex, newObjectValue), parsedMetadata);
     };
-  }
+  });
 
-  handleChangeFor(index) {
+  /** Same as handleChangeFor: keyed, and the position is resolved when the change fires. */
+  handleValueChangeFor = memoize(key => {
     return (newValue, newMetadata) => {
       const { value, metadata, onChange, field } = this.props;
+      const currentIndex = this.state.keys.indexOf(key);
+
+      if (currentIndex === -1) {
+        return;
+      }
+
       const collectionName = field.get('name');
       const parsedMetadata = {
         [collectionName]: Object.assign(metadata ? metadata.toJS() : {}, newMetadata || {}),
       };
-      onChange(value.set(index, newValue), parsedMetadata);
+      onChange(value.set(currentIndex, newValue), parsedMetadata);
     };
-  }
+  });
 
   handleDuplicate = (index, event) => {
     event.preventDefault();
@@ -455,7 +495,7 @@ export default class ListControl extends React.Component {
     const newKeys = [...this.state.keys];
 
     newItemsCollapsed.splice(index + 1, 0, false); // Insert expanded state
-    newKeys.splice(index + 1, 0, uuid()); // Insert new key
+    newKeys.splice(index + 1, 0, crypto.randomUUID()); // Insert new key
 
     this.setState({
       itemsCollapsed: newItemsCollapsed,
@@ -658,6 +698,11 @@ export default class ListControl extends React.Component {
     }
   }
 
+  getStableParentIds = memoize(
+    (parentIds, forID, key) => [...parentIds, forID, key],
+    (parentIds, forID, key) => JSON.stringify([...parentIds, forID, key]),
+  );
+
   // eslint-disable-next-line react/display-name
   renderItem = (item, index) => {
     const {
@@ -716,6 +761,8 @@ export default class ListControl extends React.Component {
           dragHandle={DragHandle}
           id={key}
           onDuplicate={partial(this.handleDuplicate, index)}
+          allowRemove={field.get('allow_remove', true)}
+          allowReorder={field.get('allow_reorder', true)}
           onRemove={partial(this.handleRemove, index)}
           data-testid={`styled-list-item-top-bar-${key}`}
         />
@@ -734,8 +781,8 @@ export default class ListControl extends React.Component {
               field={field}
               collection={collection}
               collections={collections}
-              onChange={this.handleChangeFor(index)}
-              onChangeObject={this.handleFieldChangeFor(index)}
+              onChange={this.handleValueChangeFor(key)}
+              onChangeObject={this.handleChangeFor(key)}
               editorControl={editorControl}
               resolveWidget={resolveWidget}
               metadata={metadata}
@@ -748,7 +795,7 @@ export default class ListControl extends React.Component {
               collapsed={collapsed}
               data-testid={`object-control-${key}`}
               hasError={hasError}
-              parentIds={[...parentIds, forID, key]}
+              parentIds={this.getStableParentIds(parentIds, forID, key)}
               isFieldUnused={isFieldUnused}
               setFieldUnused={setFieldUnused}
             />
@@ -761,16 +808,19 @@ export default class ListControl extends React.Component {
   renderErroneousTypedItem(index, item) {
     const field = this.props.field;
     const errorMessage = getErrorMessageForTypedFieldAndValue(field, item);
-    const key = `item-${index}`;
+    const key = this.state.keys[index];
     return (
       <SortableListItem
         css={[styles.listControlItem, styles.listControlItemCollapsed]}
         index={index}
         key={key}
+        id={key}
       >
         <StyledListItemTopBar
           onCollapseToggle={null}
           onRemove={partial(this.handleRemove, index)}
+          allowRemove={field.get('allow_remove', true)}
+          allowReorder={field.get('allow_reorder', true)}
           dragHandle={DragHandle}
           id={key}
         />

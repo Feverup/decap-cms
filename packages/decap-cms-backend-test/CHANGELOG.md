@@ -3,6 +3,72 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [3.5.6](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-test@3.5.5...decap-cms-backend-test@3.5.6) (2026-10-26)
+
+**Note:** Version bump only for package decap-cms-backend-test
+
+## [3.5.5](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-test@3.5.4...decap-cms-backend-test@3.5.5) (2026-10-14)
+
+**Note:** Version bump only for package decap-cms-backend-test
+
+## [3.5.4](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-test@3.5.4-beta.2...decap-cms-backend-test@3.5.4) (2026-10-14)
+
+**Note:** Version bump only for package decap-cms-backend-test
+
+## [3.5.4-beta.2](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-test@3.5.3-beta.2...decap-cms-backend-test@3.5.4-beta.2) (2026-10-13)
+
+**Note:** Version bump only for package decap-cms-backend-test
+
+## [3.5.4-beta.1](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-test@3.5.3-beta.2...decap-cms-backend-test@3.5.4-beta.1) (2026-10-12)
+
+**Note:** Version bump only for package decap-cms-backend-test
+
+## [3.5.3-beta.2](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-test@3.5.3-beta.1...decap-cms-backend-test@3.5.3-beta.2) (2026-10-08)
+
+**Note:** Version bump only for package decap-cms-backend-test
+
+## [3.5.3-beta.1](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-test@3.5.3-beta.0...decap-cms-backend-test@3.5.3-beta.1) (2026-09-22)
+
+**Note:** Version bump only for package decap-cms-backend-test
+
+## [3.5.3](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-test@3.5.2...decap-cms-backend-test@3.5.3) (2026-09-22)
+
+**Note:** Version bump only for package decap-cms-backend-test
+
+## [3.5.3-beta.0](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-test@3.5.2...decap-cms-backend-test@3.5.3-beta.0) (2026-09-10)
+
+**Note:** Version bump only for package decap-cms-backend-test
+
+## [3.5.2](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-test@3.5.1...decap-cms-backend-test@3.5.2) (2026-09-10)
+
+**Note:** Version bump only for package decap-cms-backend-test
+
+## [3.5.1](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-test@3.5.0...decap-cms-backend-test@3.5.1) (2026-09-08)
+
+**Note:** Version bump only for package decap-cms-backend-test
+
+# [3.5.0](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-test@3.4.0...decap-cms-backend-test@3.5.0) (2026-08-31)
+
+### Bug Fixes
+
+- solve flaky/failing tests ([#7951](https://github.com/decaporg/decap-cms/issues/7951)) ([bfe0dfd](https://github.com/decaporg/decap-cms/commit/bfe0dfd65b888f8c20f6afb879fcaff495cee7b1))
+
+# [3.4.0](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-test@3.3.0...decap-cms-backend-test@3.4.0) (2026-07-23)
+
+**Note:** Version bump only for package decap-cms-backend-test
+
+# [3.3.0](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-test@3.2.1...decap-cms-backend-test@3.3.0) (2026-06-08)
+
+**Note:** Version bump only for package decap-cms-backend-test
+
+## [3.2.1](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-test@3.2.0...decap-cms-backend-test@3.2.1) (2025-07-10)
+
+**Note:** Version bump only for package decap-cms-backend-test
+
+# [3.2.0](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-test@3.1.3...decap-cms-backend-test@3.2.0) (2025-06-26)
+
+**Note:** Version bump only for package decap-cms-backend-test
+
 ## [3.1.3](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-test@3.1.2...decap-cms-backend-test@3.1.3) (2024-08-13)
 
 ### Reverts

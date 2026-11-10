@@ -3,6 +3,64 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [3.7.5](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-object@3.7.4...decap-cms-widget-object@3.7.5) (2026-10-14)
+
+**Note:** Version bump only for package decap-cms-widget-object
+
+## [3.7.4](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-object@3.7.4-beta.2...decap-cms-widget-object@3.7.4) (2026-10-14)
+
+**Note:** Version bump only for package decap-cms-widget-object
+
+## [3.7.4-beta.2](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-object@3.7.3-beta.2...decap-cms-widget-object@3.7.4-beta.2) (2026-10-13)
+
+**Note:** Version bump only for package decap-cms-widget-object
+
+## [3.7.4-beta.1](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-object@3.7.3-beta.2...decap-cms-widget-object@3.7.4-beta.1) (2026-10-12)
+
+**Note:** Version bump only for package decap-cms-widget-object
+
+## [3.7.3-beta.2](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-object@3.7.3-beta.1...decap-cms-widget-object@3.7.3-beta.2) (2026-10-08)
+
+**Note:** Version bump only for package decap-cms-widget-object
+
+## [3.7.3-beta.1](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-object@3.7.3-beta.0...decap-cms-widget-object@3.7.3-beta.1) (2026-09-22)
+
+**Note:** Version bump only for package decap-cms-widget-object
+
+## [3.7.3](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-object@3.7.2...decap-cms-widget-object@3.7.3) (2026-09-22)
+
+**Note:** Version bump only for package decap-cms-widget-object
+
+## [3.7.3-beta.0](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-object@3.7.2...decap-cms-widget-object@3.7.3-beta.0) (2026-09-10)
+
+**Note:** Version bump only for package decap-cms-widget-object
+
+## [3.7.2](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-object@3.7.1...decap-cms-widget-object@3.7.2) (2026-09-10)
+
+**Note:** Version bump only for package decap-cms-widget-object
+
+## [3.7.1](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-object@3.7.0...decap-cms-widget-object@3.7.1) (2026-09-08)
+
+**Note:** Version bump only for package decap-cms-widget-object
+
+# [3.7.0](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-object@3.6.0...decap-cms-widget-object@3.7.0) (2026-07-23)
+
+**Note:** Version bump only for package decap-cms-widget-object
+
+# [3.6.0](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-object@3.5.0...decap-cms-widget-object@3.6.0) (2026-06-01)
+
+**Note:** Version bump only for package decap-cms-widget-object
+
+# [3.5.0](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-object@3.4.0...decap-cms-widget-object@3.5.0) (2026-04-16)
+
+### Bug Fixes
+
+- **widget-object:** don't propagate isEditorComponent to nested fields ([#7762](https://github.com/decaporg/decap-cms/issues/7762)) ([bdd5d1c](https://github.com/decaporg/decap-cms/commit/bdd5d1cd01bfa1afc320065aca20035006b19cd7))
+
+# [3.4.0](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-object@3.3.1...decap-cms-widget-object@3.4.0) (2025-06-26)
+
+**Note:** Version bump only for package decap-cms-widget-object
+
 ## [3.3.1](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-object@3.3.0...decap-cms-widget-object@3.3.1) (2025-01-30)
 
 ### Bug Fixes

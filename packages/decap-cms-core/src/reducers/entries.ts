@@ -1,7 +1,12 @@
 import { Map, List, fromJS, OrderedMap, Set } from 'immutable';
 import { dirname, join } from 'path';
 import { isAbsolutePath, basename } from 'decap-cms-lib-util';
-import { trim, once, sortBy, set, orderBy, groupBy } from 'lodash';
+import trim from 'lodash/trim';
+import once from 'lodash/once';
+import sortBy from 'lodash/sortBy';
+import set from 'lodash/set';
+import orderBy from 'lodash/orderBy';
+import groupBy from 'lodash/groupBy';
 import { stringTemplate } from 'decap-cms-lib-widgets';
 
 import { SortDirection } from '../types/redux';
@@ -62,6 +67,7 @@ import type {
   EntriesGroupFailurePayload,
   GroupOfEntries,
 } from '../types/redux';
+import type { StaticallyTypedRecord } from '../types/immutable';
 
 const { keyToPathArray } = stringTemplate;
 
@@ -73,6 +79,14 @@ let slug: string;
 
 const storageSortKey = 'decap-cms.entries.sort';
 const viewStyleKey = 'decap-cms.entries.viewStyle';
+
+function normalizeDoubleSlashes(path: string) {
+  if (!path) {
+    return path;
+  }
+
+  return path.replace(/([^:]\/)\/+/g, '$1');
+}
 type StorageSortObject = SortObject & { index: number };
 type StorageSort = { [collection: string]: { [key: string]: StorageSortObject } };
 
@@ -86,7 +100,10 @@ const loadSort = once(() => {
         let orderedMap = OrderedMap() as SortMap;
         sortBy(Object.values(sort), ['index']).forEach(value => {
           const { key, direction } = value;
-          orderedMap = orderedMap.set(key, fromJS({ key, direction }));
+          orderedMap = orderedMap.set(
+            key,
+            fromJS({ key, direction }) as unknown as StaticallyTypedRecord<SortObject>,
+          );
         });
         map = map.set(collection, orderedMap);
       });
@@ -107,7 +124,7 @@ function persistSort(sort: Sort | undefined) {
     const storageSort: StorageSort = {};
     sort.keySeq().forEach(key => {
       const collection = key as string;
-      const sortObjects = (sort.get(collection).valueSeq().toJS() as SortObject[]).map(
+      const sortObjects = (sort.get(collection)!.valueSeq().toJS() as unknown as SortObject[]).map(
         (value, index) => ({ ...value, index }),
       );
 
@@ -159,7 +176,7 @@ function entries(
       slug = payload.entry.slug;
       return state.withMutations(map => {
         map.setIn(['entities', `${collection}.${slug}`], fromJS(payload.entry));
-        const ids = map.getIn(['pages', collection, 'ids'], List());
+        const ids = map.getIn(['pages', collection, 'ids'], List()) as List<string>;
         if (!ids.includes(slug)) {
           map.setIn(['pages', collection, 'ids'], ids.unshift(slug));
         }
@@ -185,7 +202,7 @@ function entries(
         loadedEntries.forEach(entry =>
           map.setIn(
             ['entities', `${collection}.${entry.slug}`],
-            fromJS(entry).set('isFetching', false),
+            fromJS({ ...entry, isFetching: false }),
           ),
         );
 
@@ -194,7 +211,9 @@ function entries(
           ['pages', collection],
           Map({
             page,
-            ids: append ? map.getIn(['pages', collection, 'ids'], List()).concat(ids) : ids,
+            ids: append
+              ? (map.getIn(['pages', collection, 'ids'], List()) as List<string>).concat(ids)
+              : ids,
           }),
         );
       });
@@ -220,7 +239,7 @@ function entries(
         loadedEntries.forEach(entry =>
           map.setIn(
             ['entities', `${entry.collection}.${entry.slug}`],
-            fromJS(entry).set('isFetching', false),
+            fromJS({ ...entry, isFetching: false }),
           ),
         );
       });
@@ -230,8 +249,10 @@ function entries(
       const payload = action.payload as EntryDeletePayload;
       return state.withMutations(map => {
         map.deleteIn(['entities', `${payload.collectionName}.${payload.entrySlug}`]);
-        map.updateIn(['pages', payload.collectionName, 'ids'], (ids: string[] = []) =>
-          ids.filter(id => id !== payload.entrySlug),
+        map.updateIn(['pages', payload.collectionName, 'ids'], ids =>
+          ((ids as List<string> | undefined) ?? List<string>()).filter(
+            id => id !== payload.entrySlug,
+          ),
         );
       });
     }
@@ -259,7 +280,7 @@ function entries(
         loadedEntries.forEach(entry =>
           map.setIn(
             ['entities', `${entry.collection}.${entry.slug}`],
-            fromJS(entry).set('isFetching', false),
+            fromJS({ ...entry, isFetching: false }),
           ),
         );
         map.setIn(['pages', collection, 'isFetching'], false);
@@ -290,7 +311,7 @@ function entries(
       const payload = action.payload as EntriesFilterRequestPayload;
       const { collection, filter } = payload;
       const newState = state.withMutations(map => {
-        const current: FilterMap = map.getIn(['filter', collection, filter.id], fromJS(filter));
+        const current = map.getIn(['filter', collection, filter.id], fromJS(filter)) as FilterMap;
         map.setIn(
           ['filter', collection, current.get('id')],
           current.set('active', !current.get('active')),
@@ -313,7 +334,7 @@ function entries(
       const payload = action.payload as EntriesGroupRequestPayload;
       const { collection, group } = payload;
       const newState = state.withMutations(map => {
-        const current: GroupMap = map.getIn(['group', collection, group.id], fromJS(group));
+        const current = map.getIn(['group', collection, group.id], fromJS(group)) as GroupMap;
         map.deleteIn(['group', collection]);
         map.setIn(
           ['group', collection, current.get('id')],
@@ -420,7 +441,7 @@ export function selectEntries(state: Entries, collection: Collection) {
     const orders = sortFields.map(v =>
       v.get('direction') === SortDirection.Ascending ? 'asc' : 'desc',
     );
-    entries = fromJS(orderBy(entries.toJS(), keys, orders));
+    entries = fromJS(orderBy(entries.toJS(), keys, orders)) as unknown as List<EntryMap>;
   }
 
   const filters = selectEntriesFilterFields(state, collectionName);
@@ -461,14 +482,16 @@ function getGroup(entry: EntryMap, selectedGroup: GroupMap) {
   if (selectedGroup.has('pattern')) {
     const pattern = selectedGroup.get('pattern');
     let value = '';
-    try {
-      const regex = new RegExp(pattern);
-      const matched = dataAsString.match(regex);
-      if (matched) {
-        value = matched[0];
+    if (pattern !== undefined) {
+      try {
+        const regex = new RegExp(pattern);
+        const matched = dataAsString.match(regex);
+        if (matched) {
+          value = matched[0];
+        }
+      } catch (e) {
+        console.warn(`Invalid view group pattern '${pattern}' for field '${field}'`, e);
       }
-    } catch (e) {
-      console.warn(`Invalid view group pattern '${pattern}' for field '${field}'`, e);
     }
     return {
       id: `${label}${value}`,
@@ -527,11 +550,20 @@ export function selectIsFetching(state: Entries, collection: string) {
   return state.getIn(['pages', collection, 'isFetching'], false);
 }
 
-const DRAFT_MEDIA_FILES = 'DRAFT_MEDIA_FILES';
-
 function getFileField(collectionFiles: CollectionFiles, slug: string | undefined) {
   const file = collectionFiles.find(f => f?.get('name') === slug);
   return file;
+}
+
+function getMediaPublicPathSegment(mediaPath: string) {
+  const normalizedPath = trim(mediaPath, '/');
+  const transformationIndex = normalizedPath.indexOf('_transformations/');
+
+  if (transformationIndex >= 0) {
+    return normalizedPath.slice(transformationIndex);
+  }
+
+  return basename(mediaPath);
 }
 
 function hasCustomFolder(
@@ -747,7 +779,7 @@ export function selectMediaFolder(
       const entryPath = entryMap?.get('path');
       mediaFolder = entryPath
         ? join(dirname(entryPath), folder)
-        : join(collection!.get('folder') as string, DRAFT_MEDIA_FILES);
+        : (collection!.get('folder') as string);
     }
   }
 
@@ -782,19 +814,21 @@ export function selectMediaFilePublicPath(
   }
 
   const name = 'public_folder';
-  let publicFolder = config[name]!;
+  let publicFolder = normalizeDoubleSlashes(config[name]!);
 
   const customFolder = hasCustomFolder(name, collection, entryMap?.get('slug'), field);
 
   if (customFolder) {
-    publicFolder = evaluateFolder(name, config, collection!, entryMap, field);
+    publicFolder = normalizeDoubleSlashes(
+      evaluateFolder(name, config, collection!, entryMap, field),
+    );
   }
 
   if (isAbsolutePath(publicFolder)) {
-    return joinUrlPath(publicFolder, basename(mediaPath));
+    return joinUrlPath(publicFolder, getMediaPublicPathSegment(mediaPath));
   }
 
-  return join(publicFolder, basename(mediaPath));
+  return join(publicFolder, getMediaPublicPathSegment(mediaPath));
 }
 
 export function selectEditingDraft(state: EntryDraft) {

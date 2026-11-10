@@ -1,0 +1,74 @@
+# Change Log
+
+All notable changes to this project will be documented in this file.
+See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
+
+## [3.7.2](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-richtext@3.7.1...decap-cms-widget-richtext@3.7.2) (2026-10-14)
+
+### Performance Improvements
+
+- drop duplicate and unused code from the decap-cms bundle ([#8032](https://github.com/decaporg/decap-cms/issues/8032)) ([f051103](https://github.com/decaporg/decap-cms/commit/f05110384a14d27fd76d358dc1850d11254355b9))
+
+## [3.7.1](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-richtext@3.7.1-beta.0...decap-cms-widget-richtext@3.7.1) (2026-10-14)
+
+**Note:** Version bump only for package decap-cms-widget-richtext
+
+## [3.7.1-beta.0](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-richtext@3.7.0...decap-cms-widget-richtext@3.7.1-beta.0) (2026-09-10)
+
+**Note:** Version bump only for package decap-cms-widget-richtext
+
+# [3.7.0](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-richtext@3.6.1...decap-cms-widget-richtext@3.7.0) (2026-09-10)
+
+### Features
+
+- **widget-markdown:** support inline custom editor components ([#7958](https://github.com/decaporg/decap-cms/issues/7958)) ([e857f7d](https://github.com/decaporg/decap-cms/commit/e857f7dac60872a499b16c36ad38adce7489c383)), closes [#7951](https://github.com/decaporg/decap-cms/issues/7951) [#7936](https://github.com/decaporg/decap-cms/issues/7936)
+
+## [3.6.1](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-richtext@3.6.0...decap-cms-widget-richtext@3.6.1) (2026-09-08)
+
+### Bug Fixes
+
+- **preview:** preserve blob: image URLs when sanitizing preview HTML ([#7970](https://github.com/decaporg/decap-cms/issues/7970)) ([dd9219c](https://github.com/decaporg/decap-cms/commit/dd9219ce8192c014ac186210ffa8ac831bedbb4a))
+- **richtext:** render nested shortcodes in preview ([#7899](https://github.com/decaporg/decap-cms/issues/7899)) ([4d3d3ba](https://github.com/decaporg/decap-cms/commit/4d3d3ba3ce4e6998067a6f121da27cfef8c8b539))
+
+# [3.6.0](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-richtext@3.5.0...decap-cms-widget-richtext@3.6.0) (2026-08-31)
+
+**Note:** Version bump only for package decap-cms-widget-richtext
+
+# [3.5.0](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-richtext@3.4.1...decap-cms-widget-richtext@3.5.0) (2026-07-23)
+
+### Bug Fixes
+
+- **richtext:** preserve block images in list items ([#7896](https://github.com/decaporg/decap-cms/issues/7896)) ([8f23db0](https://github.com/decaporg/decap-cms/commit/8f23db0f91a97dca3a600175d5e0de4be778dae0))
+
+## [3.4.1](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-richtext@3.4.0...decap-cms-widget-richtext@3.4.1) (2026-06-15)
+
+**Note:** Version bump only for package decap-cms-widget-richtext
+
+# [3.4.0](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-richtext@3.3.0...decap-cms-widget-richtext@3.4.0) (2026-06-08)
+
+### Bug Fixes
+
+- remove unused dependencies and specify missing dependencies ([#7833](https://github.com/decaporg/decap-cms/issues/7833)) ([e324a14](https://github.com/decaporg/decap-cms/commit/e324a142f7f0ba63c760b2e8524d971c35200f87))
+- **richtext:** create break nodes on shift + enter ([#7817](https://github.com/decaporg/decap-cms/issues/7817)) ([f8c947c](https://github.com/decaporg/decap-cms/commit/f8c947c902bedeadd9e2bc425881b3328838b42b))
+
+# [3.3.0](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-richtext@3.2.1...decap-cms-widget-richtext@3.3.0) (2026-06-01)
+
+### Bug Fixes
+
+- adhere to remark's tokenizer rules [#7315](https://github.com/decaporg/decap-cms/issues/7315) ([#7444](https://github.com/decaporg/decap-cms/issues/7444)) ([50986a0](https://github.com/decaporg/decap-cms/commit/50986a0042d36554cc1f87244b5bcc109539cd8d))
+- **richtext:** invalid imports, rich text widget types, improve paste handling ([#7803](https://github.com/decaporg/decap-cms/issues/7803)) ([9db5e1e](https://github.com/decaporg/decap-cms/commit/9db5e1ed29bfa7e1500e5374aea13796d31f1021)), closes [#7796](https://github.com/decaporg/decap-cms/issues/7796) [#7797](https://github.com/decaporg/decap-cms/issues/7797) [#7802](https://github.com/decaporg/decap-cms/issues/7802)
+
+## [3.2.1](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-richtext@3.2.0...decap-cms-widget-richtext@3.2.1) (2026-04-17)
+
+**Note:** Version bump only for package decap-cms-widget-richtext
+
+# 3.2.0 (2026-04-16)
+
+### Bug Fixes
+
+- **widget-object:** don't propagate isEditorComponent to nested fields ([#7762](https://github.com/decaporg/decap-cms/issues/7762)) ([bdd5d1c](https://github.com/decaporg/decap-cms/commit/bdd5d1cd01bfa1afc320065aca20035006b19cd7))
+
+### Features
+
+- add break element to widget richtext ([#7782](https://github.com/decaporg/decap-cms/issues/7782)) ([7d99b3b](https://github.com/decaporg/decap-cms/commit/7d99b3bf3fb18c38e220415ea137a47d0fee8847))
+- remove HTML comments from pasted content ([#7775](https://github.com/decaporg/decap-cms/issues/7775)) ([b7cf396](https://github.com/decaporg/decap-cms/commit/b7cf3968b157f13da9ca6c9448ab8e8bc51a4afa))

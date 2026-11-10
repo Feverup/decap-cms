@@ -1,9 +1,9 @@
-import React from 'react';
+import { Component } from 'react';
 import PropTypes from 'prop-types';
 import Textarea from 'react-textarea-autosize';
-import { debounce } from 'lodash';
+import debounce from 'lodash/debounce';
 
-export default class TextControl extends React.Component {
+export default class TextControl extends Component {
   constructor(props) {
     super(props);
     this.state = {
@@ -23,6 +23,11 @@ export default class TextControl extends React.Component {
   static defaultProps = {
     value: '',
   };
+
+  componentDidMount() {
+    // Manually validate PropTypes - React 19 breaking change
+    PropTypes.checkPropTypes(TextControl.propTypes, this.props, 'prop', 'TextControl');
+  }
 
   /**
    * Always update to ensure `react-textarea-autosize` properly calculates

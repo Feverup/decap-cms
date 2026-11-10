@@ -1,4 +1,9 @@
-import { get, without, last, map, intersection, omit } from 'lodash';
+import get from 'lodash/get';
+import without from 'lodash/without';
+import last from 'lodash/last';
+import map from 'lodash/map';
+import intersection from 'lodash/intersection';
+import omit from 'lodash/omit';
 import u from 'unist-builder';
 import mdastToString from 'mdast-util-to-string';
 
@@ -27,6 +32,7 @@ const typeMap = {
   link: 'link',
   image: 'image',
   shortcode: 'shortcode',
+  'inline-shortcode': 'inline-shortcode',
 };
 
 /**
@@ -57,7 +63,7 @@ const blockTypes = [
   'table-cell',
 ];
 
-const inlineTypes = ['link', 'image', 'break'];
+const inlineTypes = ['link', 'image', 'break', 'inline-shortcode'];
 
 const leadingWhitespaceExp = /^\s+\S/;
 const trailingWhitespaceExp = /(?!\S)\s+$/;
@@ -109,7 +115,8 @@ export default function slateToRemark(value, { voidCodeBlock }) {
         }
 
         case 'image':
-        case 'break': {
+        case 'break':
+        case 'inline-shortcode': {
           const data = omit(node.data, 'marks');
           return { ...node, data };
         }
@@ -148,6 +155,7 @@ export default function slateToRemark(value, { voidCodeBlock }) {
 
       case 'break':
       case 'image':
+      case 'inline-shortcode':
         return map(get(node, ['data', 'marks']), mark => mark.type);
 
       default:
@@ -462,6 +470,14 @@ export default function slateToRemark(value, { voidCodeBlock }) {
       case 'image': {
         const { url, title, alt, ...data } = get(node, 'data', {});
         return u(typeMap[node.type], { url, title, alt, data });
+      }
+
+      /**
+       * Inline Shortcodes
+       */
+      case 'inline-shortcode': {
+        const { data } = node;
+        return u(typeMap[node.type], { data });
       }
     }
   }

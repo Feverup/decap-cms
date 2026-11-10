@@ -1,6 +1,8 @@
-import { flow, fromPairs, map } from 'lodash/fp';
-import { isPlainObject, isEmpty } from 'lodash';
-import minimatch from 'minimatch';
+import flow from 'lodash/flow';
+import fromPairs from 'lodash/fromPairs';
+import isPlainObject from 'lodash/isPlainObject';
+import isEmpty from 'lodash/isEmpty';
+import { minimatch } from 'minimatch';
 import { unsentRequest } from 'decap-cms-lib-util';
 
 import type { ApiRequest, PointerFile } from 'decap-cms-lib-util';
@@ -169,7 +171,7 @@ export type Client = {
 export function getClient(clientConfig: ClientConfig) {
   return flow([
     Object.keys,
-    map((key: string) => [key, configureFn(clientConfig, clientFns[key])]),
+    (keys: string[]) => keys.map(key => [key, configureFn(clientConfig, clientFns[key])]),
     fromPairs,
     configuredFns => ({
       ...configuredFns,

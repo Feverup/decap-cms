@@ -1,5 +1,7 @@
 import { Map } from 'immutable';
-import { get, trimEnd, truncate } from 'lodash';
+import get from 'lodash/get';
+import trimEnd from 'lodash/trimEnd';
+import truncate from 'lodash/truncate';
 import dayjs from 'dayjs';
 import { basename, dirname, extname } from 'path';
 
@@ -59,7 +61,18 @@ export function parseDateFromEntry(entry: Map<string, unknown>, dateFieldName?: 
     return;
   }
 
-  const dateValue = entry.getIn(['data', dateFieldName]);
+  const entryData = entry.getIn(['data']) as Map<string, unknown>;
+  return parseDateFromEntryData(entryData, dateFieldName);
+}
+
+export function parseDateFromEntryData(
+  entryData: Map<string, unknown>,
+  dateFieldName?: string | null,
+) {
+  if (!dateFieldName) {
+    return;
+  }
+  const dateValue = entryData.getIn([dateFieldName]) as dayjs.ConfigType;
   const dateDayjs = dateValue && dayjs(dateValue);
   if (dateDayjs && dateDayjs.isValid()) {
     return dateDayjs.toDate();
@@ -174,11 +187,11 @@ export function compileStringTemplate(
   const compiledString = template.replace(
     RegExp(templateVariablePattern, 'g'),
     (_full, key: string, _part, filter: string) => {
-      let replacement;
+      let replacement: string;
       const explicitFieldReplacement = getExplicitFieldReplacement(key, data);
 
       if (explicitFieldReplacement) {
-        replacement = explicitFieldReplacement;
+        replacement = explicitFieldReplacement as string;
       } else if (dateParsers[key] && !date) {
         missingRequiredDate = true;
         return '';
@@ -190,13 +203,13 @@ export function compileStringTemplate(
         replacement = data.getIn(keyToPathArray(key), '') as string;
       }
 
+      const filterFunction = getFilterFunction(filter);
+      if (filterFunction) {
+        replacement = filterFunction(replacement);
+      }
+
       if (processor) {
-        return processor(replacement);
-      } else {
-        const filterFunction = getFilterFunction(filter);
-        if (filterFunction) {
-          replacement = filterFunction(replacement);
-        }
+        replacement = processor(replacement);
       }
 
       return replacement;

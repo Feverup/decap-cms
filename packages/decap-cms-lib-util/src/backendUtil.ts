@@ -1,11 +1,15 @@
-import { flow, fromPairs } from 'lodash';
-import { map } from 'lodash/fp';
-import { fromJS } from 'immutable';
+import flow from 'lodash/flow';
+import fromPairs from 'lodash/fromPairs';
+import { Map as ImmutableMap } from 'immutable';
 
 import unsentRequest from './unsentRequest';
 import APIError from './APIError';
 
-type Formatter = (res: Response) => Promise<string | Blob | unknown>;
+// A formatter yields a string, a Blob or parsed JSON depending on the requested
+// format, so its result is only known at the call site - hence `any`. Callers
+// narrow it themselves (e.g. `.then<Blob | string>(...)`).
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Formatter = (res: Response) => Promise<any>;
 
 export function filterByIndexFile(file: { path: string }, indexFile: string) {
   if (!indexFile) return true;
@@ -32,7 +36,9 @@ function catchFormatErrors(format: string, formatter: Formatter) {
   };
 }
 
-const responseFormatters = fromJS({
+// NOTE: `Map` rather than `fromJS` on purpose - the values are functions, which
+// `fromJS` would leave untouched anyway, and `Map` keeps them properly typed.
+const responseFormatters = ImmutableMap<string, Formatter>({
   json: async (res: Response) => {
     const contentType = res.headers.get('Content-Type') || '';
     if (!contentType.startsWith('application/json') && !contentType.startsWith('text/json')) {
@@ -42,10 +48,7 @@ const responseFormatters = fromJS({
   },
   text: async (res: Response) => res.text(),
   blob: async (res: Response) => res.blob(),
-}).mapEntries(([format, formatter]: [string, Formatter]) => [
-  format,
-  catchFormatErrors(format, formatter),
-]);
+}).mapEntries(([format, formatter]) => [format, catchFormatErrors(format, formatter)]);
 
 export async function parseResponse(
   res: Response,
@@ -83,14 +86,15 @@ export function parseLinkHeader(header: string | null) {
   }
   return flow([
     linksString => linksString.split(','),
-    map((str: string) => str.trim().split(';')),
-    map(([linkStr, keyStr]) => [
-      keyStr.match(/rel="(.*?)"/)[1],
-      linkStr
-        .trim()
-        .match(/<(.*?)>/)[1]
-        .replace(/\+/g, '%20'),
-    ]),
+    (links: string[]) => links.map(str => str.trim().split(';')),
+    (links: string[][]) =>
+      links.map(([linkStr, keyStr]) => [
+        keyStr.match(/rel="(.*?)"/)![1],
+        linkStr
+          .trim()
+          .match(/<(.*?)>/)![1]
+          .replace(/\+/g, '%20'),
+      ]),
     fromPairs,
   ])(header);
 }
@@ -125,4 +129,18 @@ export async function getAllResponses(
 export function getPathDepth(path: string) {
   const depth = path.split('/').length;
   return depth;
+}
+
+/**
+ * Stable cache key for a files collection, from its paths alone (core passes
+ * no collection name). Sorted, so reordering config.yml does not orphan cached
+ * rows; FNV-1a, because it must be deterministic, short and synchronous.
+ */
+export function collectionKeyForFiles(paths: string[]) {
+  let hash = 0x811c9dc5;
+  for (const char of [...paths].sort().join('\n')) {
+    hash ^= char.charCodeAt(0);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return `files:${paths.length}:${hash.toString(36)}`;
 }

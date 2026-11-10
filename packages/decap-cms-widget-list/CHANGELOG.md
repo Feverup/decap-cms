@@ -3,6 +3,71 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [3.6.6](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-list@3.6.5...decap-cms-widget-list@3.6.6) (2026-10-26)
+
+### Bug Fixes
+
+- **widget-list:** restore controls for erroneous typed items ([#7988](https://github.com/decaporg/decap-cms/issues/7988)) ([65df768](https://github.com/decaporg/decap-cms/commit/65df768cfb71c78a92d66e09c8805edb54c126fd)), closes [#7973](https://github.com/decaporg/decap-cms/issues/7973)
+
+## [3.6.5](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-list@3.6.4...decap-cms-widget-list@3.6.5) (2026-10-14)
+
+**Note:** Version bump only for package decap-cms-widget-list
+
+## [3.6.4](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-list@3.6.4-beta.2...decap-cms-widget-list@3.6.4) (2026-10-14)
+
+**Note:** Version bump only for package decap-cms-widget-list
+
+## [3.6.4-beta.2](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-list@3.6.3-beta.2...decap-cms-widget-list@3.6.4-beta.2) (2026-10-13)
+
+**Note:** Version bump only for package decap-cms-widget-list
+
+## [3.6.4-beta.1](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-list@3.6.3-beta.2...decap-cms-widget-list@3.6.4-beta.1) (2026-10-12)
+
+**Note:** Version bump only for package decap-cms-widget-list
+
+## [3.6.3-beta.2](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-list@3.6.3-beta.1...decap-cms-widget-list@3.6.3-beta.2) (2026-10-08)
+
+**Note:** Version bump only for package decap-cms-widget-list
+
+## [3.6.3-beta.1](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-list@3.6.3-beta.0...decap-cms-widget-list@3.6.3-beta.1) (2026-09-22)
+
+**Note:** Version bump only for package decap-cms-widget-list
+
+## [3.6.3](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-list@3.6.2...decap-cms-widget-list@3.6.3) (2026-09-22)
+
+**Note:** Version bump only for package decap-cms-widget-list
+
+## [3.6.3-beta.0](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-list@3.6.2...decap-cms-widget-list@3.6.3-beta.0) (2026-09-10)
+
+**Note:** Version bump only for package decap-cms-widget-list
+
+## [3.6.2](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-list@3.6.1...decap-cms-widget-list@3.6.2) (2026-09-10)
+
+**Note:** Version bump only for package decap-cms-widget-list
+
+## [3.6.1](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-list@3.6.0...decap-cms-widget-list@3.6.1) (2026-09-08)
+
+### Bug Fixes
+
+- **widget-list:** route list item changes by item id, not position ([#7972](https://github.com/decaporg/decap-cms/issues/7972)) ([060c15b](https://github.com/decaporg/decap-cms/commit/060c15b6a98dbfa7c2b62795a4461f7726db316c))
+
+# [3.6.0](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-list@3.5.0...decap-cms-widget-list@3.6.0) (2026-06-08)
+
+### Bug Fixes
+
+- **a11y:** aria-labels ([#7720](https://github.com/decaporg/decap-cms/issues/7720)) ([cc92370](https://github.com/decaporg/decap-cms/commit/cc92370595a85590ffede50a99259d52ba3eb76b))
+- remove unused dependencies and specify missing dependencies ([#7833](https://github.com/decaporg/decap-cms/issues/7833)) ([e324a14](https://github.com/decaporg/decap-cms/commit/e324a142f7f0ba63c760b2e8524d971c35200f87))
+
+# [3.5.0](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-list@3.4.0...decap-cms-widget-list@3.5.0) (2025-09-30)
+
+### Features
+
+- add allow_remove and allow_reorder flags ([#7573](https://github.com/decaporg/decap-cms/issues/7573)) ([ff961f4](https://github.com/decaporg/decap-cms/commit/ff961f4bfe7c0a8970451d9b21645738b6cb1560))
+
+# [3.4.0](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-list@3.3.0...decap-cms-widget-list@3.4.0) (2025-06-26)
+
+**Note:** Version bump only for package decap-cms-widget-list
+
 # [3.3.0](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-list@3.2.2...decap-cms-widget-list@3.3.0) (2025-01-29)
 
 ### Features

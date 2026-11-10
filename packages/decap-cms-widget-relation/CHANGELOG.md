@@ -3,6 +3,62 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [3.7.5](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-relation@3.7.4...decap-cms-widget-relation@3.7.5) (2026-10-26)
+
+### Bug Fixes
+
+- **relation:** match filters against multiple-value fields ([#8006](https://github.com/decaporg/decap-cms/issues/8006)) ([cf80980](https://github.com/decaporg/decap-cms/commit/cf80980203de1e80325096a2f31ae41f99863a0e)), closes [#8005](https://github.com/decaporg/decap-cms/issues/8005)
+
+## [3.7.4](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-relation@3.7.3...decap-cms-widget-relation@3.7.4) (2026-10-14)
+
+**Note:** Version bump only for package decap-cms-widget-relation
+
+## [3.7.3](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-relation@3.7.3-beta.0...decap-cms-widget-relation@3.7.3) (2026-10-14)
+
+**Note:** Version bump only for package decap-cms-widget-relation
+
+## [3.7.3-beta.0](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-relation@3.7.2...decap-cms-widget-relation@3.7.3-beta.0) (2026-09-10)
+
+### Bug Fixes
+
+- **widget-relation:** don't let selected options crowd out search matches ([2f3bdd4](https://github.com/decaporg/decap-cms/commit/2f3bdd4bb40e38ecbca2d3e00ab2541353b5adc1))
+
+## [3.7.2](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-relation@3.7.1...decap-cms-widget-relation@3.7.2) (2026-09-10)
+
+**Note:** Version bump only for package decap-cms-widget-relation
+
+## [3.7.1](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-relation@3.7.0...decap-cms-widget-relation@3.7.1) (2026-09-08)
+
+**Note:** Version bump only for package decap-cms-widget-relation
+
+# [3.7.0](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-relation@3.6.0...decap-cms-widget-relation@3.7.0) (2026-07-23)
+
+### Features
+
+- remove frontmatter `draft` from dev-test ([#7865](https://github.com/decaporg/decap-cms/issues/7865)) ([2e60623](https://github.com/decaporg/decap-cms/commit/2e6062381bb6307a00c17b1982e7651242b13431))
+
+# [3.6.0](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-relation@3.5.2...decap-cms-widget-relation@3.6.0) (2026-06-08)
+
+### Bug Fixes
+
+- remove unused dependencies and specify missing dependencies ([#7833](https://github.com/decaporg/decap-cms/issues/7833)) ([e324a14](https://github.com/decaporg/decap-cms/commit/e324a142f7f0ba63c760b2e8524d971c35200f87))
+
+## [3.5.2](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-relation@3.5.1...decap-cms-widget-relation@3.5.2) (2025-07-22)
+
+**Note:** Version bump only for package decap-cms-widget-relation
+
+## [3.5.1](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-relation@3.5.0...decap-cms-widget-relation@3.5.1) (2025-07-22)
+
+**Note:** Version bump only for package decap-cms-widget-relation
+
+# [3.5.0](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-relation@3.3.2...decap-cms-widget-relation@3.5.0) (2025-07-15)
+
+**Note:** Version bump only for package decap-cms-widget-relation
+
+# [3.4.0](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-relation@3.3.2...decap-cms-widget-relation@3.4.0) (2025-06-26)
+
+**Note:** Version bump only for package decap-cms-widget-relation
+
 ## [3.3.2](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-relation@3.3.1...decap-cms-widget-relation@3.3.2) (2024-08-13)
 
 ### Reverts

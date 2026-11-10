@@ -1,10 +1,10 @@
+import { Component } from 'react';
 import PropTypes from 'prop-types';
-import React from 'react';
 import ImmutablePropTypes from 'react-immutable-proptypes';
 import { connect } from 'react-redux';
 import { Loader } from 'decap-cms-ui-default';
 import { translate } from 'react-polyglot';
-// import { debounce } from 'lodash';
+// import debounce from 'lodash/debounce';
 
 import { history, navigateToCollection, navigateToNewEntry } from '../../routing/history';
 import { logoutUser } from '../../actions/auth';
@@ -24,6 +24,12 @@ import {
   // retrieveLocalBackup,
   // deleteLocalBackup,
   removeDraftEntryMediaFiles,
+  loadNotesForEntry,
+  loadNotes,
+  stopNotesPolling,
+  persistNote,
+  updateNotePersist,
+  deleteNotePersist,
 } from '../../actions/entries';
 import {
   getUnpublishedEntries,
@@ -36,13 +42,29 @@ import {
 import { removeAssets } from '../../actions/media';
 import { loadDeployPreview } from '../../actions/deploys';
 import { searchEntries } from '../../actions/search';
-import { selectEntry, selectUnpublishedEntry, selectDeployPreview } from '../../reducers';
-import { selectFields } from '../../reducers/collections';
+import {
+  selectCanCreateNewEntry,
+  selectEntry,
+  selectUnpublishedEntry,
+  selectDeployPreview,
+} from '../../reducers';
+import { selectFields, getFileFromSlug } from '../../reducers/collections';
 import { status, EDITORIAL_WORKFLOW } from '../../constants/publishModes';
+import { FILES } from '../../constants/collectionTypes';
 import EditorInterface from './EditorInterface';
 import withWorkflow from './withWorkflow';
 
-export class Editor extends React.Component {
+function isNotesEnabled(collection, slug) {
+  if (collection.get('type') === FILES) {
+    const file = getFileFromSlug(collection, slug);
+    const notesEnabled = file?.getIn(['editor', 'notes']);
+    if (notesEnabled != null) return notesEnabled;
+  }
+
+  return collection.getIn(['editor', 'notes'], false);
+}
+
+export class Editor extends Component {
   static propTypes = {
     changeDraftField: PropTypes.func.isRequired,
     changeDraftFieldValidation: PropTypes.func.isRequired,
@@ -55,6 +77,8 @@ export class Editor extends React.Component {
     entryDraft: ImmutablePropTypes.map.isRequired,
     getUnpublishedEntries: PropTypes.func.isRequired,
     loadEntry: PropTypes.func.isRequired,
+    loadNotes: PropTypes.func,
+    stopNotesPolling: PropTypes.func,
     persistEntry: PropTypes.func.isRequired,
     persistUnpublishedEntry: PropTypes.func.isRequired,
     deleteEntry: PropTypes.func.isRequired,
@@ -84,6 +108,7 @@ export class Editor extends React.Component {
       search: PropTypes.string,
     }),
     hasChanged: PropTypes.bool,
+    canCreateNewEntry: PropTypes.bool,
     t: PropTypes.func.isRequired,
     // retrieveLocalBackup: PropTypes.func.isRequired,
     // localBackup: ImmutablePropTypes.map,
@@ -93,6 +118,9 @@ export class Editor extends React.Component {
   };
 
   componentDidMount() {
+    // Manually validate PropTypes - React 19 breaking change
+    PropTypes.checkPropTypes(Editor.propTypes, this.props, 'prop', 'Editor');
+
     const {
       newEntry,
       collection,
@@ -184,6 +212,17 @@ export class Editor extends React.Component {
     //   }
     // }
 
+    if (
+      prevProps.entry !== this.props.entry &&
+      this.props.entry &&
+      !this.props.entry.get('isFetching') &&
+      !this.props.newEntry &&
+      this.props.hasWorkflow &&
+      isNotesEnabled(this.props.collection, this.props.slug)
+    ) {
+      this.props.loadNotes(this.props.collection, this.props.slug);
+    }
+
     // if (this.props.hasChanged) {
     //   this.createBackup(this.props.entryDraft.get('entry'), this.props.collection);
     // }
@@ -198,6 +237,14 @@ export class Editor extends React.Component {
   }
 
   componentWillUnmount() {
+    if (
+      !this.props.newEntry &&
+      this.props.hasWorkflow &&
+      isNotesEnabled(this.props.collection, this.props.slug)
+    ) {
+      this.props.stopNotesPolling(this.props.collection, this.props.slug);
+    }
+
     // this.createBackup.flush();
     this.props.discardDraft();
     if (this.props.hasChanged) {
@@ -436,6 +483,24 @@ export class Editor extends React.Component {
     }
   };
 
+  handleNotesChange = (action, payload) => {
+    const { collection, slug } = this.props;
+
+    switch (action) {
+      case 'ADD_NOTE':
+        this.props.persistNote(collection, slug, payload);
+        break;
+      case 'UPDATE_NOTE':
+        this.props.updateNotePersist(collection, slug, payload.id, payload.updates);
+        break;
+      case 'DELETE_NOTE':
+        this.props.deleteNotePersist(collection, slug, payload.id);
+        break;
+      default:
+        console.log('Unknown notes action:', action, payload);
+    }
+  };
+
   render() {
     const {
       entry,
@@ -445,6 +510,7 @@ export class Editor extends React.Component {
       changeDraftFieldValidation,
       user,
       hasChanged,
+      canCreateNewEntry,
       displayUrl,
       hasWorkflow,
       useOpenAuthoring,
@@ -487,7 +553,11 @@ export class Editor extends React.Component {
         fields={fields}
         fieldsMetaData={entryDraft.get('fieldsMetaData')}
         fieldsErrors={entryDraft.get('fieldsErrors')}
+        fieldRevisions={entryDraft.get('fieldRevisions')}
+        fieldHighlights={entryDraft.get('fieldHighlights')}
+        notes={entryDraft.get('notes')}
         onChange={this.handleChangeDraftField}
+        onNotesChange={this.handleNotesChange}
         onValidate={changeDraftFieldValidation}
         onPersist={this.handlePersistEntry}
         onDelete={this.handleDeleteEntry}
@@ -499,6 +569,7 @@ export class Editor extends React.Component {
         showDelete={this.props.showDelete}
         user={user}
         hasChanged={hasChanged}
+        canCreateNewEntry={canCreateNewEntry}
         displayUrl={displayUrl}
         hasWorkflow={hasWorkflow}
         useOpenAuthoring={useOpenAuthoring}
@@ -506,6 +577,7 @@ export class Editor extends React.Component {
         isNewEntry={newEntry}
         isModification={isModification}
         isDeleteWorkflow={isDeleteWorkflow}
+        isPublished={isPublished}
         currentStatus={currentStatus}
         onLogoutClick={logoutUser}
         deployPreview={deployPreview}
@@ -522,12 +594,20 @@ function mapStateToProps(state, ownProps) {
   const { collections, entryDraft, auth, config, entries, globalUI, stack } = state;
   const slug = ownProps.match.params[0];
   const collection = collections.get(ownProps.match.params.name);
+
+  // The collection can vanish when a permissions refilter narrows the config
+  // under a mounted route; withWorkflow redirects, so just don't crash here.
+  if (!collection) {
+    return { collection: null };
+  }
+
   const collectionName = collection.get('name');
   const newEntry = ownProps.newRecord === true;
   const fields = selectFields(collection, slug);
   const entry = newEntry ? null : selectEntry(state, collectionName, slug);
   const user = auth.user;
   const hasChanged = entryDraft.get('hasChanged');
+  const canCreateNewEntry = selectCanCreateNewEntry(state, collectionName);
   const displayUrl = config.display_url;
   const hasWorkflow = config.publish_mode === EDITORIAL_WORKFLOW;
   const useOpenAuthoring = globalUI.useOpenAuthoring;
@@ -564,6 +644,7 @@ function mapStateToProps(state, ownProps) {
     entry,
     user,
     hasChanged,
+    canCreateNewEntry,
     displayUrl,
     hasWorkflow,
     useOpenAuthoring,
@@ -607,6 +688,12 @@ const mapDispatchToProps = {
   removeDraftEntryMediaFiles,
   logoutUser,
   searchEntries,
+  loadNotesForEntry,
+  loadNotes,
+  stopNotesPolling,
+  persistNote,
+  updateNotePersist,
+  deleteNotePersist,
 };
 
 export default connect(mapStateToProps, mapDispatchToProps)(withWorkflow(translate()(Editor)));

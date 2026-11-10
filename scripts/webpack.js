@@ -1,6 +1,7 @@
 const path = require('path');
 const webpack = require('webpack');
 const FriendlyErrorsWebpackPlugin = require('@soda/friendly-errors-webpack-plugin');
+const NodePolyfillPlugin = require('node-polyfill-webpack-plugin');
 const { flatMap } = require('lodash');
 
 const { toGlobalName, externals } = require('./externals');
@@ -8,10 +9,6 @@ const pkg = require(path.join(process.cwd(), 'package.json'));
 
 const isProduction = process.env.NODE_ENV === 'production';
 const isTest = process.env.NODE_ENV === 'test';
-
-function moduleNameToPath(libName) {
-  return path.resolve(__dirname, '..', 'node_modules', libName);
-}
 
 function rules() {
   return {
@@ -28,7 +25,7 @@ function rules() {
     css: () => [
       {
         test: /\.css$/,
-        include: ['ol', 'react-toastify', 'codemirror'].map(moduleNameToPath),
+        include: [/node_modules[\\/](ol|react-toastify|codemirror)[\\/]/],
         use: ['to-string-loader', 'css-loader'],
       },
     ],
@@ -36,6 +33,10 @@ function rules() {
       test: /\.svg(\?v=\d+\.\d+\.\d+)?$/,
       exclude: [/node_modules/],
       use: 'svg-inline-loader',
+    }),
+    wasm: () => ({
+      test: /\.wasm$/,
+      type: 'asset/resource',
     }),
     vfile: () => ({
       test: /node_modules\/vfile\/core\.js/,
@@ -54,12 +55,23 @@ function rules() {
 
 function plugins() {
   return {
-    ignoreEsprima: () =>
-      new webpack.IgnorePlugin({ resourceRegExp: /^esprima$/, contextRegExp: /js-yaml/ }),
+    ignoreEsprima: () => new webpack.IgnorePlugin({ resourceRegExp: /^esprima$/ }),
     friendlyErrors: () => new FriendlyErrorsWebpackPlugin(),
     buffer: () =>
       new webpack.ProvidePlugin({
         Buffer: ['buffer', 'Buffer'],
+        process: 'process/browser',
+      }),
+    nodePolyfill: () => new NodePolyfillPlugin(),
+    stripNodeProtocol: () =>
+      new webpack.NormalModuleReplacementPlugin(/^node:/, resource => {
+        const moduleName = resource.request.replace(/^node:/, '');
+        // Handle node:url specially to provide fileURLToPath polyfill
+        if (moduleName === 'url') {
+          resource.request = path.resolve(__dirname, 'shims/fileURLToPath.js');
+        } else {
+          resource.request = moduleName;
+        }
       }),
   };
 }
@@ -81,6 +93,27 @@ function stats() {
   }
   return {
     all: false,
+  };
+}
+
+/**
+ * `react-dom/server` in the browser bundles both the streaming and the legacy
+ * renderer, but Decap (shortcode previews) and Plate only call
+ * `renderToString`/`renderToStaticMarkup`, which live in the legacy one.
+ * Point the import straight at that file to drop the unused renderer.
+ */
+function reactDomServerAlias() {
+  let reactDomDir;
+  try {
+    reactDomDir = path.dirname(
+      require.resolve('react-dom/package.json', { paths: [process.cwd()] }),
+    );
+  } catch {
+    return {};
+  }
+  const build = isProduction ? 'production' : 'development';
+  return {
+    'react-dom/server$': path.join(reactDomDir, `cjs/react-dom-server-legacy.browser.${build}.js`),
   };
 }
 
@@ -141,9 +174,18 @@ function baseConfig({ target = isProduction ? 'umd' : 'umddir' } = {}) {
     resolve: {
       extensions: ['.ts', '.tsx', '.js', '.json'],
       fallback: {
-        path: require.resolve('path-browserify'),
         stream: require.resolve('stream-browserify'),
-        buffer: require.resolve('buffer'),
+        url: require.resolve('url/'),
+        process: require.resolve('process/browser'),
+      },
+      alias: {
+        url: require.resolve('url/'),
+        'process/browser': require.resolve('process/browser'),
+        // Polyfill for fileURLToPath used by clean-stack
+        'node:url': require.resolve('url/'),
+        ...reactDomServerAlias(),
+        'react-style-proptype$': path.resolve(__dirname, 'shims/noopPropType.js'),
+        'js-yaml$': path.resolve(__dirname, 'shims/unusedJsYaml.js'),
       },
     },
     plugins: Object.values(plugins()).map(plugin => plugin()),

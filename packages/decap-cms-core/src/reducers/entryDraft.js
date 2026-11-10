@@ -1,13 +1,15 @@
 import { Map, List, fromJS } from 'immutable';
-import { v4 as uuid } from 'uuid';
-import { get } from 'lodash';
-import { join } from 'path';
+import get from 'lodash/get';
+import { join, basename } from 'path';
 
+import { sanitizeSlug } from '../lib/urlHelper';
 import {
   DRAFT_CREATE_FROM_ENTRY,
   DRAFT_CREATE_EMPTY,
   DRAFT_DISCARD,
   DRAFT_CHANGE_FIELD,
+  DRAFT_FIELDS_EXTERNALLY_CHANGED,
+  DRAFT_CLEAR_FIELD_HIGHLIGHTS,
   DRAFT_VALIDATION_ERRORS,
   DRAFT_CLEAR_ERRORS,
   DRAFT_LOCAL_BACKUP_RETRIEVED,
@@ -20,6 +22,11 @@ import {
   ADD_DRAFT_ENTRY_MEDIA_FILE,
   REMOVE_DRAFT_ENTRY_MEDIA_FILES,
   REMOVE_DRAFT_ENTRY_MEDIA_FILE,
+  DRAFT_NOTES_LOAD,
+  DRAFT_NOTE_ADD,
+  DRAFT_NOTE_UPDATE,
+  DRAFT_NOTE_DELETE,
+  NOTES_POLLING_UPDATE,
 } from '../actions/entries';
 import {
   UNPUBLISHED_ENTRY_PERSIST_REQUEST,
@@ -39,9 +46,31 @@ const initialState = Map({
   entry: Map(),
   fieldsMetaData: Map(),
   fieldsErrors: Map(),
+  notes: List(),
   hasChanged: false,
   key: '',
 });
+
+/**
+ * Merges incoming field metadata into the metadata already collected for the
+ * draft. Nested Maps are merged so that metadata for different fields,
+ * collections and options accumulates, while any other value (notably Lists) is
+ * replaced by the incoming one.
+ *
+ * NOTE: this cannot be `mergeDeep`. immutable 4 concatenates Lists when merging
+ * deeply, so re-sending metadata that contains a list - e.g. a relation widget
+ * resending the data of an already selected entry - would keep appending to it.
+ * `mergeDeepWith` is no help either: its merger is not called for two Lists.
+ */
+function mergeFieldsMetaData(existing, incoming) {
+  return existing.mergeWith(
+    (oldValue, newValue) =>
+      Map.isMap(oldValue) && Map.isMap(newValue)
+        ? mergeFieldsMetaData(oldValue, newValue)
+        : newValue,
+    incoming,
+  );
+}
 
 function entryDraftReducer(state = Map(), action) {
   switch (action.type) {
@@ -52,8 +81,9 @@ function entryDraftReducer(state = Map(), action) {
         state.setIn(['entry', 'newRecord'], false);
         state.set('fieldsMetaData', Map());
         state.set('fieldsErrors', Map());
+        state.set('notes', List());
         state.set('hasChanged', false);
-        state.set('key', uuid());
+        state.set('key', crypto.randomUUID());
       });
     case DRAFT_CREATE_EMPTY:
       // New Entry
@@ -62,8 +92,9 @@ function entryDraftReducer(state = Map(), action) {
         state.setIn(['entry', 'newRecord'], true);
         state.set('fieldsMetaData', Map());
         state.set('fieldsErrors', Map());
+        state.set('notes', List());
         state.set('hasChanged', false);
-        state.set('key', uuid());
+        state.set('key', crypto.randomUUID());
       });
     case DRAFT_CREATE_FROM_LOCAL_BACKUP:
       // Local Backup
@@ -75,8 +106,9 @@ function entryDraftReducer(state = Map(), action) {
         state.setIn(['entry', 'newRecord'], !backupEntry.get('path'));
         state.set('fieldsMetaData', Map());
         state.set('fieldsErrors', Map());
+        state.set('notes', List());
         state.set('hasChanged', true);
-        state.set('key', uuid());
+        state.set('key', crypto.randomUUID());
       });
     case DRAFT_CREATE_DUPLICATE_FROM_ENTRY:
       // Duplicate Entry
@@ -85,6 +117,7 @@ function entryDraftReducer(state = Map(), action) {
         state.setIn(['entry', 'newRecord'], true);
         state.set('mediaFiles', List());
         state.set('fieldsMetaData', Map());
+        state.set('notes', List());
         state.set('fieldsErrors', Map());
         state.set('hasChanged', true);
       });
@@ -116,7 +149,9 @@ function entryDraftReducer(state = Map(), action) {
             state = duplicateI18nFields(state, field, i18n.locales, i18n.defaultLocale);
           }
         }
-        state.mergeDeepIn(['fieldsMetaData'], fromJS(metadata));
+        state.updateIn(['fieldsMetaData'], (fieldsMetaData = Map()) =>
+          mergeFieldsMetaData(fieldsMetaData, fromJS(metadata)),
+        );
         const newData = state.getIn(['entry', ...dataPath]);
         const newMeta = state.getIn(['entry', 'meta']);
         state.set(
@@ -126,6 +161,25 @@ function entryDraftReducer(state = Map(), action) {
         );
       });
     }
+    // Per top-level field: an external-change counter for its control's key,
+    // and whether it is highlighted. Readers treat a missing map as empty.
+    case DRAFT_FIELDS_EXTERNALLY_CHANGED: {
+      const { names } = action.payload;
+      return state.withMutations(state => {
+        for (const name of names) {
+          state.updateIn(['fieldRevisions', name], (revision = 0) => revision + 1);
+          state.setIn(['fieldHighlights', name], true);
+        }
+      });
+    }
+
+    case DRAFT_CLEAR_FIELD_HIGHLIGHTS: {
+      const { names } = action.payload;
+      return state.withMutations(state => {
+        for (const name of names) state.deleteIn(['fieldHighlights', name]);
+      });
+    }
+
     case DRAFT_VALIDATION_ERRORS:
       if (action.payload.errors.length === 0) {
         return state.deleteIn(['fieldsErrors', action.payload.uniquefieldId]);
@@ -221,9 +275,41 @@ function entryDraftReducer(state = Map(), action) {
       });
     }
 
+    case DRAFT_NOTES_LOAD:
+      return state.set('notes', fromJS(action.payload.notes));
+
+    case DRAFT_NOTE_ADD:
+      return state.update('notes', notes => notes.push(fromJS(action.payload.note)));
+
+    case DRAFT_NOTE_UPDATE:
+      return state.update('notes', notes =>
+        notes.map(note =>
+          note.get('id') === action.payload.id ? note.merge(fromJS(action.payload.updates)) : note,
+        ),
+      );
+
+    case DRAFT_NOTE_DELETE:
+      return state.update('notes', notes =>
+        notes.filterNot(note => note.get('id') === action.payload.id),
+      );
+
+    case NOTES_POLLING_UPDATE:
+      return state.set('notes', fromJS(action.payload.notes));
+
     default:
       return state;
   }
+}
+
+function cleanTitleForFilename(title) {
+  if (!title) return 'untitled';
+
+  const cleanedTitle = sanitizeSlug(title.toString().toLowerCase().trim(), {
+    sanitize_replacement: '-',
+    encoding: 'unicode',
+  });
+
+  return cleanedTitle || 'untitled';
 }
 
 export function selectCustomPath(collection, entryDraft) {
@@ -232,9 +318,37 @@ export function selectCustomPath(collection, entryDraft) {
   }
   const meta = entryDraft.getIn(['entry', 'meta']);
   const path = meta && meta.get('path');
-  const indexFile = get(collection.toJS(), ['meta', 'path', 'index_file']);
+
+  if (!path) {
+    return;
+  }
+
   const extension = selectFolderEntryExtension(collection);
-  const customPath = path && join(collection.get('folder'), path, `${indexFile}.${extension}`);
+  const indexFile = get(collection.toJS(), ['meta', 'path', 'index_file']);
+
+  // If index_file is specified, use the old behavior for backward compatibility
+  if (indexFile) {
+    const customPath = join(collection.get('folder'), path, `${indexFile}.${extension}`);
+    return customPath;
+  }
+
+  // New behavior: generate filename from entry title
+  const isNewEntry = entryDraft.getIn(['entry', 'newRecord']);
+  const currentPath = entryDraft.getIn(['entry', 'path']);
+
+  let filename;
+  if (isNewEntry || !currentPath) {
+    // For new entries, generate filename from title
+    const entryData = entryDraft.getIn(['entry', 'data']);
+    const title = entryData && entryData.get('title');
+    filename = cleanTitleForFilename(title);
+  } else {
+    // For existing entries, preserve the current filename
+    const currentFilename = basename(currentPath, `.${extension}`);
+    filename = currentFilename;
+  }
+
+  const customPath = join(collection.get('folder'), path, `${filename}.${extension}`);
   return customPath;
 }
 

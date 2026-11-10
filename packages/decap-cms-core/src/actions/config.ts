@@ -2,13 +2,16 @@ import yaml from 'yaml';
 import { fromJS } from 'immutable';
 import deepmerge from 'deepmerge';
 import { produce } from 'immer';
-import { trimStart, trim, isEmpty } from 'lodash';
+import trimStart from 'lodash/trimStart';
+import trim from 'lodash/trim';
+import isEmpty from 'lodash/isEmpty';
 
 import { SIMPLE as SIMPLE_PUBLISH_MODE } from '../constants/publishModes';
 import { validateConfig } from '../constants/configSchema';
 import { selectDefaultSortableFields } from '../reducers/collections';
 import { getIntegrations, selectIntegration } from '../reducers/integrations';
 import { resolveBackend } from '../backend';
+import { getBackend } from '../lib/registry';
 import { I18N, I18N_FIELD, I18N_STRUCTURE } from '../lib/i18n';
 import { FILES, FOLDER } from '../constants/collectionTypes';
 
@@ -17,6 +20,7 @@ import type { AnyAction } from 'redux';
 import type {
   CmsCollection,
   CmsConfig,
+  Collection,
   CmsField,
   CmsFieldBase,
   CmsFieldObject,
@@ -163,10 +167,23 @@ function throwOnMissingDefaultLocale(i18n?: CmsI18nConfig) {
 }
 
 function hasIntegration(config: CmsConfig, collection: CmsCollection) {
-  // TODO remove fromJS when Immutable is removed from the integrations state slice
-  const integrations = getIntegrations(fromJS(config));
+  const integrations = getIntegrations(config);
   const integration = selectIntegration(integrations, collection.name, 'listEntries');
   return !!integration;
+}
+
+function normalizeSortableFields(
+  sortableFields: (
+    | string
+    | { field: string; label?: string; default_sort?: boolean | 'asc' | 'desc' }
+  )[],
+) {
+  return sortableFields.map(field => {
+    if (typeof field === 'string') {
+      return { field, default_sort: undefined };
+    }
+    return field;
+  });
 }
 
 export function normalizeConfig(config: CmsConfig) {
@@ -198,6 +215,14 @@ export function normalizeConfig(config: CmsConfig) {
       );
     }
 
+    // Normalize sortable_fields to consistent object format
+    if (normalizedCollection.sortable_fields) {
+      normalizedCollection = {
+        ...normalizedCollection,
+        sortable_fields: normalizeSortableFields(normalizedCollection.sortable_fields),
+      };
+    }
+
     return normalizedCollection;
   });
 
@@ -209,6 +234,17 @@ export function applyDefaults(originalConfig: CmsConfig) {
     config.publish_mode = config.publish_mode || SIMPLE_PUBLISH_MODE;
     config.slug = config.slug || {};
     config.collections = config.collections || [];
+
+    if (!config.editor) {
+      config.editor = {};
+    }
+
+    if (!('preview' in config.editor)) {
+      config.editor.preview = true;
+    }
+    if (!('notes' in config.editor)) {
+      config.editor.notes = false;
+    }
 
     // Use `site_url` as default `display_url`.
     if (!config.display_url && config.site_url) {
@@ -284,11 +320,12 @@ export function applyDefaults(originalConfig: CmsConfig) {
         collection.folder = trim(folder, '/');
 
         if (meta && meta.path) {
+          const metaPath = meta.path;
           const metaField = {
             name: 'path',
             meta: true,
             required: true,
-            ...meta.path,
+            ...metaPath,
           };
           collection.fields = [metaField, ...(collection.fields || [])];
         }
@@ -334,7 +371,7 @@ export function applyDefaults(originalConfig: CmsConfig) {
       if (!collection.sortable_fields) {
         collection.sortable_fields = selectDefaultSortableFields(
           // TODO remove fromJS when Immutable is removed from the collections state slice
-          fromJS(collection),
+          fromJS(collection) as unknown as Collection,
           backend,
           hasIntegration(config, collection),
         );
@@ -354,9 +391,11 @@ export function applyDefaults(originalConfig: CmsConfig) {
         };
       });
 
-      if (config.editor && !collection.editor) {
-        collection.editor = { preview: config.editor.preview };
-      }
+      collection.editor = {
+        preview: config.editor.preview,
+        notes: config.editor.notes,
+        ...collection.editor,
+      };
     }
   });
 }
@@ -396,6 +435,55 @@ async function getConfigYaml(file: string, hasManualConfig: boolean) {
   return parseConfig(await response.text());
 }
 
+export type CollectionAccess = 'edit' | 'view' | 'none';
+
+// Per-collection access a backend may attach to the user it resolves from
+// `authenticate()`/`currentUser()` as `permissions`. Names absent from
+// `collections` mean full access, so backends that never set it are unaffected.
+export interface BackendPermissions {
+  collections?: Record<string, CollectionAccess>;
+}
+
+/**
+ * Drops collections the user has no access to and strips create, delete and
+ * publish from view-only ones. UX only: the backend that proxies writes is the
+ * boundary.
+ */
+export function applyBackendPermissionFilter(
+  config: CmsConfig,
+  permissions?: BackendPermissions,
+): CmsConfig {
+  if (!permissions?.collections || isEmpty(permissions.collections)) {
+    return config;
+  }
+
+  const access = permissions.collections;
+  const collections = config.collections || [];
+  let changed = false;
+  const filteredCollections = collections.flatMap(collection => {
+    switch (access[collection.name]) {
+      case 'none':
+        changed = true;
+        return [];
+      case 'view':
+        changed = true;
+        return [{ ...collection, create: false, delete: false, publish: false }];
+      default:
+        return [collection];
+    }
+  });
+
+  return changed ? { ...config, collections: filteredCollections } : config;
+}
+
+/** Re-filters the config already in state once auth knows the user's permissions. */
+export function refilterConfigForPermissions(permissions: BackendPermissions) {
+  return (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
+    const { config } = getState();
+    dispatch(configLoaded(applyBackendPermissionFilter(config, permissions)));
+  };
+}
+
 export function configLoaded(config: CmsConfig) {
   return {
     type: CONFIG_SUCCESS,
@@ -433,6 +521,17 @@ export async function detectProxyServer(localBackend?: boolean | CmsLocalBackend
     localBackend === true
       ? defaultUrl
       : localBackend.url || defaultUrl.replace('localhost', location.hostname);
+
+  try {
+    const { protocol } = new URL(proxyUrl);
+    if (protocol !== 'http:' && protocol !== 'https:') {
+      console.log(`Decap CMS local_backend url must use http or https, ignoring '${proxyUrl}'`);
+      return {};
+    }
+  } catch {
+    console.log(`Decap CMS local_backend url '${proxyUrl}' is not a valid URL`);
+    return {};
+  }
 
   try {
     console.log(`Looking for Decap CMS Proxy Server at '${proxyUrl}'`);
@@ -496,6 +595,20 @@ export async function handleLocalBackend(originalConfig: CmsConfig) {
   });
 }
 
+// Generic extension point: a backend class's static async `preloadConfig(config)`
+// is awaited before the backend is constructed, so it can resolve its own config.
+export async function applyBackendPreloadConfig(originalConfig: CmsConfig) {
+  const backendName = originalConfig.backend?.name;
+  const registered = backendName && getBackend(backendName);
+  const preloadConfig = registered?.BackendClass?.preloadConfig;
+
+  if (typeof preloadConfig !== 'function') {
+    return originalConfig;
+  }
+
+  return preloadConfig(originalConfig);
+}
+
 export function loadConfig(manualConfig: Partial<CmsConfig> = {}, onLoad: () => unknown) {
   if (window.CMS_CONFIG) {
     return configLoaded(window.CMS_CONFIG);
@@ -517,7 +630,8 @@ export function loadConfig(manualConfig: Partial<CmsConfig> = {}, onLoad: () => 
       validateConfig(mergedConfig);
 
       const withLocalBackend = await handleLocalBackend(mergedConfig);
-      const normalizedConfig = normalizeConfig(withLocalBackend);
+      const withPreloadedBackend = await applyBackendPreloadConfig(withLocalBackend);
+      const normalizedConfig = normalizeConfig(withPreloadedBackend);
 
       const config = applyDefaults(normalizedConfig);
 

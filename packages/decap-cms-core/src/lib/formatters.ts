@@ -1,4 +1,8 @@
-import { flow, partialRight, trimEnd, trimStart } from 'lodash';
+import escapeRegExp from 'lodash/escapeRegExp';
+import flow from 'lodash/flow';
+import partialRight from 'lodash/partialRight';
+import trimEnd from 'lodash/trimEnd';
+import trimStart from 'lodash/trimStart';
 import { stringTemplate } from 'decap-cms-lib-widgets';
 import { stripIndent } from 'common-tags';
 
@@ -18,6 +22,7 @@ import type { Map } from 'immutable';
 const {
   compileStringTemplate,
   parseDateFromEntry,
+  parseDateFromEntryData,
   SLUG_MISSING_REQUIRED_DATE,
   keyToPathArray,
   addFileTemplateFields,
@@ -42,15 +47,27 @@ type Options = {
   collection?: Collection;
   authorLogin?: string;
   authorName?: string;
+  authorEmail?: string;
 };
 
 export function commitMessageFormatter(
   type: keyof typeof commitMessageTemplates,
   config: CmsConfig,
-  { stack, slug, path, collection, authorLogin, authorName }: Options,
+  { stack, slug, path, collection, authorLogin, authorName, authorEmail }: Options,
   isOpenAuthoring?: boolean,
 ) {
   const templates = { ...commitMessageTemplates, ...(config.backend.commit_messages || {}) };
+
+  let trailers = '';
+  if (config.backend.signoff_commits) {
+    if (!authorName) {
+      console.warn('Option signoff_commits is enabled, but author name is unknown');
+    } else if (!authorEmail) {
+      console.warn('Option signoff_commits is enabled, but author email is unknown');
+    } else {
+      trailers = `\n\nSigned-off-by: ${authorName} <${authorEmail}>\n`;
+    }
+  }
 
   const commitMessage = templates[type].replace(variableRegex, (_, variable) => {
     switch (variable) {
@@ -73,7 +90,7 @@ export function commitMessageFormatter(
   });
 
   if (!isOpenAuthoring) {
-    return commitMessage;
+    return commitMessage + trailers;
   }
 
   const message = templates.openAuthoring.replace(variableRegex, (_, variable) => {
@@ -90,7 +107,7 @@ export function commitMessageFormatter(
     }
   });
 
-  return message;
+  return message + trailers;
 }
 
 export function prepareSlug(slug: string) {
@@ -108,21 +125,39 @@ export function prepareSlug(slug: string) {
   );
 }
 
-export function getProcessSegment(slugConfig?: CmsSlug, ignoreValues?: string[]) {
+export function getProcessSegment(
+  slugConfig?: CmsSlug,
+  ignoreValues?: (string | undefined)[],
+  preserveSlashes?: boolean,
+) {
   return (value: string) =>
     ignoreValues && ignoreValues.includes(value)
       ? value
-      : flow([value => String(value), prepareSlug, partialRight(sanitizeSlug, slugConfig)])(value);
+      : flow([
+          value => String(value),
+          prepareSlug,
+          partialRight(sanitizeSlug, slugConfig, preserveSlashes),
+        ])(value);
 }
 
-export function slugFormatter(
+/**
+ * Returns a formatter for an entry slug and its optional collection path.
+ *
+ * The entry identifier, date and slug are resolved once so the formatter renders the same
+ * base slug for every collision suffix. A suffix is inserted after each `{{slug}}` or
+ * identifier field variable in the path, including filtered ones, so nested bundle paths
+ * become `post-1/index` instead of `post/index-1`. Paths without such a variable get the
+ * suffix appended to the whole path.
+ */
+export function getSlugFormatter(
   collection: Collection,
   entryData: Map<string, unknown>,
   slugConfig?: CmsSlug,
 ) {
   const slugTemplate = collection.get('slug') || '{{slug}}';
 
-  const identifier = entryData.getIn(keyToPathArray(selectIdentifier(collection) as string));
+  const identifierField = selectIdentifier(collection) as string;
+  const identifier = entryData.getIn(keyToPathArray(identifierField)) as string;
   if (!identifier) {
     throw new Error(
       'Collection must have a field name that is a valid entry identifier, or must have `identifier_field` set',
@@ -130,17 +165,103 @@ export function slugFormatter(
   }
 
   const processSegment = getProcessSegment(slugConfig);
-  const date = new Date();
+  const date =
+    parseDateFromEntryData(
+      entryData as unknown as Map<string, unknown>,
+      selectInferredField(collection, 'date'),
+    ) || new Date(Date.now());
   const slug = compileStringTemplate(slugTemplate, date, identifier, entryData, processSegment);
 
   if (!collection.has('path')) {
-    return slug;
-  } else {
-    const pathTemplate = prepareSlug(collection.get('path') as string);
-    return compileStringTemplate(pathTemplate, date, slug, entryData, (value: string) =>
-      value === slug ? value : processSegment(value),
-    );
+    return (suffix = '') => `${slug}${suffix}`;
   }
+
+  const pathTemplate = prepareSlug(collection.get('path') as string);
+  const slugVariablePattern = new RegExp(
+    `{{ *(?:slug|${escapeRegExp(identifierField)}) *(?:\\|[^}]*)?}}`,
+    'gi',
+  );
+  const processPathSegment = getProcessSegment(slugConfig, [slug]);
+
+  return (suffix = '') => {
+    const suffixedTemplate = pathTemplate.replace(
+      slugVariablePattern,
+      match => `${match}${suffix}`,
+    );
+    const path = compileStringTemplate(suffixedTemplate, date, slug, entryData, processPathSegment);
+    return suffixedTemplate === pathTemplate ? `${path}${suffix}` : path;
+  };
+}
+
+export function slugFormatter(
+  collection: Collection,
+  entryData: Map<string, unknown>,
+  slugConfig?: CmsSlug,
+) {
+  return getSlugFormatter(collection, entryData, slugConfig)();
+}
+
+/** Upper bound on a generated slug in UTF-8 bytes, so slug + extension fits NAME_MAX. */
+export const MAX_SLUG_BYTES = 200;
+
+/** GitHub refs may be 255 bytes, `refs/heads/` included. */
+const MAX_BRANCH_BYTES = 255 - 'refs/heads/'.length;
+
+/** Below this, a slug stops being useful; only an absurd config gets here. */
+const MIN_SLUG_BYTES = 32;
+
+function codePointBytes(char: string) {
+  const codePoint = char.codePointAt(0) as number;
+  if (codePoint < 0x80) return 1;
+  if (codePoint < 0x800) return 2;
+  if (codePoint < 0x10000) return 3;
+  return 4;
+}
+
+export function utf8ByteLength(str: string) {
+  return Array.from(str).reduce((total, char) => total + codePointBytes(char), 0);
+}
+
+/**
+ * How many bytes a newly generated slug may take. The workflow branch
+ * `cms/<collection>/<slug>` is parsed back into its parts, so the slug must fit.
+ */
+export function slugByteBudget(collection: Collection, config?: CmsConfig) {
+  const repo = config?.backend?.open_authoring ? config.backend.repo : undefined;
+  const branchPrefix = ['cms', repo, collection.get('name')].filter(Boolean).join('/') + '/';
+  const budget = Math.min(MAX_SLUG_BYTES, MAX_BRANCH_BYTES - utf8ByteLength(branchPrefix));
+  return Math.max(budget, MIN_SLUG_BYTES);
+}
+
+/**
+ * Cut a slug down to `maxBytes` of UTF-8 on a code point, then drop the
+ * separators the cut left at the end: a ref may not end in `/` or `.`.
+ */
+export function truncateSlug(slug: string, maxBytes: number, slugConfig?: CmsSlug) {
+  if (utf8ByteLength(slug) <= maxBytes) {
+    return slug;
+  }
+
+  let bytes = 0;
+  const kept: string[] = [];
+  for (const char of Array.from(slug)) {
+    bytes += codePointBytes(char);
+    if (bytes > maxBytes) break;
+    kept.push(char);
+  }
+
+  const replacement = slugConfig?.sanitize_replacement;
+  let truncated = kept.join('');
+  let previous;
+  do {
+    previous = truncated;
+    truncated = truncated.replace(/[\s\-_./]+$/u, '');
+    if (replacement && truncated.endsWith(replacement)) {
+      truncated = truncated.slice(0, -replacement.length);
+    }
+  } while (truncated !== previous);
+
+  return truncated;
 }
 
 export function previewUrlFormatter(
@@ -189,19 +310,21 @@ export function previewUrlFormatter(
   fields = addFileTemplateFields(entry.get('path'), fields, collection.get('folder'));
   const dateFieldName = getDateField() || selectInferredField(collection, 'date');
   const date = parseDateFromEntry(entry as unknown as Map<string, unknown>, dateFieldName);
+  const previewPathPreserveSlashes = collection.get('preview_path_preserve_slashes');
+  const preserveSlashes = !!(previewPathPreserveSlashes ?? collection.has('nested'));
 
   // Prepare and sanitize slug variables only, leave the rest of the
   // `preview_path` template as is.
-  const processSegment = getProcessSegment(slugConfig, [fields.get('dirname')]);
+  const processSegment = getProcessSegment(slugConfig, [fields.get('dirname')], preserveSlashes);
   let compiledPath;
 
   try {
     compiledPath = compileStringTemplate(pathTemplate, date, slug, fields, processSegment);
-  } catch (err) {
+  } catch (err: unknown) {
     // Print an error and ignore `preview_path` if both:
     //   1. Date is invalid (according to DayJs), and
     //   2. A date expression (eg. `{{year}}`) is used in `preview_path`
-    if (err.name === SLUG_MISSING_REQUIRED_DATE) {
+    if (err instanceof Error && err.name === SLUG_MISSING_REQUIRED_DATE) {
       console.error(stripIndent`
         Collection "${collection.get('name')}" configuration error:
           \`preview_path_date_field\` must be a field with a valid date. Ignoring \`preview_path\`.
@@ -256,7 +379,7 @@ export function folderFormatter(
       entry as unknown as Map<string, unknown>,
       selectInferredField(collection, 'date'),
     ) || null;
-  const identifier = fields.getIn(keyToPathArray(selectIdentifier(collection) as string));
+  const identifier = fields.getIn(keyToPathArray(selectIdentifier(collection) as string)) as string;
   const processSegment = getProcessSegment(slugConfig, [defaultFolder, fields.get('dirname')]);
 
   const mediaFolder = compileStringTemplate(
@@ -268,4 +391,37 @@ export function folderFormatter(
   );
 
   return mediaFolder;
+}
+
+/**
+ * Where an entry will live on the built site, as a path (`/blog/my-post/`), so
+ * whichever deploy carries the change can supply its own host. Undefined
+ * without a `preview_path`, rather than a site-root link posing as the entry.
+ */
+export function entryPreviewPath(
+  collection: Collection,
+  slug: string,
+  entry: EntryMap,
+  slugConfig?: CmsSlug,
+): string | undefined {
+  // A base that cannot be confused for a real one, since only the path is kept.
+  const SENTINEL = 'https://entry-preview-path.invalid';
+
+  try {
+    const url = previewUrlFormatter(SENTINEL, collection, slug, entry, slugConfig);
+    if (!url) {
+      return undefined;
+    }
+    // Compared as parsed origins, not a string prefix: `${SENTINEL}.example.com`
+    // would pass startsWith while naming another host. CodeQL flags the prefix form.
+    const parsed = new URL(url);
+    if (parsed.origin !== new URL(SENTINEL).origin) {
+      return undefined;
+    }
+    const path = `${parsed.pathname}${parsed.search}${parsed.hash}`;
+    return path && path !== '/' ? path : undefined;
+  } catch {
+    // A malformed template must not cost the editor their save notification.
+    return undefined;
+  }
 }

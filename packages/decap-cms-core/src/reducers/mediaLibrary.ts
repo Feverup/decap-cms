@@ -1,5 +1,4 @@
 import { Map, List } from 'immutable';
-import { v4 as uuid } from 'uuid';
 import { dirname } from 'path';
 
 import {
@@ -34,6 +33,11 @@ import type {
   DisplayURLState,
   EntryField,
 } from '../types/redux';
+
+function isMediaFileInFolder(filePath: string, mediaFolder: string) {
+  const fileFolder = dirname(filePath);
+  return fileFolder === mediaFolder || fileFolder.startsWith(`${mediaFolder}/_transformations/`);
+}
 
 const defaultState: {
   isVisible: boolean;
@@ -92,7 +96,7 @@ function mediaLibrary(state = Map(defaultState), action: MediaLibraryAction) {
         replaceIndex,
       } = action.payload;
       const libConfig = config || Map();
-      const mediaLibraryValidation = state.get('validation');
+      const mediaLibraryValidation = state.get('validation') as Map<string, unknown> | undefined;
       const mediaValidation = mediaLibraryValidation
         ? mediaLibraryValidation.mergeDeep(validation)
         : validation;
@@ -118,7 +122,10 @@ function mediaLibrary(state = Map(defaultState), action: MediaLibraryAction) {
         map.set('forImage', forImage ?? false);
         map.set('controlID', controlID ?? '');
         map.set('canInsert', !!controlID);
-        map.set('privateUpload', privateUpload);
+        // NOTE: stored as-is rather than defaulted - `privateUploadChanged`
+        // above compares against this value on the next open, so coercing
+        // `undefined` to `false` would spuriously reset the library state.
+        map.set('privateUpload', privateUpload as boolean);
         map.set('config', libConfig);
         map.set('validation', mediaValidation);
         map.set('field', field ?? '');
@@ -181,7 +188,7 @@ function mediaLibrary(state = Map(defaultState), action: MediaLibraryAction) {
         return state;
       }
 
-      const filesWithKeys = files.map(file => ({ ...file, key: uuid() }));
+      const filesWithKeys = files.map(file => ({ ...file, key: crypto.randomUUID() }));
       return state.withMutations(map => {
         map.set('isLoading', false);
         map.set('isPaginating', false);
@@ -217,8 +224,8 @@ function mediaLibrary(state = Map(defaultState), action: MediaLibraryAction) {
         return state;
       }
       return state.withMutations(map => {
-        const fileWithKey = { ...file, key: uuid() };
-        const files = map.get('files') as MediaFile[];
+        const fileWithKey = { ...file, key: crypto.randomUUID() };
+        const files = (map.get('files') as MediaFile[]) || [];
         const updatedFiles = [fileWithKey, ...files];
         map.set('files', updatedFiles);
         map.set('isPersisting', false);
@@ -296,12 +303,12 @@ export function selectMediaFiles(state: State, field?: EntryField) {
   if (editingDraft && !integration) {
     const entryFiles = entryDraft
       .getIn(['entry', 'mediaFiles'], List<MediaFileMap>())
-      .toJS() as MediaFile[];
+      .toJS() as unknown as MediaFile[];
     const entry = entryDraft.get('entry');
     const collection = state.collections.get(entry?.get('collection'));
     const mediaFolder = selectMediaFolder(state.config, collection, entry, field);
     files = entryFiles
-      .filter(f => dirname(f.path) === mediaFolder)
+      .filter(f => isMediaFileInFolder(f.path, mediaFolder))
       .map(file => ({ key: file.id, ...file }));
   } else {
     files = mediaLibrary.get('files') || [];

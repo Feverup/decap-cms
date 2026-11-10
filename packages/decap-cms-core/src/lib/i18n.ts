@@ -1,5 +1,7 @@
 import { Map, List } from 'immutable';
-import { set, groupBy, escapeRegExp } from 'lodash';
+import set from 'lodash/set';
+import groupBy from 'lodash/groupBy';
+import escapeRegExp from 'lodash/escapeRegExp';
 
 import { selectEntrySlug } from '../reducers/collections';
 
@@ -127,6 +129,30 @@ export function getFilePaths(
   return paths;
 }
 
+/**
+ * Every file of an entry, marked by whether it is known to exist (the default
+ * locale, and locales found on load); the rest must be checked before deleting.
+ */
+export function getI18nFilesToDelete(
+  collection: Collection,
+  extension: string,
+  path: string,
+  slug: string,
+  entry?: EntryMap,
+) {
+  const { structure, locales, defaultLocale } = getI18nInfo(collection) as I18nInfo;
+
+  if (structure === I18N_STRUCTURE.SINGLE_FILE) {
+    return [{ path, known: true }];
+  }
+
+  const found = entry?.get('i18nLocales');
+  return locales.map(locale => ({
+    path: getFilePath(structure as I18N_STRUCTURE, extension, path, slug, locale),
+    known: locale === defaultLocale || !!found?.includes(locale),
+  }));
+}
+
 export function normalizeFilePath(structure: I18N_STRUCTURE, path: string, locale: string) {
   switch (structure) {
     case I18N_STRUCTURE.MULTIPLE_FOLDERS:
@@ -224,6 +250,24 @@ export function formatI18nBackup(
   return i18n;
 }
 
+function applyDefaultI18nValues(
+  collection: Collection,
+  value: EntryValue,
+  defaultLocaleValue: EntryValue,
+) {
+  if (collection.get('fields') === undefined) {
+    return;
+  }
+  collection.get('fields').forEach(field => {
+    if (field && field.get(I18N) === I18N_FIELD.DUPLICATE) {
+      const data = value.data[field.get('name')];
+      if (!data) {
+        value.data[field.get('name')] = defaultLocaleValue.data[field.get('name')];
+      }
+    }
+  });
+}
+
 function mergeValues(
   collection: Collection,
   structure: I18N_STRUCTURE,
@@ -239,17 +283,26 @@ function mergeValues(
     .filter(e => e.locale !== defaultEntry!.locale)
     .reduce((acc, { locale, value }) => {
       const dataPath = getLocaleDataPath(locale);
+      if (defaultEntry) {
+        applyDefaultI18nValues(collection, value, defaultEntry.value);
+      }
       return set(acc, dataPath, value.data);
     }, {});
 
   const path = normalizeFilePath(structure, defaultEntry.value.path, defaultLocale);
   const slug = selectEntrySlug(collection, path) as string;
+  // Which locales have a file: GitHub answers a missing file with empty content,
+  // and deleteEntry must not ask to delete one, which fails the whole commit.
+  const i18nLocales = values
+    .filter(({ locale, value }) => locale === defaultEntry!.locale || value.raw !== '')
+    .map(({ locale }) => locale);
   const entryValue: EntryValue = {
     ...defaultEntry.value,
     raw: '',
     ...i18n,
     path,
     slug,
+    i18nLocales,
   };
 
   return entryValue;
@@ -290,18 +343,26 @@ export async function getI18nEntry(
   if (structure === I18N_STRUCTURE.SINGLE_FILE) {
     entryValue = mergeSingleFileValue(await getEntryValue(path), defaultLocale, locales);
   } else {
-    const entryValues = await Promise.all(
+    const entryValuesResults = await Promise.allSettled(
       locales.map(async locale => {
         const entryPath = getFilePath(structure, extension, path, slug, locale);
-        const value = await getEntryValue(entryPath).catch(() => null);
+        const value = await getEntryValue(entryPath);
         return { value, locale };
       }),
     );
 
-    const nonNullValues = entryValues.filter(e => e.value !== null) as {
-      value: EntryValue;
-      locale: string;
-    }[];
+    const nonNullValues = entryValuesResults
+      .map(e => (e.status === 'fulfilled' ? e.value : undefined))
+      .filter((e): e is { value: EntryValue; locale: string } => e !== undefined);
+
+    if (nonNullValues.length === 0) {
+      // mergeValues will throw on an empty list, and show the error messages.
+      const [error = new Error('No entry values found for any locale')] = entryValuesResults
+        .map(e => (e.status === 'rejected' ? e.reason : undefined))
+        .filter(e => e !== undefined);
+
+      throw error;
+    }
 
     entryValue = mergeValues(collection, structure, defaultLocale, nonNullValues);
   }

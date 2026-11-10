@@ -3,10 +3,16 @@ import { List, Map, fromJS } from 'immutable';
 import {
   commitMessageFormatter,
   prepareSlug,
+  getSlugFormatter,
   slugFormatter,
   previewUrlFormatter,
+  entryPreviewPath,
   summaryFormatter,
   folderFormatter,
+  truncateSlug,
+  slugByteBudget,
+  utf8ByteLength,
+  MAX_SLUG_BYTES,
 } from '../formatters';
 
 jest.spyOn(console, 'warn').mockImplementation(() => {});
@@ -247,6 +253,27 @@ describe('formatters', () => {
         'Ignoring unknown variable “author-email” in open authoring message template.',
       );
     });
+
+    it('should return commit with trailer when signoff_commits is enabled', () => {
+      const collection = Map({ label_singular: 'Collection' });
+      const config = {
+        backend: {
+          signoff_commits: true,
+        },
+      };
+
+      expect(
+        commitMessageFormatter('create', config, {
+          slug: 'doc-slug',
+          path: 'file-path',
+          collection,
+          authorName: 'Test User',
+          authorEmail: 'test-user@example.org',
+        }),
+      ).toEqual(
+        'Create Collection “doc-slug”\n\nSigned-off-by: Test User <test-user@example.org>\n',
+      );
+    });
   });
 
   describe('prepareSlug', () => {
@@ -274,8 +301,8 @@ describe('formatters', () => {
   };
 
   describe('slugFormatter', () => {
-    const date = new Date('2020-01-01');
-    jest.spyOn(global, 'Date').mockImplementation(() => date);
+    const date = new Date('2020-01-01T13:28:27.679Z').valueOf();
+    jest.spyOn(Date, 'now').mockImplementation(() => date);
 
     const { selectIdentifier } = require('../../reducers/collections');
 
@@ -310,6 +337,46 @@ describe('formatters', () => {
           slugConfig,
         ),
       ).toBe('entry-slug');
+    });
+
+    it('should allow filters in slug templates', () => {
+      selectIdentifier.mockReturnValueOnce('published');
+
+      expect(
+        slugFormatter(
+          Map({ slug: "{{published | date('MM-DD')}}" }),
+          Map({ title: 'Post Title', published: new Date(date) }),
+          slugConfig,
+        ),
+      ).toBe('01-01');
+    });
+
+    it('should see date filters applied to date from entry if it exists', () => {
+      const { selectInferredField } = require('../../reducers/collections');
+      selectInferredField.mockReturnValue('date');
+      const entryDate = new Date('2026-10-20T13:28:27.679Z');
+
+      expect(
+        slugFormatter(
+          Map({ slug: '{{year}}-{{month}}-{{day}}-{{title}}' }),
+          Map({ date: entryDate, title: 'post title' }),
+          slugConfig,
+        ),
+      ).toBe('2026-10-20-post-title');
+    });
+
+    it('should see date filters applied to publishDate from entry if it exists', () => {
+      const { selectInferredField } = require('../../reducers/collections');
+      selectInferredField.mockReturnValue('publishDate');
+      const entryDate = new Date('2026-10-20T13:28:27.679Z');
+
+      expect(
+        slugFormatter(
+          Map({ slug: '{{year}}-{{month}}-{{day}}-{{title}}' }),
+          Map({ publishDate: entryDate, title: 'post title' }),
+          slugConfig,
+        ),
+      ).toBe('2026-10-20-post-title');
     });
 
     it('should return slug', () => {
@@ -360,6 +427,196 @@ describe('formatters', () => {
           slugConfig,
         ),
       ).toBe('--/dir/post-title.en');
+    });
+  });
+
+  describe('getSlugFormatter', () => {
+    const date = new Date('2020-01-01T13:28:27.679Z').valueOf();
+    jest.spyOn(Date, 'now').mockImplementation(() => date);
+
+    const { selectIdentifier } = require('../../reducers/collections');
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it('should apply a suffix to a slug without a path template', () => {
+      selectIdentifier.mockReturnValueOnce('title');
+
+      expect(
+        getSlugFormatter(Map({ slug: '{{slug}}' }), Map({ title: 'Post Title' }), slugConfig)('-1'),
+      ).toBe('post-title-1');
+    });
+
+    it('should apply a suffix to the slug placeholder before the rest of the path', () => {
+      selectIdentifier.mockReturnValueOnce('title');
+
+      expect(
+        getSlugFormatter(
+          Map({ slug: '{{slug}}', path: '{{ slug }}/index' }),
+          Map({ title: 'Post Title' }),
+          slugConfig,
+        )('-1'),
+      ).toBe('post-title-1/index');
+    });
+
+    it('should apply a suffix to the identifier field placeholder in the path', () => {
+      selectIdentifier.mockReturnValueOnce('title');
+
+      expect(
+        getSlugFormatter(
+          Map({ slug: '{{year}}-{{slug}}', path: '{{title}}/index' }),
+          Map({ title: 'Post Title' }),
+          slugConfig,
+        )('-1'),
+      ).toBe('post-title-1/index');
+    });
+
+    it('should apply a suffix to every slug placeholder', () => {
+      selectIdentifier.mockReturnValueOnce('title');
+
+      expect(
+        getSlugFormatter(
+          Map({ slug: '{{slug}}', path: '{{slug}}/{{slug}}' }),
+          Map({ title: 'Post Title' }),
+          slugConfig,
+        )('-1'),
+      ).toBe('post-title-1/post-title-1');
+    });
+
+    it('should apply a suffix to a filtered slug placeholder', () => {
+      selectIdentifier.mockReturnValueOnce('title');
+
+      expect(
+        getSlugFormatter(
+          Map({ slug: '{{slug}}', path: '{{slug | upper}}/index' }),
+          Map({ title: 'Post Title' }),
+          slugConfig,
+        )('-1'),
+      ).toBe('post-title-1/index');
+    });
+
+    it('should not apply a suffix to variables that only start with the identifier field', () => {
+      selectIdentifier.mockReturnValueOnce('title');
+
+      expect(
+        getSlugFormatter(
+          Map({ slug: '{{slug}}', path: '{{title_short}}/index' }),
+          Map({ title: 'Post Title', title_short: 'Short' }),
+          slugConfig,
+        )('-1'),
+      ).toBe('short/index-1');
+    });
+
+    it('should apply a suffix to the complete path when it has no slug placeholder', () => {
+      selectIdentifier.mockReturnValueOnce('title');
+
+      expect(
+        getSlugFormatter(
+          Map({ slug: '{{slug}}', path: 'sub_dir/{{year}}/index' }),
+          Map({ title: 'Post Title' }),
+          slugConfig,
+        )('-1'),
+      ).toBe('sub_dir/2020/index-1');
+    });
+
+    it('should resolve the date once for every suffix', () => {
+      selectIdentifier.mockReturnValueOnce('title');
+      const formatSlug = getSlugFormatter(
+        Map({ slug: '{{year}}-{{month}}-{{day}}-{{slug}}', path: '{{year}}/{{slug}}' }),
+        Map({ title: 'Post Title' }),
+        slugConfig,
+      );
+
+      expect(formatSlug()).toBe('2020/2020-01-01-post-title');
+      expect(formatSlug('-1')).toBe('2020/2020-01-01-post-title-1');
+      expect(Date.now).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('slug length', () => {
+    const { selectIdentifier } = require('../../reducers/collections');
+    const vietnamese = 'Hướng dẫn chăm sóc da mặt cho làn da nhạy cảm '.repeat(20);
+    const encoder = new (require('util').TextEncoder)();
+
+    function bytes(str) {
+      return encoder.encode(str).length;
+    }
+
+    it('counts bytes the way UTF-8 does', () => {
+      expect(utf8ByteLength('abc')).toBe(3);
+      expect(utf8ByteLength(vietnamese)).toBe(bytes(vietnamese));
+      expect(utf8ByteLength('😀')).toBe(4);
+    });
+
+    it('caps a long Vietnamese title in bytes and ends on a word', () => {
+      selectIdentifier.mockReturnValueOnce('title');
+      const slug = slugFormatter(Map(), Map({ title: vietnamese }), slugConfig);
+      expect(bytes(slug)).toBeGreaterThan(MAX_SLUG_BYTES);
+
+      const truncated = truncateSlug(slug, MAX_SLUG_BYTES, slugConfig);
+
+      expect(bytes(truncated)).toBeLessThanOrEqual(MAX_SLUG_BYTES);
+      expect(truncated).not.toMatch(/[-_./\s]$/);
+      expect(slug.startsWith(truncated)).toBe(true);
+      // Nothing was mangled on the way: re-encoding round-trips.
+      expect(Buffer.from(truncated, 'utf8').toString('utf8')).toBe(truncated);
+    });
+
+    it('caps a long ASCII title', () => {
+      selectIdentifier.mockReturnValueOnce('title');
+      const slug = slugFormatter(
+        Map(),
+        Map({ title: 'A rather long post title '.repeat(20) }),
+        slugConfig,
+      );
+
+      const truncated = truncateSlug(slug, MAX_SLUG_BYTES, slugConfig);
+
+      expect(truncated.length).toBeLessThanOrEqual(MAX_SLUG_BYTES);
+      expect(truncated).not.toMatch(/[-_./\s]$/);
+      expect(slug.startsWith(truncated)).toBe(true);
+    });
+
+    it('leaves a slug within the budget alone', () => {
+      expect(truncateSlug('post-title', MAX_SLUG_BYTES, slugConfig)).toBe('post-title');
+    });
+
+    it('never splits a surrogate pair', () => {
+      // 3 bytes of ASCII, then 4-byte emoji: a 5-byte cut lands inside the second.
+      expect(truncateSlug('abc😀😀', 9, slugConfig)).toBe('abc😀');
+      expect(truncateSlug('abc😀😀', 8, slugConfig)).toBe('abc😀');
+      expect(truncateSlug('abc😀😀', 6, slugConfig)).toBe('abc');
+    });
+
+    it('drops separators the cut leaves at the end, including a custom replacement', () => {
+      expect(truncateSlug('one-two-three', 8, slugConfig)).toBe('one-two');
+      expect(truncateSlug('dir/sub/name', 8, slugConfig)).toBe('dir/sub');
+      expect(truncateSlug('one__two__three', 10, { sanitize_replacement: '__' })).toBe('one__two');
+    });
+
+    it('keeps the editorial workflow branch within what GitHub accepts', () => {
+      const collection = Map({ name: 'x'.repeat(100) });
+
+      const budget = slugByteBudget(collection, {});
+
+      expect(budget).toBeLessThan(MAX_SLUG_BYTES);
+      expect(bytes(`refs/heads/cms/${collection.get('name')}/`) + budget).toBeLessThanOrEqual(255);
+    });
+
+    it('makes room for the repository under open authoring', () => {
+      const collection = Map({ name: 'posts' });
+      const config = { backend: { open_authoring: true, repo: `owner/${'r'.repeat(80)}` } };
+
+      const budget = slugByteBudget(collection, config);
+
+      expect(bytes(`refs/heads/cms/${config.backend.repo}/posts/`) + budget).toBeLessThanOrEqual(
+        255,
+      );
+    });
+
+    it('allows the full budget for a short collection name', () => {
+      expect(slugByteBudget(Map({ name: 'posts' }), {})).toBe(MAX_SLUG_BYTES);
     });
   });
 
@@ -537,6 +794,118 @@ describe('formatters', () => {
       expect(console.error).toHaveBeenCalledWith(
         'Collection "posts" configuration error:\n  `preview_path_date_field` must be a field with a valid date. Ignoring `preview_path`.',
       );
+    });
+
+    it('should preserve slashes in value when configured', () => {
+      expect(
+        previewUrlFormatter(
+          'https://www.example.com',
+          Map({
+            preview_path: 'prefix/{{value}}',
+            preview_path_preserve_slashes: true,
+          }),
+          'backendSlug',
+          Map({ data: Map({ value: 'nested/value' }) }),
+          slugConfig,
+        ),
+      ).toBe('https://www.example.com/prefix/nested/value');
+    });
+
+    it('should sanitize slashes in value when not configured', () => {
+      expect(
+        previewUrlFormatter(
+          'https://www.example.com',
+          Map({
+            preview_path: 'prefix/{{value}}',
+          }),
+          'backendSlug',
+          Map({ data: Map({ value: 'nested/value' }) }),
+          slugConfig,
+        ),
+      ).toBe('https://www.example.com/prefix/nested-value');
+    });
+
+    it('should preserve slashes in value for nested collections by default', () => {
+      expect(
+        previewUrlFormatter(
+          'https://www.example.com',
+          Map({
+            preview_path: 'prefix/{{value}}',
+            nested: { depth: 10 },
+          }),
+          'backendSlug',
+          Map({ data: Map({ value: 'nested/value' }) }),
+          slugConfig,
+        ),
+      ).toBe('https://www.example.com/prefix/nested/value');
+    });
+
+    it('should sanitize slashes in value for nested collections when explicitly disabled', () => {
+      expect(
+        previewUrlFormatter(
+          'https://www.example.com',
+          Map({
+            preview_path: 'prefix/{{value}}',
+            nested: { depth: 10 },
+            preview_path_preserve_slashes: false,
+          }),
+          'backendSlug',
+          Map({ data: Map({ value: 'nested/value' }) }),
+          slugConfig,
+        ),
+      ).toBe('https://www.example.com/prefix/nested-value');
+    });
+  });
+
+  describe('entryPreviewPath', () => {
+    // Feeds the "your change is live" notification's link, so it can point at
+    // the entry rather than the site's home page — see actions/deployStatus.ts.
+    it('returns only the path, never the sentinel base', () => {
+      const date = new Date('2020-01-02T13:28:27.679Z');
+      const path = entryPreviewPath(
+        Map({
+          preview_path: '{{year}}/{{slug}}',
+          preview_path_date_field: 'customDateField',
+        }),
+        'backendSlug',
+        Map({ data: Map({ customDateField: date, slug: 'entrySlug', title: 'title' }) }),
+        slugConfig,
+      );
+
+      expect(path).toBe('/2020/backendslug');
+      expect(path).not.toContain('invalid');
+      expect(path).not.toContain('https://');
+    });
+
+    // Without a preview_path the formatter hands back the base unchanged, and
+    // a link to the site root dressed up as a link to the entry is worse than
+    // the plain site link the notification already falls back to.
+    it('returns undefined for a collection with no preview_path', () => {
+      expect(entryPreviewPath(Map({}), 'slug', Map({ data: Map({}) }), slugConfig)).toBeUndefined();
+    });
+
+    it('returns undefined rather than throwing on a template it cannot compile', () => {
+      expect(() =>
+        entryPreviewPath(
+          Map({ preview_path: '{{unknown_field}}' }),
+          'slug',
+          Map({ data: Map({}) }),
+          slugConfig,
+        ),
+      ).not.toThrow();
+    });
+
+    // previewUrlFormatter joins base and path with an unconditional `/`, so a
+    // template cannot reach the host position — this stays a path.
+    it('keeps a host-looking template in the path, where it belongs', () => {
+      expect(
+        entryPreviewPath(
+          Map({ preview_path: '.example.com/evil' }),
+          'slug',
+          Map({ data: Map({}) }),
+          slugConfig,
+        ),
+      ).toBe('/.example.com/evil');
     });
   });
 

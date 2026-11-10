@@ -1,4 +1,4 @@
-import React from 'react';
+import { Component } from 'react';
 import PropTypes from 'prop-types';
 import styled from '@emotion/styled';
 import { Icon, buttons, shadows, GoBackButton, renderPageLogo } from 'decap-cms-ui-default';
@@ -28,13 +28,23 @@ const LoginButton = styled.button`
   }
 `;
 
-export default class AuthenticationPage extends React.Component {
+export default class AuthenticationPage extends Component {
   static propTypes = {
     onLogin: PropTypes.func.isRequired,
     inProgress: PropTypes.bool,
     config: PropTypes.object.isRequired,
     t: PropTypes.func.isRequired,
   };
+
+  componentDidMount() {
+    // Manually validate PropTypes - React 19 breaking change
+    PropTypes.checkPropTypes(
+      AuthenticationPage.propTypes,
+      this.props,
+      'prop',
+      'AuthenticationPage',
+    );
+  }
 
   handleLogin = e => {
     e.preventDefault();
@@ -46,7 +56,7 @@ export default class AuthenticationPage extends React.Component {
 
     return (
       <StyledAuthenticationPage>
-        {renderPageLogo(config.logo_url)}
+        {renderPageLogo(config.logo?.src || config.logo_url)}
         <LoginButton disabled={inProgress} onClick={this.handleLogin}>
           {inProgress ? t('auth.loggingIn') : t('auth.login')}
         </LoginButton>

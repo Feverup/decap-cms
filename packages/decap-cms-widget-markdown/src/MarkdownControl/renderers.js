@@ -1,5 +1,4 @@
 /* eslint-disable react/display-name */
-import React from 'react';
 import { css } from '@emotion/react';
 import styled from '@emotion/styled';
 import { colors, lengths } from 'decap-cms-ui-default';
@@ -7,6 +6,7 @@ import { useSelected } from 'slate-react';
 
 import VoidBlock from './components/VoidBlock';
 import Shortcode from './components/Shortcode';
+import InlineShortcode from './components/InlineShortcode';
 
 const bottomMargin = '16px';
 
@@ -97,7 +97,7 @@ const StyledTable = styled.table`
 `;
 
 const StyledTd = styled.td`
-  border: 2px solid black;
+  border: 1px solid black;
   padding: 8px;
   text-align: left;
 `;
@@ -351,6 +351,8 @@ export function Element(props) {
           <Shortcode {...props}>{children}</Shortcode>
         </VoidBlock>
       );
+    case 'inline-shortcode':
+      return <InlineShortcode {...props} />;
     default:
       return <Paragraph style={style}>{children}</Paragraph>;
   }

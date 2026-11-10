@@ -1,5 +1,5 @@
 import PropTypes from 'prop-types';
-import React, { Component } from 'react';
+import { createElement, Component } from 'react';
 import ImmutablePropTypes from 'react-immutable-proptypes';
 import { Map, List } from 'immutable';
 import { oneLine } from 'common-tags';
@@ -68,7 +68,11 @@ export default class Widget extends Component {
     onValidateObject: PropTypes.func,
     isEditorComponent: PropTypes.bool,
     isNewEditorComponent: PropTypes.bool,
+    /**
+     * @deprecated Every update creates a new entry, passing a live value down is too expensive. Use the getEntry callback instead or get the value from the store directly in the widget via `useSelector` or `connect`.
+     */
     entry: ImmutablePropTypes.map.isRequired,
+    getEntry: PropTypes.func.isRequired,
     isDisabled: PropTypes.bool,
     isFieldDuplicate: PropTypes.func,
     isFieldHidden: PropTypes.func,
@@ -77,6 +81,11 @@ export default class Widget extends Component {
     locale: PropTypes.string,
     isParentListCollapsed: PropTypes.bool,
   };
+
+  componentDidMount() {
+    // Manually validate PropTypes - React 19 breaking change
+    PropTypes.checkPropTypes(Widget.propTypes, this.props, 'prop', 'Widget');
+  }
 
   shouldComponentUpdate(nextProps) {
     /**
@@ -312,7 +321,8 @@ export default class Widget extends Component {
   render() {
     const {
       controlComponent,
-      entry,
+      entry, // TODO: Remove this prop in favor of getEntry
+      getEntry,
       collection,
       collections,
       config,
@@ -363,8 +373,9 @@ export default class Widget extends Component {
       isParentListCollapsed,
     } = this.props;
 
-    return React.createElement(controlComponent, {
-      entry,
+    return createElement(controlComponent, {
+      entry, // TODO: Remove this deprecated prop in favor of getEntry
+      getEntry,
       collection,
       collections,
       config,

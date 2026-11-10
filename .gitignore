@@ -8,6 +8,7 @@ npm-debug.log
 yarn-error.log
 .vscode/
 .idea/
+.claude/
 manifest.yml
 .imdone/
 cypress/videos
@@ -19,4 +20,6 @@ coverage/
 .env
 .temp/
 storybook-static/
-.nx/cache
+.nx
+.claude/settings.local.json
+pnpm-publish-summary.json

@@ -1,12 +1,19 @@
-import { fromJS, List, Map } from 'immutable';
-import { isEqual } from 'lodash';
+import { fromJS, List, Map, Set } from 'immutable';
+import isEqual from 'lodash/isEqual';
 import { Cursor } from 'decap-cms-lib-util';
 
 import { selectCollectionEntriesCursor } from '../reducers/cursors';
-import { selectFields, updateFieldByKey } from '../reducers/collections';
+import {
+  selectFields,
+  selectField,
+  updateFieldByKey,
+  selectDefaultSortField,
+  getFileFromSlug,
+  selectEntryCollectionTitle,
+} from '../reducers/collections';
 import { selectIntegration, selectPublishedSlugs } from '../reducers';
 import { getIntegrationProvider } from '../integrations';
-import { currentBackend } from '../backend';
+import { currentBackend, safeEntryLabel } from '../backend';
 import { serializeValues } from '../lib/serializeEntryValues';
 import { createEntry } from '../valueObjects/Entry';
 import { createAssetProxy } from '../valueObjects/AssetProxy';
@@ -18,12 +25,14 @@ import { waitUntil } from './waitUntil';
 import { selectIsFetching, selectEntriesSortFields, selectEntryByPath } from '../reducers/entries';
 import { selectCustomPath } from '../reducers/entryDraft';
 import { navigateToCollection, navigateToEntry } from '../routing/history';
-import { getProcessSegment } from '../lib/formatters';
+import { getProcessSegment, entryPreviewPath } from '../lib/formatters';
 import { hasI18n, duplicateDefaultI18nFields, serializeI18n, I18N, I18N_FIELD } from '../lib/i18n';
 import { loadUnpublishedEntry, UNPUBLISHED_ENTRY_DISMISS_ERROR } from './editorialWorkflow';
 import { addNotification } from './notifications';
+import { notifyEntrySaved } from './deployStatus';
+import { FILES } from '../constants/collectionTypes';
 
-import type { ImplementationMediaFile } from 'decap-cms-lib-util';
+import type { ImplementationMediaFile, Note, IssueChange } from 'decap-cms-lib-util';
 import type { AnyAction } from 'redux';
 import type { ThunkDispatch } from 'redux-thunk';
 import type {
@@ -36,11 +45,21 @@ import type {
   ViewGroup,
   Entry,
   EntryDraft,
+  MediaFile,
 } from '../types/redux';
 import type { EntryValue } from '../valueObjects/Entry';
 import type { Backend, HookContext } from '../backend';
 import type AssetProxy from '../valueObjects/AssetProxy';
-import type { Set } from 'immutable';
+
+function isNotesEnabled(collection: Collection, slug: string) {
+  if (collection.get('type') === FILES) {
+    const file = getFileFromSlug(collection, slug);
+    const notesEnabled = file?.get('editor')?.get('notes');
+    if (notesEnabled != null) return notesEnabled;
+  }
+
+  return collection.get('editor')?.get('notes') ?? false;
+}
 
 /*
  * Constant Declarations
@@ -69,6 +88,8 @@ export const DRAFT_CREATE_FROM_ENTRY = 'DRAFT_CREATE_FROM_ENTRY';
 export const DRAFT_CREATE_EMPTY = 'DRAFT_CREATE_EMPTY';
 export const DRAFT_DISCARD = 'DRAFT_DISCARD';
 export const DRAFT_CHANGE_FIELD = 'DRAFT_CHANGE_FIELD';
+export const DRAFT_FIELDS_EXTERNALLY_CHANGED = 'DRAFT_FIELDS_EXTERNALLY_CHANGED';
+export const DRAFT_CLEAR_FIELD_HIGHLIGHTS = 'DRAFT_CLEAR_FIELD_HIGHLIGHTS';
 export const DRAFT_VALIDATION_ERRORS = 'DRAFT_VALIDATION_ERRORS';
 export const DRAFT_CLEAR_ERRORS = 'DRAFT_CLEAR_ERRORS';
 export const DRAFT_LOCAL_BACKUP_RETRIEVED = 'DRAFT_LOCAL_BACKUP_RETRIEVED';
@@ -88,6 +109,24 @@ export const REMOVE_DRAFT_ENTRY_MEDIA_FILES = 'REMOVE_DRAFT_ENTRY_MEDIA_FILES';
 export const REMOVE_DRAFT_ENTRY_MEDIA_FILE = 'REMOVE_DRAFT_ENTRY_MEDIA_FILE';
 
 export const CHANGE_VIEW_STYLE = 'CHANGE_VIEW_STYLE';
+
+export const DRAFT_NOTES_LOAD = 'DRAFT_NOTES_LOAD';
+export const DRAFT_NOTE_ADD = 'DRAFT_NOTE_ADD';
+export const DRAFT_NOTE_UPDATE = 'DRAFT_NOTE_UPDATE';
+export const DRAFT_NOTE_DELETE = 'DRAFT_NOTE_DELETE';
+export const NOTES_REQUEST = 'NOTES_REQUEST';
+export const NOTES_SUCCESS = 'NOTES_SUCCESS';
+export const NOTES_FAILURE = 'NOTES_FAILURE';
+export const NOTE_PERSIST_REQUEST = 'NOTE_PERSIST_REQUEST';
+export const NOTE_PERSIST_SUCCESS = 'NOTE_PERSIST_SUCCESS';
+export const NOTE_PERSIST_FAILURE = 'NOTE_PERSIST_FAILURE';
+export const NOTE_DELETE_REQUEST = 'NOTE_DELETE_REQUEST';
+export const NOTE_DELETE_SUCCESS = 'NOTE_DELETE_SUCCESS';
+export const NOTE_DELETE_FAILURE = 'NOTE_DELETE_FAILURE';
+export const NOTES_POLLING_START = 'NOTES_POLLING_START';
+export const NOTES_POLLING_STOP = 'NOTES_POLLING_STOP';
+export const NOTES_POLLING_UPDATE = 'NOTES_POLLING_UPDATE';
+export const NOTES_CHANGE_DETECTED = 'NOTES_CHANGE_DETECTED';
 
 /*
  * Simple Action Creators (Internal)
@@ -394,7 +433,7 @@ export function draftDuplicateEntry(entry: EntryMap) {
     payload: createEntry(entry.get('collection'), '', '', {
       data: entry.get('data'),
       i18n: entry.get('i18n'),
-      mediaFiles: entry.get('mediaFiles').toJS(),
+      mediaFiles: entry.get('mediaFiles').toJS() as unknown as MediaFile[],
     }),
   };
 }
@@ -424,6 +463,19 @@ export function changeDraftField({
     type: DRAFT_CHANGE_FIELD,
     payload: { field, value, metadata, entries, i18n },
   };
+}
+
+/**
+ * Fields changed from outside the editor (lib/editorApi.ts): remount their
+ * controls so widgets that only read their value on mount (the markdown and
+ * richtext editors) show it, and highlight them until clearFieldHighlights.
+ */
+export function markFieldsExternallyChanged(names: string[]) {
+  return { type: DRAFT_FIELDS_EXTERNALLY_CHANGED, payload: { names } };
+}
+
+export function clearFieldHighlights(names: string[]) {
+  return { type: DRAFT_CLEAR_FIELD_HIGHLIGHTS, payload: { names } };
 }
 
 export function changeDraftFieldValidation(
@@ -468,6 +520,22 @@ export function removeDraftEntryMediaFile({ id }: { id: string }) {
   return { type: REMOVE_DRAFT_ENTRY_MEDIA_FILE, payload: { id } };
 }
 
+export function loadNotesForEntry(notes: Note[]) {
+  return { type: DRAFT_NOTES_LOAD, payload: { notes } };
+}
+
+export function addNote(note: Note) {
+  return { type: DRAFT_NOTE_ADD, payload: { note } };
+}
+
+export function updateNote(noteId: string, updates: Partial<Note>) {
+  return { type: DRAFT_NOTE_UPDATE, payload: { id: noteId, updates } };
+}
+
+export function deleteNote(noteId: string) {
+  return { type: DRAFT_NOTE_DELETE, payload: { id: noteId } };
+}
+
 export function persistLocalBackup(entry: EntryMap, collection: Collection) {
   return (_dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
     const state = getState();
@@ -509,7 +577,7 @@ export function retrieveLocalBackup(collection: Collection, slug: string) {
           } else {
             return getAsset({
               collection,
-              entry: fromJS(entry),
+              entry: fromJS(entry) as unknown as EntryMap,
               path: file.path,
               field: file.field,
             })(dispatch, getState);
@@ -566,16 +634,16 @@ export async function tryLoadEntry(state: State, collection: Collection, slug: s
   return loadedEntry;
 }
 
+type AppendAction = { action: string; append: boolean };
+
 const appendActions = fromJS({
   ['append_next']: { action: 'next', append: true },
-});
+}) as Map<string, Map<string, string | boolean>>;
 
 function addAppendActionsToCursor(cursor: Cursor) {
   return Cursor.create(cursor).updateStore('actions', (actions: Set<string>) => {
     return actions.union(
-      appendActions
-        .filter((v: Map<string, string | boolean>) => actions.has(v.get('action') as string))
-        .keySeq(),
+      appendActions.filter(v => actions.has(v.get('action') as string)).keySeq(),
     );
   });
 }
@@ -587,9 +655,19 @@ export function loadEntries(collection: Collection, page = 0) {
     }
     const state = getState();
     const sortFields = selectEntriesSortFields(state.entries, collection.get('name'));
+
+    // If user has already set a sort, use it
     if (sortFields && sortFields.length > 0) {
       const field = sortFields[0];
       return dispatch(sortByField(collection, field.get('key'), field.get('direction')));
+    }
+
+    // Otherwise, check for a default sort field in the collection configuration
+    const defaultSort = selectDefaultSortField(collection);
+    if (defaultSort) {
+      const direction =
+        defaultSort.direction === 'desc' ? SortDirection.Descending : SortDirection.Ascending;
+      return dispatch(sortByField(collection, defaultSort.field, direction));
     }
 
     const backend = currentBackend(state.config);
@@ -672,7 +750,7 @@ export function traverseCollectionCursor(collection: Collection, action: string)
     const backend = currentBackend(state.config);
 
     const { action: realAction, append } = appendActions.has(action)
-      ? appendActions.get(action).toJS()
+      ? (appendActions.get(action)!.toJS() as AppendAction)
       : { action, append: false };
     const cursor = selectCollectionEntriesCursor(state.cursors, collection.get('name'));
 
@@ -738,10 +816,21 @@ function getMetaFields(fields: EntryFields) {
 export function createEmptyDraft(collection: Collection, search: string) {
   return async (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
     const params = new URLSearchParams(search);
-    params.forEach((value, key) => {
-      collection = updateFieldByKey(collection, key, field =>
-        field.set('default', processValue(value)),
-      );
+    const uniqueKeys = Set([...params.keys()]).toArray();
+
+    uniqueKeys.forEach(key => {
+      const field = selectField(collection, key);
+      const isMultiple = field?.get('multiple', false);
+      const values = params.getAll(key);
+
+      collection = updateFieldByKey(collection, key, field => {
+        if (isMultiple) {
+          const allValues = values.flatMap(v => v.split(',')).map(processValue);
+          return field.set('default', List(allValues));
+        } else {
+          return field.set('default', processValue(values[values.length - 1]));
+        }
+      });
     });
 
     const fields = collection.get('fields', List());
@@ -953,23 +1042,28 @@ export function persistEntry(
         status: customEntryStatus,
       })
       .then(async (newSlug: string) => {
+        // Both arguments are guarded: the entry is already committed, so a
+        // preSave handler that reshaped the data must not fail the save.
         dispatch(
-          addNotification({
-            message: {
-              key: 'ui.toast.entrySaved',
-            },
-            type: 'success',
-            dismissAfter: 4000,
-          }),
+          notifyEntrySaved(
+            safeEntryLabel(collection, serializedEntry),
+            entryPreviewPath(collection, newSlug, serializedEntry, state.config.slug),
+          ),
         );
 
         if (!isCustomEntry) {
-          // re-load media library if entry had media files
-          if (assetProxies.length > 0) {
-            await dispatch(loadMedia());
-          }
+          // Release the editor as soon as the entry is committed: everything
+          // after this is a background refresh the editor is not waiting on.
           dispatch(entryPersisted(collection, serializedEntry, newSlug));
-          if (collection.has('nested')) {
+
+          // Not awaited; a rejection is logged, never reported as a failed save.
+          if (assetProxies.length > 0) {
+            Promise.resolve(dispatch(loadMedia())).catch(error => {
+              console.error('Failed to reload the media library after saving', error);
+            });
+          }
+
+          if (collection.has('nested') || backend.implementation.reloadEntriesAfterPersist) {
             await dispatch(loadEntries(collection));
           }
           if (entry.get('slug') !== newSlug) {
@@ -1054,6 +1148,426 @@ export function deleteEntry(
       });
   };
 }
+export function notesLoading(collection: Collection, slug: string) {
+  return {
+    type: NOTES_REQUEST,
+    payload: {
+      collection: collection.get('name'),
+      slug,
+    },
+  };
+}
+
+export function notesLoaded(collection: Collection, slug: string, notes: Note[]) {
+  return {
+    type: NOTES_SUCCESS,
+    payload: {
+      collection: collection.get('name'),
+      slug,
+      notes,
+    },
+  };
+}
+
+export function notesLoadError(error: Error, collection: Collection, slug: string) {
+  return {
+    type: NOTES_FAILURE,
+    payload: {
+      error,
+      collection: collection.get('name'),
+      slug,
+    },
+  };
+}
+
+export function notePersisting(collection: Collection, slug: string, note: Note) {
+  return {
+    type: NOTE_PERSIST_REQUEST,
+    payload: {
+      collection: collection.get('name'),
+      slug,
+      noteId: note.id,
+    },
+  };
+}
+
+export function notePersisted(collection: Collection, slug: string, note: Note) {
+  return {
+    type: NOTE_PERSIST_SUCCESS,
+    payload: {
+      collection: collection.get('name'),
+      slug,
+      note,
+    },
+  };
+}
+
+export function notePersistFail(collection: Collection, slug: string, note: Note, error: Error) {
+  return {
+    type: NOTE_PERSIST_FAILURE,
+    error: 'Failed to persist note',
+    payload: {
+      collection: collection.get('name'),
+      slug,
+      noteId: note.id,
+      error: error.toString(),
+    },
+  };
+}
+
+export function noteDeleting(collection: Collection, slug: string, noteId: string) {
+  return {
+    type: NOTE_DELETE_REQUEST,
+    payload: {
+      collection: collection.get('name'),
+      slug,
+      noteId,
+    },
+  };
+}
+
+export function noteDeleted(collection: Collection, slug: string, noteId: string) {
+  return {
+    type: NOTE_DELETE_SUCCESS,
+    payload: {
+      collection: collection.get('name'),
+      slug,
+      noteId,
+    },
+  };
+}
+
+export function noteDeleteFail(collection: Collection, slug: string, noteId: string, error: Error) {
+  return {
+    type: NOTE_DELETE_FAILURE,
+    payload: {
+      collection: collection.get('name'),
+      slug,
+      noteId,
+      error: error.toString(),
+    },
+  };
+}
+
+export function loadNotes(collection: Collection, slug: string) {
+  return async (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
+    dispatch(notesLoading(collection, slug));
+    try {
+      const state = getState();
+      const backend = currentBackend(state.config);
+      const notes = await backend.getNotes(collection.get('name'), slug);
+
+      // Set entrySlug for all notes
+      const notesWithSlug = notes.map(note => ({ ...note, entrySlug: slug }));
+
+      dispatch(notesLoaded(collection, slug, notesWithSlug));
+      dispatch(loadNotesForEntry(notesWithSlug));
+      dispatch(startNotesPolling(collection, slug));
+    } catch (error) {
+      dispatch(notesLoadError(error, collection, slug));
+      dispatch(loadNotesForEntry([])); // Start with empty notes
+    }
+  };
+}
+
+export function pollingStarted(collection: Collection, slug: string) {
+  return {
+    type: NOTES_POLLING_START,
+    payload: {
+      collection: collection.get('name'),
+      slug,
+    },
+  };
+}
+
+export function pollingStopped(collection: Collection, slug: string) {
+  return {
+    type: NOTES_POLLING_STOP,
+    payload: {
+      collection: collection.get('name'),
+      slug,
+    },
+  };
+}
+
+export function notesUpdatedFromPolling(
+  collection: Collection,
+  slug: string,
+  notes: Note[],
+  changes: IssueChange[],
+) {
+  return {
+    type: NOTES_POLLING_UPDATE,
+    payload: {
+      collection: collection.get('name'),
+      slug,
+      notes,
+      changes,
+    },
+  };
+}
+
+export function changeDetected(collection: Collection, slug: string, change: IssueChange) {
+  return {
+    type: NOTES_CHANGE_DETECTED,
+    payload: {
+      collection: collection.get('name'),
+      slug,
+      change,
+    },
+  };
+}
+
+export function startNotesPolling(collection: Collection, slug: string) {
+  return async (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
+    try {
+      const state = getState();
+      const backend = currentBackend(state.config);
+
+      if (!backend.startNotesPolling) {
+        console.warn('[DecapNotes Polling] Backend does not support notes polling');
+        return;
+      }
+
+      const callbacks = {
+        onUpdate: (notes: Note[], changes: IssueChange[]) => {
+          if (getState().entryDraft?.getIn(['entry', 'slug']) !== slug) {
+            return;
+          }
+
+          dispatch(notesUpdatedFromPolling(collection, slug, notes, changes));
+          dispatch(loadNotesForEntry(notes));
+        },
+        onChange: (change: IssueChange) => {
+          // Dispatch action for individual change notifications
+          dispatch(changeDetected(collection, slug, change));
+        },
+      };
+
+      await backend.startNotesPolling(collection.get('name'), slug, callbacks);
+
+      dispatch(pollingStarted(collection, slug));
+    } catch (error) {
+      console.error('[DecapNotes Polling] Failed to start notes polling:', error);
+    }
+  };
+}
+/**
+ * Stop watching notes for an entry
+ */
+export function stopNotesPolling(collection: Collection, slug: string) {
+  return async (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
+    try {
+      const state = getState();
+      const backend = currentBackend(state.config);
+
+      if (!backend.stopNotesPolling) {
+        return;
+      }
+
+      await backend.stopNotesPolling(collection.get('name'), slug);
+
+      dispatch(pollingStopped(collection, slug));
+    } catch (error) {
+      console.error('[Redux] Failed to stop notes polling:', error);
+    }
+  };
+}
+
+/**
+ * Manually refresh notes
+ */
+export function refreshNotesNow(collection: Collection, slug: string) {
+  return async (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
+    try {
+      const state = getState();
+      const backend = currentBackend(state.config);
+
+      if (!backend.refreshNotesNow) {
+        return dispatch(loadNotes(collection, slug));
+      }
+
+      await backend.refreshNotesNow(collection.get('name'), slug);
+    } catch (error) {
+      console.error('[DecapNotes Polling] Failed to refresh notes:', error);
+    }
+  };
+}
+
+export function persistNote(collection: Collection, slug: string, note: Omit<Note, 'id'>) {
+  return async (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
+    const state = getState();
+    const backend = currentBackend(state.config);
+    // Named off the open draft rather than fetched: this runs from the editor,
+    // so the entry is already in hand, and `selectEntryCollectionTitle` is the
+    // same thing the collection list shows — it honours a `summary` template,
+    // a files collection's label, and an inferred title field, none of which a
+    // backend reading the raw file can work out for itself.
+    const draftEntry = state.entryDraft?.get('entry');
+    const entryTitle =
+      draftEntry && draftEntry.get('slug') === slug
+        ? selectEntryCollectionTitle(collection, draftEntry)
+        : undefined;
+    dispatch(notePersisting(collection, slug, note as Note));
+    try {
+      const savedNote = await backend.addNote(collection.get('name'), slug, note, entryTitle);
+      dispatch(notePersisted(collection, slug, savedNote));
+      dispatch(addNote(savedNote));
+      dispatch(
+        addNotification({
+          message: {
+            key: 'ui.toast.noteAdded',
+          },
+          type: 'success',
+          dismissAfter: 4000,
+        }),
+      );
+      // After adding a note, polling gets restarted. In case the note is the first ever note persisted (which is the moment a Github Issue is created for example) this will help the Polling system to pickup the source of the Notes.
+      if (isNotesEnabled(collection, slug)) {
+        // Small delay to let the issue creation propagate
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        await dispatch(startNotesPolling(collection, slug));
+      }
+      return savedNote;
+    } catch (error) {
+      dispatch(notePersistFail(collection, slug, note as Note, error));
+      dispatch(
+        addNotification({
+          message: {
+            details: error.message,
+            key: 'ui.toast.onFailToAddNote',
+          },
+          type: 'error',
+          dismissAfter: 8000,
+        }),
+      );
+    }
+  };
+}
+
+export function updateNotePersist(
+  collection: Collection,
+  slug: string,
+  noteId: string,
+  updates: Partial<Note>,
+) {
+  return async (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
+    const state = getState();
+    const backend = currentBackend(state.config);
+
+    // Create a temporary note object for the persist actions
+    const tempNote = { id: noteId, ...updates } as Note;
+    dispatch(notePersisting(collection, slug, tempNote));
+
+    try {
+      const updatedNote = await backend.updateNote(collection.get('name'), slug, noteId, updates);
+      dispatch(notePersisted(collection, slug, updatedNote));
+      dispatch(updateNote(noteId, updates));
+
+      dispatch(
+        addNotification({
+          message: {
+            key: 'ui.toast.noteUpdated',
+          },
+          type: 'success',
+          dismissAfter: 4000,
+        }),
+      );
+
+      return updatedNote;
+    } catch (error) {
+      dispatch(notePersistFail(collection, slug, tempNote, error));
+      dispatch(
+        addNotification({
+          message: {
+            details: error.message,
+            key: 'ui.toast.onFailToUpdateNote',
+          },
+          type: 'error',
+          dismissAfter: 8000,
+        }),
+      );
+    }
+  };
+}
+
+export function deleteNotePersist(collection: Collection, slug: string, noteId: string) {
+  return async (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
+    const state = getState();
+    const backend = currentBackend(state.config);
+
+    dispatch(noteDeleting(collection, slug, noteId));
+
+    try {
+      await backend.deleteNote(collection.get('name'), slug, noteId);
+      dispatch(noteDeleted(collection, slug, noteId));
+      dispatch(deleteNote(noteId));
+
+      dispatch(
+        addNotification({
+          message: {
+            key: 'ui.toast.noteDeleted',
+          },
+          type: 'success',
+          dismissAfter: 4000,
+        }),
+      );
+    } catch (error) {
+      dispatch(noteDeleteFail(collection, slug, noteId, error));
+      dispatch(
+        addNotification({
+          message: {
+            details: error.message,
+            key: 'ui.toast.onFailToDeleteNote',
+          },
+          type: 'error',
+          dismissAfter: 8000,
+        }),
+      );
+    }
+  };
+}
+
+export function toggleNoteResolutionPersist(collection: Collection, slug: string, noteId: string) {
+  return async (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
+    const state = getState();
+    const backend = currentBackend(state.config);
+
+    // Create a temporary note object for the persist actions
+    const tempNote = { id: noteId } as Note;
+    dispatch(notePersisting(collection, slug, tempNote));
+
+    try {
+      const updatedNote = await backend.toggleNoteResolution(collection.get('name'), slug, noteId);
+      dispatch(notePersisted(collection, slug, updatedNote));
+      dispatch(updateNote(noteId, { resolved: updatedNote.resolved }));
+
+      dispatch(
+        addNotification({
+          message: {
+            key: updatedNote.resolved ? 'ui.toast.noteResolved' : 'ui.toast.noteReopened',
+          },
+          type: 'success',
+          dismissAfter: 4000,
+        }),
+      );
+
+      return updatedNote;
+    } catch (error) {
+      dispatch(notePersistFail(collection, slug, tempNote, error));
+      dispatch(
+        addNotification({
+          message: {
+            details: error.message,
+            key: 'ui.toast.onFailToToggleNote',
+          },
+          type: 'error',
+          dismissAfter: 8000,
+        }),
+      );
+    }
+  };
+}
 
 function getPathError(
   path: string | undefined,
@@ -1086,7 +1600,8 @@ export function validateMetaField(
       .map(getProcessSegment(state.config.slug))
       .join('/');
 
-    if (value !== sanitizedPath) {
+    // Slug processing lower-cases each segment, but folder names may keep their case
+    if (value.toLocaleLowerCase() !== sanitizedPath) {
       return getPathError(value, 'invalidPath', t);
     }
 

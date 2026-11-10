@@ -3,6 +3,166 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [3.17.3](https://github.com/decaporg/decap-cms/compare/decap-cms-app@3.17.2...decap-cms-app@3.17.3) (2026-10-26)
+
+**Note:** Version bump only for package decap-cms-app
+
+## [3.17.2](https://github.com/decaporg/decap-cms/compare/decap-cms-app@3.17.1...decap-cms-app@3.17.2) (2026-10-26)
+
+**Note:** Version bump only for package decap-cms-app
+
+## [3.17.1](https://github.com/decaporg/decap-cms/compare/decap-cms-app@3.17.0...decap-cms-app@3.17.1) (2026-10-14)
+
+**Note:** Version bump only for package decap-cms-app
+
+# [3.17.0](https://github.com/decaporg/decap-cms/compare/decap-cms-app@3.17.0-beta.5...decap-cms-app@3.17.0) (2026-10-14)
+
+**Note:** Version bump only for package decap-cms-app
+
+# [3.17.0-beta.5](https://github.com/decaporg/decap-cms/compare/decap-cms-app@3.17.0-beta.3...decap-cms-app@3.17.0-beta.5) (2026-10-13)
+
+### Features
+
+- **lib-turbo:** share the Turbo backends' session, fetch, cache and login code ([367b528](https://github.com/decaporg/decap-cms/commit/367b5286afe2c98bb28be38866b43275ab63bd65))
+
+# [3.17.0-beta.4](https://github.com/decaporg/decap-cms/compare/decap-cms-app@3.17.0-beta.3...decap-cms-app@3.17.0-beta.4) (2026-10-12)
+
+### Features
+
+- **lib-turbo:** share the Turbo backends' session, fetch, cache and login code ([367b528](https://github.com/decaporg/decap-cms/commit/367b5286afe2c98bb28be38866b43275ab63bd65))
+
+# [3.17.0-beta.3](https://github.com/decaporg/decap-cms/compare/decap-cms-app@3.17.0-beta.2...decap-cms-app@3.17.0-beta.3) (2026-10-08)
+
+**Note:** Version bump only for package decap-cms-app
+
+# [3.17.0-beta.2](https://github.com/decaporg/decap-cms/compare/decap-cms-app@3.17.0-beta.1...decap-cms-app@3.17.0-beta.2) (2026-09-22)
+
+**Note:** Version bump only for package decap-cms-app
+
+## [3.16.3](https://github.com/decaporg/decap-cms/compare/decap-cms-app@3.16.2...decap-cms-app@3.16.3) (2026-09-22)
+
+**Note:** Version bump only for package decap-cms-app
+
+# [3.17.0-beta.1](https://github.com/decaporg/decap-cms/compare/decap-cms-app@3.17.0-beta.0...decap-cms-app@3.17.0-beta.1) (2026-09-14)
+
+**Note:** Version bump only for package decap-cms-app
+
+# [3.17.0-beta.0](https://github.com/decaporg/decap-cms/compare/decap-cms-app@3.16.2...decap-cms-app@3.17.0-beta.0) (2026-09-10)
+
+### Bug Fixes
+
+- make pnpm run build and lint work under corepack-managed pnpm ([2792b04](https://github.com/decaporg/decap-cms/commit/2792b04c9ff9c80b780850fbb3b0b31e3659bb68))
+
+### Features
+
+- add turbo gitlab backend, rename turbo-github ([ea09b39](https://github.com/decaporg/decap-cms/commit/ea09b3995721227d0eb57c329ad2616d3defd439))
+- **deap-turbo:** create decap-turbo backend - wip ([17f228a](https://github.com/decaporg/decap-cms/commit/17f228ad5e9ef0281a4c8db2c2faff97cc6f563f))
+- **proxy:** wip - first draft / caching allEntriesByFolder ([56ca436](https://github.com/decaporg/decap-cms/commit/56ca436725668a997ba4ee24122d1e10bbb2ed3c))
+
+## [3.16.2](https://github.com/decaporg/decap-cms/compare/decap-cms-app@3.16.1...decap-cms-app@3.16.2) (2026-09-10)
+
+**Note:** Version bump only for package decap-cms-app
+
+## [3.16.1](https://github.com/decaporg/decap-cms/compare/decap-cms-app@3.16.0...decap-cms-app@3.16.1) (2026-09-08)
+
+**Note:** Version bump only for package decap-cms-app
+
+# [3.16.0](https://github.com/decaporg/decap-cms/compare/decap-cms-app@3.15.1...decap-cms-app@3.16.0) (2026-08-31)
+
+**Note:** Version bump only for package decap-cms-app
+
+## [3.15.1](https://github.com/decaporg/decap-cms/compare/decap-cms-app@3.15.0...decap-cms-app@3.15.1) (2026-07-24)
+
+**Note:** Version bump only for package decap-cms-app
+
+# [3.15.0](https://github.com/decaporg/decap-cms/compare/decap-cms-app@3.14.1...decap-cms-app@3.15.0) (2026-07-23)
+
+### Features
+
+- add uuid widget ([#6675](https://github.com/decaporg/decap-cms/issues/6675)) ([78c0793](https://github.com/decaporg/decap-cms/commit/78c079313e0eb2f0f98d2734338ead8046dfdba4))
+
+## [3.14.1](https://github.com/decaporg/decap-cms/compare/decap-cms-app@3.14.0...decap-cms-app@3.14.1) (2026-06-15)
+
+**Note:** Version bump only for package decap-cms-app
+
+# [3.14.0](https://github.com/decaporg/decap-cms/compare/decap-cms-app@3.13.0...decap-cms-app@3.14.0) (2026-06-08)
+
+### Bug Fixes
+
+- remove unused dependencies and specify missing dependencies ([#7833](https://github.com/decaporg/decap-cms/issues/7833)) ([e324a14](https://github.com/decaporg/decap-cms/commit/e324a142f7f0ba63c760b2e8524d971c35200f87))
+
+# [3.13.0](https://github.com/decaporg/decap-cms/compare/decap-cms-app@3.12.2...decap-cms-app@3.13.0) (2026-06-01)
+
+**Note:** Version bump only for package decap-cms-app
+
+## [3.12.2](https://github.com/decaporg/decap-cms/compare/decap-cms-app@3.12.1...decap-cms-app@3.12.2) (2026-04-17)
+
+**Note:** Version bump only for package decap-cms-app
+
+## [3.12.1](https://github.com/decaporg/decap-cms/compare/decap-cms-app@3.12.0...decap-cms-app@3.12.1) (2026-04-16)
+
+### Bug Fixes
+
+- add decap-cms-widget-richtext dependency ([be8cf6b](https://github.com/decaporg/decap-cms/commit/be8cf6bf18f832d1e8664b2604467872a5e8d83e)), closes [#7787](https://github.com/decaporg/decap-cms/issues/7787)
+
+# [3.12.0](https://github.com/decaporg/decap-cms/compare/decap-cms-app@3.11.0...decap-cms-app@3.12.0) (2026-04-16)
+
+**Note:** Version bump only for package decap-cms-app
+
+# [3.11.0](https://github.com/decaporg/decap-cms/compare/decap-cms-app@3.10.1...decap-cms-app@3.11.0) (2026-03-24)
+
+**Note:** Version bump only for package decap-cms-app
+
+## [3.10.1](https://github.com/decaporg/decap-cms/compare/decap-cms-app@3.10.0...decap-cms-app@3.10.1) (2026-02-23)
+
+**Note:** Version bump only for package decap-cms-app
+
+# [3.10.0](https://github.com/decaporg/decap-cms/compare/decap-cms-app@3.9.0...decap-cms-app@3.10.0) (2025-12-18)
+
+**Note:** Version bump only for package decap-cms-app
+
+# [3.9.0](https://github.com/decaporg/decap-cms/compare/decap-cms-app@3.8.4...decap-cms-app@3.9.0) (2025-11-04)
+
+**Note:** Version bump only for package decap-cms-app
+
+## [3.8.4](https://github.com/decaporg/decap-cms/compare/decap-cms-app@3.8.3...decap-cms-app@3.8.4) (2025-09-30)
+
+**Note:** Version bump only for package decap-cms-app
+
+## [3.8.3](https://github.com/decaporg/decap-cms/compare/decap-cms-app@3.8.2...decap-cms-app@3.8.3) (2025-07-31)
+
+**Note:** Version bump only for package decap-cms-app
+
+## [3.8.2](https://github.com/decaporg/decap-cms/compare/decap-cms-app@3.8.1...decap-cms-app@3.8.2) (2025-07-22)
+
+**Note:** Version bump only for package decap-cms-app
+
+## [3.8.1](https://github.com/decaporg/decap-cms/compare/decap-cms-app@3.8.0...decap-cms-app@3.8.1) (2025-07-22)
+
+**Note:** Version bump only for package decap-cms-app
+
+# [3.8.0](https://github.com/decaporg/decap-cms/compare/decap-cms-app@3.7.2...decap-cms-app@3.8.0) (2025-07-15)
+
+**Note:** Version bump only for package decap-cms-app
+
+## [3.7.2](https://github.com/decaporg/decap-cms/compare/decap-cms-app@3.7.1...decap-cms-app@3.7.2) (2025-07-10)
+
+**Note:** Version bump only for package decap-cms-app
+
+## [3.7.1](https://github.com/decaporg/decap-cms/compare/decap-cms-app@3.7.0...decap-cms-app@3.7.1) (2025-06-26)
+
+### Bug Fixes
+
+- could not resolve "ajv" ([#7520](https://github.com/decaporg/decap-cms/issues/7520)) ([93a369d](https://github.com/decaporg/decap-cms/commit/93a369d9b6299d891bf0338a09a2d5a503176018))
+
+# [3.7.0](https://github.com/decaporg/decap-cms/compare/decap-cms-app@3.6.4...decap-cms-app@3.7.0) (2025-06-26)
+
+**Note:** Version bump only for package decap-cms-app
+
+## [3.6.4](https://github.com/decaporg/decap-cms/compare/decap-cms-app@3.6.3...decap-cms-app@3.6.4) (2025-06-06)
+
+**Note:** Version bump only for package decap-cms-app
+
 ## [3.6.3](https://github.com/decaporg/decap-cms/compare/decap-cms-app@3.6.2...decap-cms-app@3.6.3) (2025-05-15)
 
 **Note:** Version bump only for package decap-cms-app

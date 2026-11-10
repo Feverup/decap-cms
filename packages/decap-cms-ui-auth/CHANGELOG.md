@@ -1,0 +1,38 @@
+# Change Log
+
+All notable changes to this project will be documented in this file.
+See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
+
+## [3.3.5](https://github.com/decaporg/decap-cms/compare/decap-cms-ui-auth@3.3.4...decap-cms-ui-auth@3.3.5) (2026-10-26)
+
+**Note:** Version bump only for package decap-cms-ui-auth
+
+## [3.3.4](https://github.com/decaporg/decap-cms/compare/decap-cms-ui-auth@3.3.3...decap-cms-ui-auth@3.3.4) (2026-10-14)
+
+**Note:** Version bump only for package decap-cms-ui-auth
+
+## [3.3.3](https://github.com/decaporg/decap-cms/compare/decap-cms-ui-auth@3.3.3-beta.0...decap-cms-ui-auth@3.3.3) (2026-10-14)
+
+**Note:** Version bump only for package decap-cms-ui-auth
+
+## [3.3.3-beta.0](https://github.com/decaporg/decap-cms/compare/decap-cms-ui-auth@3.3.2...decap-cms-ui-auth@3.3.3-beta.0) (2026-09-10)
+
+**Note:** Version bump only for package decap-cms-ui-auth
+
+## [3.3.2](https://github.com/decaporg/decap-cms/compare/decap-cms-ui-auth@3.3.1...decap-cms-ui-auth@3.3.2) (2026-09-10)
+
+**Note:** Version bump only for package decap-cms-ui-auth
+
+## [3.3.1](https://github.com/decaporg/decap-cms/compare/decap-cms-ui-auth@3.3.0...decap-cms-ui-auth@3.3.1) (2026-09-08)
+
+**Note:** Version bump only for package decap-cms-ui-auth
+
+# [3.3.0](https://github.com/decaporg/decap-cms/compare/decap-cms-ui-auth@3.2.3...decap-cms-ui-auth@3.3.0) (2025-11-04)
+
+### Bug Fixes
+
+- update react peer dependency for decap-cms-ui-auth ([#7642](https://github.com/decaporg/decap-cms/issues/7642)) ([5940784](https://github.com/decaporg/decap-cms/commit/5940784fc6e8ef1a498c6c942c5caa15d6c47b92)), closes [#7365](https://github.com/decaporg/decap-cms/issues/7365)
+
+## 3.2.3 (2025-07-31)
+
+**Note:** Version bump only for package decap-cms-ui-auth
