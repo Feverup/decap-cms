@@ -394,12 +394,21 @@ export default class RelationControl extends React.Component {
     const searchFieldsArray = getFieldArray(field.get('search_fields'));
     const file = field.get('file');
 
-    query(forID, collection, searchFieldsArray, term, file).then(({ payload }) => {
-      const hits = payload.hits || [];
-      const options = this.parseHitOptions(hits);
-      const uniq = uniqOptions(this.state.initialOptions, options).slice(0, optionsLength);
-      callback(uniq);
-    });
+    query(forID, collection, searchFieldsArray, term, file)
+      .then(({ payload }) => {
+        const hits = payload.hits || [];
+        const options = this.parseHitOptions(hits);
+        // With a search term, matches go first so selected options can't crowd them out.
+        const uniq = term
+          ? uniqOptions(options, this.state.initialOptions).slice(0, optionsLength)
+          : uniqOptions(this.state.initialOptions, options).slice(0, optionsLength);
+        callback(uniq);
+      })
+      .catch(error => {
+        // Without a callback the menu stays on "Loading..." forever.
+        console.error('Failed to load options:', error);
+        callback([]);
+      });
   }, 500);
 
   render() {

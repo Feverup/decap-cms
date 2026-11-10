@@ -450,6 +450,31 @@ describe('Relation widget', () => {
     });
   });
 
+  it('should stop loading when a search query fails (upstream #7556)', async () => {
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+    const query = jest.fn(() => Promise.reject(new Error('rate limited')));
+    const { container, findByText } = render(
+      <RelationControl
+        field={fromJS(fieldConfig)}
+        value=""
+        query={query}
+        queryHits={[]}
+        onChange={jest.fn()}
+        forID="relation-field"
+        classNameWrapper=""
+        setActiveStyle={jest.fn()}
+        setInactiveStyle={jest.fn()}
+      />,
+    );
+    const input = container.querySelector('input');
+
+    fireEvent.change(input, { target: { value: 'Post' } });
+
+    expect(await findByText('No options', {}, { timeout: 2000 })).toBeInTheDocument();
+    expect(console.error).toHaveBeenCalledWith('Failed to load options:', expect.any(Error));
+    console.error.mockRestore();
+  });
+
   it('should update option list based on nested search term', async () => {
     const field = fromJS(nestedFieldConfig);
     const { getAllByText, input } = setup({ field });
