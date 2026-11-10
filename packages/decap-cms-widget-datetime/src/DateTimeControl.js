@@ -62,6 +62,11 @@ class DateTimeControl extends React.Component {
     isDisabled: false,
   };
 
+  // While focused, show what the user typed: re-formatting a partial year ("0002") mangles it.
+  state = {
+    inputValue: null,
+  };
+
   componentDidMount() {
     const { value } = this.props;
     if (value === '{{now}}') {
@@ -155,13 +160,24 @@ class DateTimeControl extends React.Component {
 
   onInputChange = e => {
     const etv = e.target.value;
+    this.setState({ inputValue: etv });
     this.handleChange(etv);
   };
 
+  onInputFocus = e => {
+    this.setState({ inputValue: e.target.value });
+    this.props.setActiveStyle();
+  };
+
+  onInputBlur = () => {
+    this.setState({ inputValue: null });
+    this.props.setInactiveStyle();
+  };
+
   render() {
-    const { forID, value, classNameWrapper, setActiveStyle, setInactiveStyle, t, isDisabled } =
-      this.props;
+    const { forID, value, classNameWrapper, t, isDisabled } = this.props;
     const { inputType } = this.getFormat();
+    const { inputValue } = this.state;
 
     return (
       <div
@@ -176,10 +192,10 @@ class DateTimeControl extends React.Component {
           id={forID}
           data-testid={forID}
           type={inputType}
-          value={value ? this.formatInputValue(value) : ''}
+          value={inputValue === null ? (value ? this.formatInputValue(value) : '') : inputValue}
           onChange={this.onInputChange}
-          onFocus={setActiveStyle}
-          onBlur={setInactiveStyle}
+          onFocus={this.onInputFocus}
+          onBlur={this.onInputBlur}
           disabled={isDisabled}
         />
         {this.isUtc && (
