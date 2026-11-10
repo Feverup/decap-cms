@@ -3,6 +3,56 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [3.6.5](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-datetime@3.6.4...decap-cms-widget-datetime@3.6.5) (2026-10-26)
+
+### Bug Fixes
+
+- **datetime:** preserve year while typing ([#8002](https://github.com/decaporg/decap-cms/issues/8002)) ([295904e](https://github.com/decaporg/decap-cms/commit/295904e551c79b89def924d0d063c9809650f5eb)), closes [#7939](https://github.com/decaporg/decap-cms/issues/7939)
+
+## [3.6.4](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-datetime@3.6.3...decap-cms-widget-datetime@3.6.4) (2026-10-14)
+
+**Note:** Version bump only for package decap-cms-widget-datetime
+
+## [3.6.3](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-datetime@3.6.3-beta.0...decap-cms-widget-datetime@3.6.3) (2026-10-14)
+
+**Note:** Version bump only for package decap-cms-widget-datetime
+
+## [3.6.3-beta.0](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-datetime@3.6.2...decap-cms-widget-datetime@3.6.3-beta.0) (2026-09-10)
+
+**Note:** Version bump only for package decap-cms-widget-datetime
+
+## [3.6.2](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-datetime@3.6.1...decap-cms-widget-datetime@3.6.2) (2026-09-10)
+
+**Note:** Version bump only for package decap-cms-widget-datetime
+
+## [3.6.1](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-datetime@3.6.0...decap-cms-widget-datetime@3.6.1) (2026-09-08)
+
+**Note:** Version bump only for package decap-cms-widget-datetime
+
+# [3.6.0](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-datetime@3.5.0...decap-cms-widget-datetime@3.6.0) (2026-07-23)
+
+**Note:** Version bump only for package decap-cms-widget-datetime
+
+# [3.5.0](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-datetime@3.4.1...decap-cms-widget-datetime@3.5.0) (2026-06-08)
+
+### Bug Fixes
+
+- remove unused dependencies and specify missing dependencies ([#7833](https://github.com/decaporg/decap-cms/issues/7833)) ([e324a14](https://github.com/decaporg/decap-cms/commit/e324a142f7f0ba63c760b2e8524d971c35200f87))
+
+## [3.4.1](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-datetime@3.4.0...decap-cms-widget-datetime@3.4.1) (2026-02-23)
+
+### Bug Fixes
+
+- **a11y:** aria-labels ([#7720](https://github.com/decaporg/decap-cms/issues/7720)) ([cc92370](https://github.com/decaporg/decap-cms/commit/cc92370595a85590ffede50a99259d52ba3eb76b))
+
+# [3.4.0](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-datetime@3.2.3...decap-cms-widget-datetime@3.4.0) (2025-07-15)
+
+**Note:** Version bump only for package decap-cms-widget-datetime
+
+# [3.3.0](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-datetime@3.2.3...decap-cms-widget-datetime@3.3.0) (2025-06-26)
+
+**Note:** Version bump only for package decap-cms-widget-datetime
+
 ## [3.2.3](https://github.com/decaporg/decap-cms/compare/decap-cms-widget-datetime@3.2.2...decap-cms-widget-datetime@3.2.3) (2024-08-30)
 
 ### Bug Fixes

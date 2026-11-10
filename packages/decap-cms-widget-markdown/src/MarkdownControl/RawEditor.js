@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import PropTypes from 'prop-types';
 import ImmutablePropTypes from 'react-immutable-proptypes';
 import { ClassNames } from '@emotion/react';
@@ -57,7 +57,7 @@ function RawEditor(props) {
   }
 
   return (
-    <Slate editor={editor} value={value} onChange={handleChange}>
+    <Slate editor={editor} value={value} initialValue={value} onChange={handleChange}>
       <RawEditorContainer>
         <EditorControlBar>
           <Toolbar

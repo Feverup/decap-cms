@@ -1,0 +1,134 @@
+name: Publish Packages
+
+on:
+  push:
+    tags:
+      - 'decap-*@*'
+  workflow_dispatch:
+    inputs:
+      dist_tag:
+        description: >
+          npm dist-tag to publish under. `latest` is what `npm install <pkg>` resolves to, so a prerelease must go out as `beta` or it becomes the default install for everyone.
+        type: choice
+        default: latest
+        options:
+          - latest
+          - beta
+      allow_unattested:
+        description: >
+          Comma-separated packages published by hand for their first release, which carry no provenance (for example decap-cms-lib-turbo).
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+  id-token: write  # Required for OIDC trusted publishers
+
+# Two publish runs racing each other (a dispatch plus tag-push runs, or two
+# dispatches) each see the other's half-published state.
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: production  # Optional: adds approval requirements and deployment protection
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Required for Lerna to detect changes
+
+      # Only a lerna version commit may be published: anything else means the
+      # dispatch ran on a branch head that moved past (or never had) a release.
+      - name: Require a release commit
+        run: |
+          subject="$(git log -1 --format=%s)"
+          if [ "$subject" != "chore(release): publish" ]; then
+            echo "::error::HEAD is '$subject', not 'chore(release): publish'. Dispatch on the version commit."
+            exit 1
+          fi
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.12.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build packages
+        run: pnpm run build
+
+      - name: Run tests
+        run: pnpm run test:ci
+
+      - name: Test package integrity
+        run: pnpm run test:package-integrity
+
+      # Installs the pnpm-packed tarballs with npm, yarn 4, yarn 1 and pnpm and
+      # runs a default-config webpack build of decap-cms-app: what consumers do.
+      - name: Smoke-install packed packages
+        run: node scripts/smoke-install-packed.mjs
+
+      - name: Debug
+        run: |
+          echo "::group::Node & npm versions"
+          node -v
+          npm -v
+          pnpm -v
+          echo "::endgroup::"
+
+          echo "::group::npm config (redacted)"
+          npm config get registry || true
+          npm config list -l | sed 's/_authToken.*/_authToken=[REDACTED]/' || true
+          echo "::endgroup::"
+
+          echo "::group::Env checks"
+          if [ -n "${NODE_AUTH_TOKEN}" ]; then echo "NODE_AUTH_TOKEN set? yes"; else echo "NODE_AUTH_TOKEN set? no"; fi
+          if [ -n "${NPM_CONFIG_USERCONFIG}" ]; then echo "NPM_CONFIG_USERCONFIG set? yes"; else echo "NPM_CONFIG_USERCONFIG set? no"; fi
+          echo "::endgroup::"
+
+          echo "::group::Git state"
+          git status --porcelain || true
+          git tag --list --points-at HEAD || true
+          echo "::endgroup::"
+
+          echo "::group::Registry package info"
+          npm view decap-server version || true
+          npm view decap-server versions --json || true
+          echo "::endgroup::"
+
+          echo "::group::Lerna packages"
+          pnpm exec lerna ls --json || true
+          echo "::endgroup::"
+
+      # Skips versions already on the registry, isolates a failure to its own
+      # package instead of stranding the rest, retries the intermittent OIDC
+      # exchange, and names the packages that need a manual first publish.
+      # Re-running against a partially published release is safe.
+      # No NODE_AUTH_TOKEN needed - uses OIDC automatically via trusted publishers
+      - name: Publish to npm
+        run: node scripts/publish-packages.mjs --provenance --tag=${{ inputs.dist_tag || 'latest' }}
+
+      # Must run after publishing: a pre-publish check only sees what the correct
+      # publish client produces, so it cannot catch a release uploaded by a client
+      # that does not understand `catalog:`. See issue #7979.
+      #
+      # `always()`: a failed publish is exactly when the true registry state is
+      # least obvious. The 3.17.0-beta.0 release reported failure having shipped
+      # 16 of 44 packages, and this step being skipped meant nobody could tell.
+      #
+      # Also requires every package released by this commit to carry provenance
+      # naming HEAD, and the dispatched dist-tag to point at the tree version.
+      - name: Verify published manifests
+        if: always()
+        run: node scripts/verify-published-packages.mjs --expect-tag=${{ inputs.dist_tag || 'latest' }} ${{ inputs.allow_unattested && format('--allow-unattested={0}', inputs.allow_unattested) || '' }}

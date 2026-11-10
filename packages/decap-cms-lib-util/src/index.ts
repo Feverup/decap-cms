@@ -9,12 +9,21 @@ import unsentRequest from './unsentRequest';
 import {
   filterByIndexFile,
   filterByExtension,
+  collectionKeyForFiles,
   getAllResponses,
   parseLinkHeader,
   parseResponse,
   responseParser,
   getPathDepth,
 } from './backendUtil';
+import { NotesPollingManager } from './notesPolling';
+import {
+  formatNoteBody,
+  parseNoteBody,
+  commentToNote,
+  commentsToNotes,
+  markOwnNotes,
+} from './notesFormat';
 import loadScript from './loadScript';
 import getBlobSHA from './getBlobSHA';
 import { asyncLock } from './asyncLock';
@@ -79,9 +88,19 @@ import type {
   Config as C,
   UnpublishedEntryMediaFile as UEMF,
   DataFile as DF,
+  Note as NT,
+  IssueState as IS,
+  CommentData as CD,
+  ChangeType as CT,
+  IssueChangeData as ICD,
+  IssueChange as IC,
 } from './implementation';
+import type { NotesPollingAPI as NPA } from './notesPolling';
+import type { ParsedNoteBody as PNB } from './notesFormat';
 import type { AsyncLock as AL } from './asyncLock';
 
+export type NotesPollingAPI = NPA;
+export type ParsedNoteBody = PNB;
 export type AsyncLock = AL;
 export type Implementation = I;
 export type ImplementationEntry = IE;
@@ -103,6 +122,12 @@ export type Config = C;
 export type FetchError = FE;
 export type PointerFile = PF;
 export type DataFile = DF;
+export type Note = NT;
+export type IssueState = IS;
+export type CommentData = CD;
+export type IssueChangeData = ICD;
+export type IssueChange = IC;
+export type ChangeType = CT;
 
 export const DecapCmsLibUtil = {
   APIError,
@@ -120,6 +145,7 @@ export const DecapCmsLibUtil = {
   unsentRequest,
   filterByIndexFile,
   filterByExtension,
+  collectionKeyForFiles,
   parseLinkHeader,
   parseResponse,
   responseParser,
@@ -161,6 +187,12 @@ export const DecapCmsLibUtil = {
   throwOnConflictingBranches,
 };
 export {
+  NotesPollingManager,
+  formatNoteBody,
+  parseNoteBody,
+  commentToNote,
+  commentsToNotes,
+  markOwnNotes,
   APIError,
   Cursor,
   CURSOR_COMPATIBILITY_SYMBOL,
@@ -176,6 +208,7 @@ export {
   unsentRequest,
   filterByIndexFile,
   filterByExtension,
+  collectionKeyForFiles,
   parseLinkHeader,
   getAllResponses,
   parseResponse,

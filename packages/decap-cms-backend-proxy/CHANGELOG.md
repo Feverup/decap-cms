@@ -3,6 +3,68 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [3.5.6](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-proxy@3.5.5...decap-cms-backend-proxy@3.5.6) (2026-10-26)
+
+**Note:** Version bump only for package decap-cms-backend-proxy
+
+## [3.5.5](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-proxy@3.5.4...decap-cms-backend-proxy@3.5.5) (2026-10-14)
+
+**Note:** Version bump only for package decap-cms-backend-proxy
+
+## [3.5.4](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-proxy@3.5.4-beta.2...decap-cms-backend-proxy@3.5.4) (2026-10-14)
+
+**Note:** Version bump only for package decap-cms-backend-proxy
+
+## [3.5.4-beta.2](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-proxy@3.5.3-beta.2...decap-cms-backend-proxy@3.5.4-beta.2) (2026-10-13)
+
+**Note:** Version bump only for package decap-cms-backend-proxy
+
+## [3.5.4-beta.1](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-proxy@3.5.3-beta.2...decap-cms-backend-proxy@3.5.4-beta.1) (2026-10-12)
+
+**Note:** Version bump only for package decap-cms-backend-proxy
+
+## [3.5.3-beta.2](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-proxy@3.5.3-beta.1...decap-cms-backend-proxy@3.5.3-beta.2) (2026-10-08)
+
+**Note:** Version bump only for package decap-cms-backend-proxy
+
+## [3.5.3-beta.1](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-proxy@3.5.3-beta.0...decap-cms-backend-proxy@3.5.3-beta.1) (2026-09-22)
+
+**Note:** Version bump only for package decap-cms-backend-proxy
+
+## [3.5.3](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-proxy@3.5.2...decap-cms-backend-proxy@3.5.3) (2026-09-22)
+
+**Note:** Version bump only for package decap-cms-backend-proxy
+
+## [3.5.3-beta.0](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-proxy@3.5.2...decap-cms-backend-proxy@3.5.3-beta.0) (2026-09-10)
+
+**Note:** Version bump only for package decap-cms-backend-proxy
+
+## [3.5.2](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-proxy@3.5.1...decap-cms-backend-proxy@3.5.2) (2026-09-10)
+
+**Note:** Version bump only for package decap-cms-backend-proxy
+
+## [3.5.1](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-proxy@3.5.0...decap-cms-backend-proxy@3.5.1) (2026-09-08)
+
+**Note:** Version bump only for package decap-cms-backend-proxy
+
+# [3.5.0](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-proxy@3.4.0...decap-cms-backend-proxy@3.5.0) (2026-07-23)
+
+**Note:** Version bump only for package decap-cms-backend-proxy
+
+# [3.4.0](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-proxy@3.3.0...decap-cms-backend-proxy@3.4.0) (2026-06-01)
+
+**Note:** Version bump only for package decap-cms-backend-proxy
+
+# [3.3.0](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-proxy@3.1.4...decap-cms-backend-proxy@3.3.0) (2025-07-15)
+
+### Features
+
+- add logo to header ([#7487](https://github.com/decaporg/decap-cms/issues/7487)) ([b540ace](https://github.com/decaporg/decap-cms/commit/b540acec943eb231df6aac7b1d515d9b4b84fa5d))
+
+# [3.2.0](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-proxy@3.1.4...decap-cms-backend-proxy@3.2.0) (2025-06-26)
+
+**Note:** Version bump only for package decap-cms-backend-proxy
+
 ## [3.1.4](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-proxy@3.1.3...decap-cms-backend-proxy@3.1.4) (2024-08-13)
 
 ### Reverts

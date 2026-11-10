@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { render, fireEvent } from '@testing-library/react';
 import dayjs from 'dayjs';
 
@@ -105,7 +105,7 @@ describe('DateTimeControl', () => {
     const expectedValue = dayjs(testDate).format('YYYY-MM-DDTHH:mm:ss.SSS[Z]');
     expect(props.onChange).toHaveBeenCalledWith(expectedValue);
   });
-  // Upstream 295904e5 (#8002): typing a year digit by digit must not rewrite it.
+
   test('does not rewrite the year while it is being typed in a controlled date input', () => {
     const field = new Map([
       ['name', 'date'],

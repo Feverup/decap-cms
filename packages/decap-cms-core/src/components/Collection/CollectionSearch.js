@@ -1,7 +1,7 @@
-import React from 'react';
 import styled from '@emotion/styled';
 import { colorsRaw, colors, Icon, lengths, zIndex } from 'decap-cms-ui-default';
 import { translate } from 'react-polyglot';
+import { Component } from 'react';
 import PropTypes from 'prop-types';
 import ImmutablePropTypes from 'react-immutable-proptypes';
 
@@ -86,7 +86,7 @@ const SuggestionDivider = styled.div`
   width: 100%;
 `;
 
-class CollectionSearch extends React.Component {
+class CollectionSearch extends Component {
   static propTypes = {
     collections: ImmutablePropTypes.map.isRequired,
     collection: ImmutablePropTypes.map,
@@ -101,6 +101,11 @@ class CollectionSearch extends React.Component {
     // default to the currently selected
     selectedCollectionIdx: this.getSelectedSelectionBasedOnProps(),
   };
+
+  componentDidMount() {
+    // Manually validate PropTypes - React 19 breaking change
+    PropTypes.checkPropTypes(CollectionSearch.propTypes, this.props, 'prop', 'CollectionSearch');
+  }
 
   componentDidUpdate(prevProps) {
     if (prevProps.collection !== this.props.collection) {

@@ -1,4 +1,5 @@
-import React from 'react';
+// eslint-disable-next-line no-unused-vars
+import React, { Component, Fragment } from 'react';
 import PropTypes from 'prop-types';
 import ImmutablePropTypes from 'react-immutable-proptypes';
 import { css } from '@emotion/react';
@@ -19,6 +20,7 @@ import {
 
 import { status } from '../../constants/publishModes';
 import { SettingsDropdown } from '../UI';
+import { selectUserIdentity } from '../../lib/userHelper';
 
 const styles = {
   noOverflow: css`
@@ -260,6 +262,24 @@ const RefreshPreviewButton = styled.button`
   span {
     margin-right: 6px;
   }
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.6;
+  }
+
+  ${Icon} {
+    ${props => props.$spinning && `animation: spin 1s linear infinite;`}
+  }
+
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
 `;
 
 const PreviewLink = RefreshPreviewButton.withComponent('a');
@@ -274,7 +294,7 @@ const StatusDropdownItem = styled(DropdownItem)`
   }
 `;
 
-export class EditorToolbar extends React.Component {
+export class EditorToolbar extends Component {
   static propTypes = {
     isPersisting: PropTypes.bool,
     isPublishing: PropTypes.bool,
@@ -295,6 +315,7 @@ export class EditorToolbar extends React.Component {
     onPublishAndDuplicate: PropTypes.func.isRequired,
     user: PropTypes.object,
     hasChanged: PropTypes.bool,
+    canCreateNewEntry: PropTypes.bool,
     displayUrl: PropTypes.string,
     collection: ImmutablePropTypes.map.isRequired,
     hasWorkflow: PropTypes.bool,
@@ -312,22 +333,41 @@ export class EditorToolbar extends React.Component {
   };
 
   componentDidMount() {
+    // Manually validate PropTypes - React 19 breaking change
+    PropTypes.checkPropTypes(EditorToolbar.propTypes, this.props, 'prop', 'EditorToolbar');
+
     const { isNewEntry, loadDeployPreview } = this.props;
     if (!isNewEntry) {
-      loadDeployPreview({ maxAttempts: 3 });
+      // 24 attempts × 5s interval = ~2 min polling window.
+      // With editorial workflow, saving remounts the component (navigates to
+      // the unpublished entry view), so componentDidMount is the primary
+      // polling trigger — not componentDidUpdate.
+      this._pollController = new AbortController();
+      loadDeployPreview({ maxAttempts: 24, signal: this._pollController.signal });
     }
   }
 
   componentDidUpdate(prevProps) {
     const { isNewEntry, isPersisting, loadDeployPreview } = this.props;
     if (!isNewEntry && prevProps.isPersisting && !isPersisting) {
-      loadDeployPreview({ maxAttempts: 3 });
+      // Abort any in-flight poll before starting a new one.
+      this._pollController?.abort();
+      this._pollController = new AbortController();
+      // Fires on subsequent saves when the component survives (no remount).
+      // In editorial workflow the first save remounts, so this mainly
+      // covers the second-save-and-beyond case.
+      loadDeployPreview({ maxAttempts: 3, signal: this._pollController.signal });
     }
   }
 
+  componentWillUnmount() {
+    this._pollController?.abort();
+  }
+
   renderSimpleControls = () => {
-    const { collection, hasChanged, isNewEntry, showDelete, onDelete, t } = this.props;
-    const canCreate = collection.get('create');
+    const { collection, canCreateNewEntry, hasChanged, isNewEntry, showDelete, onDelete, t } =
+      this.props;
+    const canCreate = canCreateNewEntry ?? collection.get('create');
 
     return (
       <>
@@ -360,7 +400,11 @@ export class EditorToolbar extends React.Component {
             <Icon type="new-tab" size="xsmall" />
           </PreviewLink>
         ) : (
-          <RefreshPreviewButton onClick={loadDeployPreview}>
+          <RefreshPreviewButton
+            onClick={loadDeployPreview}
+            disabled={isFetching}
+            $spinning={isFetching}
+          >
             <span>{t('editor.editorToolbar.deployPreviewPendingButtonLabel')}</span>
             <Icon type="refresh" size="xsmall" />
           </RefreshPreviewButton>
@@ -443,7 +487,7 @@ export class EditorToolbar extends React.Component {
       <>
         <ToolbarDropdown
           dropdownTopOverlap="40px"
-          dropdownWidth="120px"
+          dropdownWidth="max-content"
           renderButton={() => <StatusButton label={currentStatus}>{buttonText}</StatusButton>}
         >
           <StatusDropdownItem
@@ -491,7 +535,7 @@ export class EditorToolbar extends React.Component {
     return canPublish ? (
       <ToolbarDropdown
         dropdownTopOverlap="40px"
-        dropdownWidth="200px"
+        dropdownWidth="max-content"
         renderButton={() => (
           <PublishButton>
             {isPublishing
@@ -534,7 +578,7 @@ export class EditorToolbar extends React.Component {
     return canPublish || canCreate ? (
       <ToolbarDropdown
         dropdownTopOverlap="40px"
-        dropdownWidth="150px"
+        dropdownWidth="max-content"
         key="td-publish-create"
         renderButton={() => (
           <PublishedToolbarButton>
@@ -569,7 +613,7 @@ export class EditorToolbar extends React.Component {
     return canCreate ? (
       <ToolbarDropdown
         dropdownTopOverlap="40px"
-        dropdownWidth="150px"
+        dropdownWidth="max-content"
         renderButton={() => (
           <PublishedToolbarButton>{t('editor.editorToolbar.published')}</PublishedToolbarButton>
         )}
@@ -594,7 +638,7 @@ export class EditorToolbar extends React.Component {
       <div>
         <ToolbarDropdown
           dropdownTopOverlap="40px"
-          dropdownWidth="150px"
+          dropdownWidth="max-content"
           renderButton={() => (
             <PublishButton>
               {isPersisting
@@ -650,10 +694,11 @@ export class EditorToolbar extends React.Component {
       // isDeleteWorkflow,
       currentStatus,
       collection,
+      canCreateNewEntry,
       t,
     } = this.props;
 
-    const canCreate = collection.get('create');
+    const canCreate = canCreateNewEntry ?? collection.get('create');
     const canPublish = collection.get('publish') && !useOpenAuthoring;
     const canDelete = collection.get('delete', true);
 
@@ -676,20 +721,20 @@ export class EditorToolbar extends React.Component {
       </SaveButton>,
       currentStatus
         ? [
-            <React.Fragment key="workflow-status-controls">
+            <Fragment key="workflow-status-controls">
               {this.renderWorkflowStatusControls()}
               {currentStatus === status.get('PENDING_PUBLISH') &&
                 this.renderNewEntryWorkflowPublishControls({ canCreate, canPublish })}
-            </React.Fragment>,
+            </Fragment>,
           ]
         : !isNewEntry && (
-            <React.Fragment key="existing-entry-workflow-publish-controls">
+            <Fragment key="existing-entry-workflow-publish-controls">
               {this.renderExistingEntryWorkflowPublishControls({
                 canCreate,
                 canPublish,
                 canDelete,
               })}
-            </React.Fragment>
+            </Fragment>
           ),
       !hasUnpublishedChanges && !isModification ? null : (
         <DeleteButton key="delete-button" onClick={this.handleDelete}>
@@ -757,6 +802,7 @@ export class EditorToolbar extends React.Component {
           <SettingsDropdown
             displayUrl={displayUrl}
             imageUrl={user?.avatar_url}
+            identity={selectUserIdentity(user)}
             onLogoutClick={onLogoutClick}
           />
         </ToolbarSectionMeta>

@@ -31,10 +31,40 @@ function fetchWithTimeout(input, init) {
     });
 }
 
+// Query strings written by servers, such as Bitbucket's pagination links, use `+`
+// for spaces. `decodeURIComponent` keeps `+` as is, which would then be sent back
+// as `%2B`, so turn it into a space first. A literal plus always arrives as `%2B`.
+function decodeQueryPart(part) {
+  return decodeURIComponent(part.replace(/\+/g, ' '));
+}
+
 function decodeParams(paramsString) {
   return List(paramsString.split('&'))
-    .map(s => List(s.split('=')).map(decodeURIComponent))
+    .map(s => List(s.split('=')).map(decodeQueryPart))
     .update(Map);
+}
+
+// Only `params` and `headers` are ever traversed as collections by the helpers
+// below; every other value of a request is passed straight through to `fetch`.
+const NESTED_REQUEST_KEYS = ['params', 'headers'];
+
+/**
+ * Turns a request-like object into a Map, converting only the keys the request
+ * helpers actually operate on.
+ *
+ * NOTE: this cannot be `fromJS`. immutable 4 recurses into any iterable, not
+ * just plain objects and arrays, so a `FormData` or `URLSearchParams` body
+ * would be turned into a collection and the `toJS()` in `toFetchArguments`
+ * would then hand `fetch` a plain object instead of the original body.
+ */
+function toRequestMap(req) {
+  return Map(req).withMutations(map => {
+    NESTED_REQUEST_KEYS.forEach(key => {
+      if (map.has(key)) {
+        map.set(key, fromJS(map.get(key)));
+      }
+    });
+  });
 }
 
 function fromURL(wholeURL) {
@@ -44,7 +74,7 @@ function fromURL(wholeURL) {
 
 function fromFetchArguments(wholeURL, options) {
   return fromURL(wholeURL).merge(
-    (options ? fromJS(options) : Map()).remove('url').remove('params'),
+    (options ? toRequestMap(options) : Map()).remove('url').remove('params'),
   );
 }
 
@@ -68,7 +98,7 @@ function maybeRequestArg(req) {
     return fromURL(req);
   }
   if (req) {
-    return fromJS(req);
+    return toRequestMap(req);
   }
   return Map();
 }

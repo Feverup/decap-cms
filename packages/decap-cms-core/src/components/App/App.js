@@ -1,5 +1,5 @@
+import { Component, createElement } from 'react';
 import PropTypes from 'prop-types';
-import React from 'react';
 import { translate } from 'react-polyglot';
 import ImmutablePropTypes from 'react-immutable-proptypes';
 import styled from '@emotion/styled';
@@ -8,16 +8,19 @@ import { Route, Switch, Redirect } from 'react-router-dom';
 import TopBarProgress from 'react-topbar-progress-indicator';
 import { Loader, colors } from 'decap-cms-ui-default';
 
-import { loginUser, logoutUser } from '../../actions/auth';
-import { currentBackend } from '../../backend';
+import { loginUser, logoutUser, sessionInvalidated } from '../../actions/auth';
+import { currentBackend, subscribeToSessionInvalid } from '../../backend';
 import { createNewEntry } from '../../actions/collections';
 import { openMediaLibrary } from '../../actions/mediaLibrary';
+import { startDeployNotifications, startDeployStatus } from '../../actions/deployStatus';
+import { selectDeployStatusVisible } from '../../reducers/deployStatus';
 import MediaLibrary from '../MediaLibrary/MediaLibrary';
 import { Notifications } from '../UI';
 import { history } from '../../routing/history';
 import { SIMPLE, EDITORIAL_WORKFLOW } from '../../constants/publishModes';
 import Collection from '../Collection/Collection';
 import Workflow from '../Workflow/Workflow';
+import Deploys from '../Deploys/Deploys';
 import Editor from '../Editor/Editor';
 import NotFoundPage from './NotFoundPage';
 import Header from './Header';
@@ -32,7 +35,6 @@ TopBarProgress.config({
 });
 
 const AppMainContainer = styled.div`
-  min-width: 800px;
   max-width: 1440px;
   margin: 0 auto;
 `;
@@ -69,13 +71,14 @@ function RouteInCollection({ collections, render, ...props }) {
   );
 }
 
-class App extends React.Component {
+export class App extends Component {
   static propTypes = {
     auth: PropTypes.object.isRequired,
     config: PropTypes.object.isRequired,
     collections: ImmutablePropTypes.map.isRequired,
     loginUser: PropTypes.func.isRequired,
     logoutUser: PropTypes.func.isRequired,
+    sessionInvalidated: PropTypes.func.isRequired,
     user: PropTypes.object,
     isFetching: PropTypes.bool.isRequired,
     publishMode: PropTypes.oneOf([SIMPLE, EDITORIAL_WORKFLOW]),
@@ -83,8 +86,41 @@ class App extends React.Component {
     useMediaLibrary: PropTypes.bool,
     openMediaLibrary: PropTypes.func.isRequired,
     showMediaButton: PropTypes.bool,
+    startDeployNotifications: PropTypes.func.isRequired,
+    startDeployStatus: PropTypes.func.isRequired,
+    deployStatusVisible: PropTypes.bool.isRequired,
     t: PropTypes.func.isRequired,
   };
+
+  componentDidMount() {
+    // Manually validate PropTypes - React 19 breaking change
+    PropTypes.checkPropTypes(App.propTypes, this.props, 'prop', 'App');
+
+    this.startDeployWatching();
+
+    this.unsubscribeSessionInvalid = subscribeToSessionInvalid(message =>
+      this.props.sessionInvalidated(message),
+    );
+  }
+
+  componentWillUnmount() {
+    this.unsubscribeSessionInvalid?.();
+  }
+
+  componentDidUpdate(prevProps) {
+    // At mount the config is still loading and both deploy thunks do nothing;
+    // retry when the user arrives (they are idempotent).
+    if (!prevProps.user && this.props.user) {
+      this.startDeployWatching();
+    }
+  }
+
+  startDeployWatching() {
+    // From here rather than the editor: a build outlives the screen the save
+    // was made on.
+    this.props.startDeployNotifications();
+    this.props.startDeployStatus();
+  }
 
   configError(config) {
     const t = this.props.t;
@@ -119,7 +155,7 @@ class App extends React.Component {
     return (
       <div>
         <Notifications />
-        {React.createElement(backend.authComponent(), {
+        {createElement(backend.authComponent(), {
           onLogin: this.handleLogin.bind(this),
           error: auth.error,
           inProgress: auth.isFetching,
@@ -151,6 +187,8 @@ class App extends React.Component {
       openMediaLibrary,
       t,
       showMediaButton,
+      location,
+      deployStatusVisible,
     } = this.props;
 
     if (config === null) {
@@ -171,21 +209,33 @@ class App extends React.Component {
 
     const defaultPath = getDefaultPath(collections);
     const hasWorkflow = publishMode === EDITORIAL_WORKFLOW;
+    // Auto-hide: no route and no nav item until the backend reports a deploy.
+    const hasDeployStatus = deployStatusVisible;
+
+    // Work out if this is an editor route, following the same URL matching as the router.
+    // - /collections/:name/entries/*
+    // - /collections/:name/new
+    const [, base, , view] = location.pathname.split('/');
+    const isEditorRoute = base === 'collections' && (view === 'entries' || view === 'new');
 
     return (
       <>
         <Notifications />
-        <Header
-          user={user}
-          collections={collections}
-          onCreateEntryClick={createNewEntry}
-          onLogoutClick={logoutUser}
-          openMediaLibrary={openMediaLibrary}
-          hasWorkflow={hasWorkflow}
-          displayUrl={config.display_url}
-          isTestRepo={config.backend.name === 'test-repo'}
-          showMediaButton={showMediaButton}
-        />
+        {!isEditorRoute && (
+          <Header
+            user={user}
+            collections={collections}
+            onCreateEntryClick={createNewEntry}
+            onLogoutClick={logoutUser}
+            openMediaLibrary={openMediaLibrary}
+            hasWorkflow={hasWorkflow}
+            displayUrl={config.display_url}
+            logoUrl={config.logo_url} // Deprecated, replaced by `logo.src`
+            logo={config.logo}
+            isTestRepo={config.backend.name === 'test-repo'}
+            showMediaButton={showMediaButton}
+          />
+        )}
         <AppMainContainer>
           {isFetching && <TopBarProgress />}
           <Switch>
@@ -204,6 +254,7 @@ class App extends React.Component {
               to={defaultPath}
             />
             {hasWorkflow ? <Route path="/workflow" component={Workflow} /> : null}
+            {hasDeployStatus ? <Route path="/deploys" component={Deploys} /> : null}
             <RouteInCollection
               exact
               collections={collections}
@@ -235,7 +286,8 @@ class App extends React.Component {
               render={props => <Collection {...props} isSearchResults />}
             />
             <RouteInCollection
-              path="/edit/:name/:entryName"
+              // `+` keeps nested entry paths like `about/index` in one param
+              path="/edit/:name/:entryName+"
               collections={collections}
               render={({ match }) => {
                 const { name, entryName } = match.params;
@@ -252,7 +304,7 @@ class App extends React.Component {
 }
 
 function mapStateToProps(state) {
-  const { auth, config, collections, globalUI, mediaLibrary } = state;
+  const { auth, config, collections, globalUI, mediaLibrary, deployStatus } = state;
   const user = auth.user;
   const isFetching = globalUI.isFetching;
   const publishMode = config.publish_mode;
@@ -267,6 +319,7 @@ function mapStateToProps(state) {
     publishMode,
     showMediaButton,
     useMediaLibrary,
+    deployStatusVisible: selectDeployStatusVisible(deployStatus),
   };
 }
 
@@ -274,6 +327,9 @@ const mapDispatchToProps = {
   openMediaLibrary,
   loginUser,
   logoutUser,
+  sessionInvalidated,
+  startDeployNotifications,
+  startDeployStatus,
 };
 
 export default connect(mapStateToProps, mapDispatchToProps)(translate()(App));

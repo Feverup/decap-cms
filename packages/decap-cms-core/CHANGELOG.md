@@ -3,6 +3,274 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [3.20.2](https://github.com/decaporg/decap-cms/compare/decap-cms-core@3.20.1...decap-cms-core@3.20.2) (2026-10-26)
+
+### Bug Fixes
+
+- **core:** add min and max to relation field types ([#8034](https://github.com/decaporg/decap-cms/issues/8034)) ([3eb4401](https://github.com/decaporg/decap-cms/commit/3eb44011911e203b223f57f3e83496c84f9802d3)), closes [#6800](https://github.com/decaporg/decap-cms/issues/6800)
+- **core:** allow uppercase characters in nested collection meta path ([#8007](https://github.com/decaporg/decap-cms/issues/8007)) ([3071551](https://github.com/decaporg/decap-cms/commit/307155155c865f322ba3c36fdbdacb2ea7bcc349)), closes [#7461](https://github.com/decaporg/decap-cms/issues/7461)
+- **core:** never evaluate JavaScript front matter ([a2b0ae1](https://github.com/decaporg/decap-cms/commit/a2b0ae1539d35129b530c43ff4fd957de2656841))
+- **core:** preserve full entries returned by preSave handlers ([#7989](https://github.com/decaporg/decap-cms/issues/7989)) ([3d0f655](https://github.com/decaporg/decap-cms/commit/3d0f6550bb699776da72a3c0c550c4f908d5f7e4)), closes [#7966](https://github.com/decaporg/decap-cms/issues/7966)
+- place slug collision suffix before collection path ([#8000](https://github.com/decaporg/decap-cms/issues/8000)) ([9155f27](https://github.com/decaporg/decap-cms/commit/9155f271ea47a000a275f869acf16020c8cd3f99))
+- several small issues ([#8043](https://github.com/decaporg/decap-cms/issues/8043)) ([70d8e25](https://github.com/decaporg/decap-cms/commit/70d8e2560fc424f220a957a5c35a8161bd173bed)), closes [#2209](https://github.com/decaporg/decap-cms/issues/2209) [#3562](https://github.com/decaporg/decap-cms/issues/3562) [#3622](https://github.com/decaporg/decap-cms/issues/3622) [#3828](https://github.com/decaporg/decap-cms/issues/3828) [#4753](https://github.com/decaporg/decap-cms/issues/4753) [#5125](https://github.com/decaporg/decap-cms/issues/5125) [#6215](https://github.com/decaporg/decap-cms/issues/6215) [#7105](https://github.com/decaporg/decap-cms/issues/7105) [#7203](https://github.com/decaporg/decap-cms/issues/7203)
+
+## [3.20.1](https://github.com/decaporg/decap-cms/compare/decap-cms-core@3.20.0...decap-cms-core@3.20.1) (2026-10-14)
+
+**Note:** Version bump only for package decap-cms-core
+
+# [3.20.0](https://github.com/decaporg/decap-cms/compare/decap-cms-core@3.20.0-beta.4...decap-cms-core@3.20.0) (2026-10-14)
+
+**Note:** Version bump only for package decap-cms-core
+
+# [3.20.0-beta.4](https://github.com/decaporg/decap-cms/compare/decap-cms-core@3.20.0-beta.2...decap-cms-core@3.20.0-beta.4) (2026-10-13)
+
+### Bug Fixes
+
+- **core:** hide create, delete and publish on view-only collections ([915b0be](https://github.com/decaporg/decap-cms/commit/915b0bec8660ce1421a0b184ac698d2d59cdc8a0))
+- **core:** search body only on backends that search it, and other GA fixes ([e57639b](https://github.com/decaporg/decap-cms/commit/e57639bcd7f91a3541cd95280dd0125ec13ecc9e))
+
+# [3.20.0-beta.3](https://github.com/decaporg/decap-cms/compare/decap-cms-core@3.20.0-beta.2...decap-cms-core@3.20.0-beta.3) (2026-10-12)
+
+### Bug Fixes
+
+- **core:** hide create, delete and publish on view-only collections ([915b0be](https://github.com/decaporg/decap-cms/commit/915b0bec8660ce1421a0b184ac698d2d59cdc8a0))
+- **core:** search body only on backends that search it, and other GA fixes ([e57639b](https://github.com/decaporg/decap-cms/commit/e57639bcd7f91a3541cd95280dd0125ec13ecc9e))
+
+# [3.20.0-beta.2](https://github.com/decaporg/decap-cms/compare/decap-cms-core@3.20.0-beta.1...decap-cms-core@3.20.0-beta.2) (2026-10-08)
+
+### Bug Fixes
+
+- **core:** keep field actions from re-rendering every field ([b98ac09](https://github.com/decaporg/decap-cms/commit/b98ac09d6ee41c29eb0237959352b37be42ab28e)), closes [#7793](https://github.com/decaporg/decap-cms/issues/7793)
+- **core:** keep generated slugs and i18n deletes within what git accepts ([9752f3c](https://github.com/decaporg/decap-cms/commit/9752f3c662fabd2e7ddcb74782c5c3fb37b957ef))
+- **core:** stop a failed workflow load from retrying on every render ([20c99e0](https://github.com/decaporg/decap-cms/commit/20c99e0c443feb3a2dba23fd10c657f54e58dc0e))
+- **turbo:** end a dead session once instead of failing every request ([ef2cefa](https://github.com/decaporg/decap-cms/commit/ef2cefaead2c043c5594a6f3cafd2d1b79649972))
+- **turbo:** make the editor bridge opt-in ([3983a1a](https://github.com/decaporg/decap-cms/commit/3983a1a775fe469ac29313ed6bf34a0b3c1c4217))
+- **turbo:** stop CMS tabs and the dashboard logging each other out ([fbb445d](https://github.com/decaporg/decap-cms/commit/fbb445dd39be3a97f10b7bde059ca85d478dfa7c))
+
+### Features
+
+- **core:** editor API, field actions and the Turbo editor bridge ([2884f29](https://github.com/decaporg/decap-cms/commit/2884f29fc2e72661b98b24d0f126ed5b2a6db311))
+
+# [3.20.0-beta.1](https://github.com/decaporg/decap-cms/compare/decap-cms-core@3.20.0-beta.0...decap-cms-core@3.20.0-beta.1) (2026-09-22)
+
+### Features
+
+- attribute Turbo notes to signed-in editor and fix github issue lookup ([2414aca](https://github.com/decaporg/decap-cms/commit/2414aca6e024ad8e3d417ac7b547491592cca66e))
+
+## [3.19.1](https://github.com/decaporg/decap-cms/compare/decap-cms-core@3.19.0...decap-cms-core@3.19.1) (2026-09-22)
+
+**Note:** Version bump only for package decap-cms-core
+
+# [3.20.0-beta.0](https://github.com/decaporg/decap-cms/compare/decap-cms-core@3.19.0...decap-cms-core@3.20.0-beta.0) (2026-09-10)
+
+### Bug Fixes
+
+- always route local_backend through proxy detection ([479d9b0](https://github.com/decaporg/decap-cms/commit/479d9b0a73440f5166a82831edebd3c07602cc6c))
+- **core,media-library-s3:** stop handing media libraries the refresh token ([27927cb](https://github.com/decaporg/decap-cms/commit/27927cbbec0189c7e1220cda9da4692a8a57ed5a))
+- **core,turbo-github:** three defects in deploy watching ([90b58c8](https://github.com/decaporg/decap-cms/commit/90b58c82234907f0b0342edc0f4681b7dc9a070d))
+- **core:** do not let a stale listing certify a draft as published ([ccdd71d](https://github.com/decaporg/decap-cms/commit/ccdd71d30bd0ac768e1a95a7e9a7ef02c7fd1948))
+- **core:** don't let a create overwrite an existing i18n entry ([d3d40d1](https://github.com/decaporg/decap-cms/commit/d3d40d1b3a8e7604e3ebe8839517e23328a53051))
+- **core:** give the unpublished-entry shortcut a freshness window ([591c145](https://github.com/decaporg/decap-cms/commit/591c14591d6be18a13e2dc3889fc59916921cc5d))
+- **core:** key a new workflow entry on the slug the backend committed ([efbd052](https://github.com/decaporg/decap-cms/commit/efbd05279483aa0a13390128309e88a568cb6b96))
+- **core:** let a new save clear the previous deploy toast in every state ([6e7bee0](https://github.com/decaporg/decap-cms/commit/6e7bee01f7ec24782440114b2406a9b81d79d7f2))
+- **core:** let an update cancel a queued dismissal ([a115a19](https://github.com/decaporg/decap-cms/commit/a115a1906d4c772da9b099f8c2cf493391d1c01e))
+- **core:** match the preview-path sentinel by origin, not by prefix ([7f6e6b1](https://github.com/decaporg/decap-cms/commit/7f6e6b1b55dcd2ea7acd237e0e49ffc8430b8613))
+- **core:** stop a persisted slug passing for a loaded workflow list ([5deeb6e](https://github.com/decaporg/decap-cms/commit/5deeb6e68f9206bf2153d4c351f64be83a764850))
+- **core:** stop Editor crashing when its route names a collection missing from state ([465bdd7](https://github.com/decaporg/decap-cms/commit/465bdd7b08be4e8b14cc7b47ae190e5db8ce1d55))
+- **deploy-status:** only the site's own branch can be Live ([69f5776](https://github.com/decaporg/decap-cms/commit/69f57764b0d31cafc306c9d3f8a7deb9de7da257))
+- **deploy-status:** subscribe once the user exists, not only at mount ([4339011](https://github.com/decaporg/decap-cms/commit/43390116c416967112439e8af3ec0f236f3611d4))
+- **deploys:** name the success state in the filter ([a32ba30](https://github.com/decaporg/decap-cms/commit/a32ba3051b20d59478913b97a9f9792760cb0a37))
+- dispatch doneAuthenticating after login failure ([8ee54c9](https://github.com/decaporg/decap-cms/commit/8ee54c97c12bbf067718ff898f9317ae4d118ad0))
+- make pnpm run build and lint work under corepack-managed pnpm ([2792b04](https://github.com/decaporg/decap-cms/commit/2792b04c9ff9c80b780850fbb3b0b31e3659bb68))
+- release editor before media library reload on entry save ([b51a744](https://github.com/decaporg/decap-cms/commit/b51a744885158529066fee890d25ea68d4237861))
+- reload entries after persist based on backend config ([8caaf54](https://github.com/decaporg/decap-cms/commit/8caaf5416138d97bb6ca591a5f68e4452e2a370d))
+
+### Features
+
+- add S3-compatible media library, remove standalone Bunny package ([8d19951](https://github.com/decaporg/decap-cms/commit/8d1995164017e6c6c5b7263acd4da91be7ea0686))
+- add turbo gitlab backend, rename turbo-github ([ea09b39](https://github.com/decaporg/decap-cms/commit/ea09b3995721227d0eb57c329ad2616d3defd439))
+- **core,turbo-github:** async, entry-scoped deploy notifications (A4b) ([ce3ef09](https://github.com/decaporg/decap-cms/commit/ce3ef092ab65d73502d3340ab281b33c26050ce9))
+- **core:** follow a save's deploy in one updating toast (A4) ([4aa5b0a](https://github.com/decaporg/decap-cms/commit/4aa5b0afc2c14dd62097eecb9967e843a49d29d9))
+- **deap-turbo:** create decap-turbo backend - wip ([17f228a](https://github.com/decaporg/decap-cms/commit/17f228ad5e9ef0281a4c8db2c2faff97cc6f563f))
+- **decap-turbo:** add backend preload config check in handleLocalBackend function ([9cd8963](https://github.com/decaporg/decap-cms/commit/9cd8963bf2e4ddd3bf2c7cc55f555629bd600b21))
+- **decap-turbo:** implement backend-agnostic permissions handling ([bd173a2](https://github.com/decaporg/decap-cms/commit/bd173a2294fea62a4e4b4fe8a891e9e4b9263c21))
+- **decap-turbo:** update configuration handling and improve error messaging ([f8f151b](https://github.com/decaporg/decap-cms/commit/f8f151b2597c25cd7bb84f3a5cad690b427d2845))
+- **deploy-status:** a Deploys page and a header state indicator (A8) ([1827898](https://github.com/decaporg/decap-cms/commit/18278989b65d3f5dcef1f433feed7e84e00d346f))
+- **deploy-status:** saved entry and published-to columns, stateful nav ([6bce67b](https://github.com/decaporg/decap-cms/commit/6bce67b506ef075f412107ff0be8e114910a216d))
+- **deploys:** filter by the state shown, and sort every column ([b3b3a6a](https://github.com/decaporg/decap-cms/commit/b3b3a6a43d01b2381d83dccb4736c3fbefa966fe))
+- **deploys:** live per branch, a stalled state, and table controls ([feb232e](https://github.com/decaporg/decap-cms/commit/feb232e87f57c5558bd6c29da2470d8c509f6340))
+- harden turbo backend auth, config, and API error handling ([ae1bd79](https://github.com/decaporg/decap-cms/commit/ae1bd79389019716b49111d8fcaeb23ee359a992))
+- **proxy:** add supabase-github-proxy as possible backend in CmsBackendType ([24be973](https://github.com/decaporg/decap-cms/commit/24be973e02c3cac4173c19ac6326f44c15aef18e))
+- **proxy:** force reload entries after publishing if backend is supabase-github-proxy ([dc9b27c](https://github.com/decaporg/decap-cms/commit/dc9b27cc4fc04cbbf809407ec88da599b02af86e))
+- **proxy:** wip - first draft / caching allEntriesByFolder ([56ca436](https://github.com/decaporg/decap-cms/commit/56ca436725668a997ba4ee24122d1e10bbb2ed3c))
+- rename turbo keys, add backend config resolver ([60b963b](https://github.com/decaporg/decap-cms/commit/60b963ba094255fb9de7052e516b5b65fc3fd1d7))
+- **supabase-github-proxy:** add site_id support, update readme ([87ed396](https://github.com/decaporg/decap-cms/commit/87ed3964e035d3b8d6666dce0e5f31e4db1c08dd))
+- **supabase-github-proxy:** allow searching on the cached backend query ([a8bec9b](https://github.com/decaporg/decap-cms/commit/a8bec9b874e09373abe05444c89b1921599a6238))
+- **turbo-github,turbo-gitlab:** show signed-in user identity and clear session on logout ([295ae6d](https://github.com/decaporg/decap-cms/commit/295ae6dae7989b8006b2579e564dbb1461631ee8))
+- **widget-markdown:** support inline custom editor components ([#7958](https://github.com/decaporg/decap-cms/issues/7958)) ([65526d2](https://github.com/decaporg/decap-cms/commit/65526d2daa8e38a998f59b8c3476e27e3b166656)), closes [#7951](https://github.com/decaporg/decap-cms/issues/7951) [#7936](https://github.com/decaporg/decap-cms/issues/7936)
+
+### Performance Improvements
+
+- **core,turbo-github,turbo-gitlab:** stop hydrating every draft, cache i18n siblings ([b26cb27](https://github.com/decaporg/decap-cms/commit/b26cb27223714928e06b684527ca233559e8f769))
+- **core,turbo-github:** answer "is this entry in the workflow" from state ([f8e58ae](https://github.com/decaporg/decap-cms/commit/f8e58aeea99ebbaa41fd19d438f2c20cb033ee47))
+
+# [3.19.0](https://github.com/decaporg/decap-cms/compare/decap-cms-core@3.18.1...decap-cms-core@3.19.0) (2026-09-10)
+
+### Features
+
+- **widget-markdown:** support inline custom editor components ([#7958](https://github.com/decaporg/decap-cms/issues/7958)) ([e857f7d](https://github.com/decaporg/decap-cms/commit/e857f7dac60872a499b16c36ad38adce7489c383)), closes [#7951](https://github.com/decaporg/decap-cms/issues/7951) [#7936](https://github.com/decaporg/decap-cms/issues/7936)
+
+## [3.18.1](https://github.com/decaporg/decap-cms/compare/decap-cms-core@3.18.0...decap-cms-core@3.18.1) (2026-09-08)
+
+### Bug Fixes
+
+- applying collection filter on i18n: single file ([#7612](https://github.com/decaporg/decap-cms/issues/7612)) ([8b56355](https://github.com/decaporg/decap-cms/commit/8b563553a396d4fbcff54b40ad391fdee192e11e))
+- Windows path-mock regression and media library upload/delete edge case ([#7965](https://github.com/decaporg/decap-cms/issues/7965)) ([d532e66](https://github.com/decaporg/decap-cms/commit/d532e66237ed07bbdfcbea7ba2d97a8a4032c8de))
+
+# [3.18.0](https://github.com/decaporg/decap-cms/compare/decap-cms-core@3.17.1...decap-cms-core@3.18.0) (2026-08-31)
+
+### Bug Fixes
+
+- solve flaky/failing tests ([#7951](https://github.com/decaporg/decap-cms/issues/7951)) ([bfe0dfd](https://github.com/decaporg/decap-cms/commit/bfe0dfd65b888f8c20f6afb879fcaff495cee7b1))
+
+## [3.17.1](https://github.com/decaporg/decap-cms/compare/decap-cms-core@3.17.0...decap-cms-core@3.17.1) (2026-07-24)
+
+### Bug Fixes
+
+- bump incompatible react-tostify version ([#7914](https://github.com/decaporg/decap-cms/issues/7914)) ([d8436e6](https://github.com/decaporg/decap-cms/commit/d8436e6a2536c57f200448d10ede5aa87f0a65f8))
+
+# [3.17.0](https://github.com/decaporg/decap-cms/compare/decap-cms-core@3.16.0...decap-cms-core@3.17.0) (2026-07-23)
+
+### Bug Fixes
+
+- add separator and sorting for unpublished entries ([#7624](https://github.com/decaporg/decap-cms/issues/7624)) ([2f5c54d](https://github.com/decaporg/decap-cms/commit/2f5c54d96d3eaf657d0b75a0a2578073731907a7)), closes [#7542](https://github.com/decaporg/decap-cms/issues/7542)
+- remove weird padding from group by headings ([#7866](https://github.com/decaporg/decap-cms/issues/7866)) ([825f3d8](https://github.com/decaporg/decap-cms/commit/825f3d8e40b328d6e52f435a8c1aba271bf24016))
+
+### Features
+
+- add collection size limit feature ([#7451](https://github.com/decaporg/decap-cms/issues/7451)) ([40c4ac0](https://github.com/decaporg/decap-cms/commit/40c4ac0d5ee126b92f35fa3651d1f4aacbdea733))
+
+# [3.16.0](https://github.com/decaporg/decap-cms/compare/decap-cms-core@3.15.0...decap-cms-core@3.16.0) (2026-06-15)
+
+### Features
+
+- **locales:** unify "New entry" button label to "＋ %{collectionLabel}" across all locales ([#7842](https://github.com/decaporg/decap-cms/issues/7842)) ([0e82bc5](https://github.com/decaporg/decap-cms/commit/0e82bc5fbf4670cf64a933e9abda89e7ac3a0637))
+
+# [3.15.0](https://github.com/decaporg/decap-cms/compare/decap-cms-core@3.14.0...decap-cms-core@3.15.0) (2026-06-08)
+
+### Bug Fixes
+
+- remove unused dependencies and specify missing dependencies ([#7833](https://github.com/decaporg/decap-cms/issues/7833)) ([e324a14](https://github.com/decaporg/decap-cms/commit/e324a142f7f0ba63c760b2e8524d971c35200f87))
+
+### Features
+
+- **ui:** make collections and workflow views responsive ([#7827](https://github.com/decaporg/decap-cms/issues/7827)) ([11f3540](https://github.com/decaporg/decap-cms/commit/11f35405cd1a1d1216e97b890173f46436752019))
+- **ui:** make media library responsive ([#7820](https://github.com/decaporg/decap-cms/issues/7820)) ([3c3fd81](https://github.com/decaporg/decap-cms/commit/3c3fd819fbdbff08e6a0a4d2df15857a8d03c983))
+
+# [3.14.0](https://github.com/decaporg/decap-cms/compare/decap-cms-core@3.13.0...decap-cms-core@3.14.0) (2026-06-01)
+
+### Bug Fixes
+
+- **#7794:** populate relation widget from url ([#7806](https://github.com/decaporg/decap-cms/issues/7806)) ([f8de615](https://github.com/decaporg/decap-cms/commit/f8de615a52860e06848a4ff9d2da2fee653a552a)), closes [#7794](https://github.com/decaporg/decap-cms/issues/7794)
+- **core:** return full entry object from invokeEvent instead of just data ([#7667](https://github.com/decaporg/decap-cms/issues/7667)) ([6ef2f9b](https://github.com/decaporg/decap-cms/commit/6ef2f9bdf81ce9df55642fe1414e5e687cff95fd))
+- **richtext:** invalid imports, rich text widget types, improve paste handling ([#7803](https://github.com/decaporg/decap-cms/issues/7803)) ([9db5e1e](https://github.com/decaporg/decap-cms/commit/9db5e1ed29bfa7e1500e5374aea13796d31f1021)), closes [#7796](https://github.com/decaporg/decap-cms/issues/7796) [#7797](https://github.com/decaporg/decap-cms/issues/7797) [#7802](https://github.com/decaporg/decap-cms/issues/7802)
+
+### Features
+
+- include slug and path in result ([#7436](https://github.com/decaporg/decap-cms/issues/7436)) ([17fb630](https://github.com/decaporg/decap-cms/commit/17fb6306d7e5001df75e8d5b832838fbdf61c4a6))
+- **slugs:** allow filters in template strings ([#6690](https://github.com/decaporg/decap-cms/issues/6690)) ([25db74b](https://github.com/decaporg/decap-cms/commit/25db74b710b351258d2d39385d1f8254821544e3)), closes [#4783](https://github.com/decaporg/decap-cms/issues/4783)
+- **ui:** make app header responsive ([#7825](https://github.com/decaporg/decap-cms/issues/7825)) ([64118e4](https://github.com/decaporg/decap-cms/commit/64118e404b47c2efbb1b1842f3da87dfae23767b)), closes [#7298](https://github.com/decaporg/decap-cms/issues/7298)
+- **ui:** make dropdown positioning responsive ([#7828](https://github.com/decaporg/decap-cms/issues/7828)) ([2fdf798](https://github.com/decaporg/decap-cms/commit/2fdf798412188559738c5bbd5f593c3f352d24fc))
+
+# [3.13.0](https://github.com/decaporg/decap-cms/compare/decap-cms-core@3.12.0...decap-cms-core@3.13.0) (2026-04-17)
+
+### Features
+
+- allow special characters to pass through slugification ([#6220](https://github.com/decaporg/decap-cms/issues/6220)) ([074354d](https://github.com/decaporg/decap-cms/commit/074354d9a83d63d87818ff1c527c38262a421426))
+
+# [3.12.0](https://github.com/decaporg/decap-cms/compare/decap-cms-core@3.11.0...decap-cms-core@3.12.0) (2026-04-16)
+
+### Bug Fixes
+
+- **frontmatter:** improve duplicate frontmatter key error handling ([#7679](https://github.com/decaporg/decap-cms/issues/7679)) ([cbe162d](https://github.com/decaporg/decap-cms/commit/cbe162d740bcbfafc4e76a77ac49e2029bc3a4c4))
+
+### Features
+
+- add config option to enable Signed-off-by in commit messages ([#7766](https://github.com/decaporg/decap-cms/issues/7766)) ([4b9ea40](https://github.com/decaporg/decap-cms/commit/4b9ea4040f3b858793052cee287caa3cce2f3af3))
+
+### Performance Improvements
+
+- use Clipboard API ([#7780](https://github.com/decaporg/decap-cms/issues/7780)) ([c90804f](https://github.com/decaporg/decap-cms/commit/c90804fa623020dd7246cc8154c6992a1bc2a79e))
+
+# [3.11.0](https://github.com/decaporg/decap-cms/compare/decap-cms-core@3.10.1...decap-cms-core@3.11.0) (2026-03-24)
+
+### Bug Fixes
+
+- increase deploy preview polling and cancel on unmount ([#7758](https://github.com/decaporg/decap-cms/issues/7758)) ([a814f95](https://github.com/decaporg/decap-cms/commit/a814f953af4723a38e99ec0cd066f6000229b978))
+- set PENDING status on deploy preview request and failure ([#7756](https://github.com/decaporg/decap-cms/issues/7756)) ([d9e4292](https://github.com/decaporg/decap-cms/commit/d9e4292a14a722bd8e1c5a8da2337c9bf3fec814)), closes [#7755](https://github.com/decaporg/decap-cms/issues/7755)
+
+### Features
+
+- add configurable issue url ([#7734](https://github.com/decaporg/decap-cms/issues/7734)) ([56e057b](https://github.com/decaporg/decap-cms/commit/56e057b9332d69663e7b52b22938d463497161e2))
+- add loading feedback to deploy preview button ([#7757](https://github.com/decaporg/decap-cms/issues/7757)) ([61d8b8b](https://github.com/decaporg/decap-cms/commit/61d8b8bdc0a89a29e546cd3ac58ce0f67936f551))
+
+## [3.10.1](https://github.com/decaporg/decap-cms/compare/decap-cms-core@3.10.0...decap-cms-core@3.10.1) (2026-02-23)
+
+### Bug Fixes
+
+- **a11y:** aria-labels ([#7720](https://github.com/decaporg/decap-cms/issues/7720)) ([cc92370](https://github.com/decaporg/decap-cms/commit/cc92370595a85590ffede50a99259d52ba3eb76b))
+
+# [3.10.0](https://github.com/decaporg/decap-cms/compare/decap-cms-core@3.9.0...decap-cms-core@3.10.0) (2025-12-18)
+
+### Bug Fixes
+
+- **lib-util:** treat root-relative media paths as absolute ([#7650](https://github.com/decaporg/decap-cms/issues/7650)) ([5d0e417](https://github.com/decaporg/decap-cms/commit/5d0e4175f042f43b2e63cc57b631d6b684fea0fc))
+- slugFormatter populates date template variables using date from entry if it exists ([#7633](https://github.com/decaporg/decap-cms/issues/7633)) ([b5a7de0](https://github.com/decaporg/decap-cms/commit/b5a7de02c8fa47faab3a7ef2389439d7552c68ac))
+
+### Features
+
+- add default_sort option to sortable fields ([#7665](https://github.com/decaporg/decap-cms/issues/7665)) ([5e782ee](https://github.com/decaporg/decap-cms/commit/5e782ee33ab7b7f144fd34ed817b2a93caa4f942))
+
+# [3.9.0](https://github.com/decaporg/decap-cms/compare/decap-cms-core@3.8.1...decap-cms-core@3.9.0) (2025-09-30)
+
+### Bug Fixes
+
+- **7281:** remove the string "DRAFT_MEDIA_FILES" ([#7432](https://github.com/decaporg/decap-cms/issues/7432)) ([cbde141](https://github.com/decaporg/decap-cms/commit/cbde14160a41f27c22e686f65461272f9ba4fa1f))
+
+### Features
+
+- add allow_remove and allow_reorder flags ([#7573](https://github.com/decaporg/decap-cms/issues/7573)) ([ff961f4](https://github.com/decaporg/decap-cms/commit/ff961f4bfe7c0a8970451d9b21645738b6cb1560))
+
+## [3.8.1](https://github.com/decaporg/decap-cms/compare/decap-cms-core@3.8.0...decap-cms-core@3.8.1) (2025-07-31)
+
+**Note:** Version bump only for package decap-cms-core
+
+# [3.8.0](https://github.com/decaporg/decap-cms/compare/decap-cms-core@3.7.1...decap-cms-core@3.8.0) (2025-07-15)
+
+### Bug Fixes
+
+- apply duplicate i18n values on entry load ([#7145](https://github.com/decaporg/decap-cms/issues/7145)) ([fc88f4f](https://github.com/decaporg/decap-cms/commit/fc88f4fecfb698ff2456f2cafcf757078773d999))
+
+### Features
+
+- add logo to header ([#7487](https://github.com/decaporg/decap-cms/issues/7487)) ([b540ace](https://github.com/decaporg/decap-cms/commit/b540acec943eb231df6aac7b1d515d9b4b84fa5d))
+
+## [3.7.1](https://github.com/decaporg/decap-cms/compare/decap-cms-core@3.7.0...decap-cms-core@3.7.1) (2025-07-10)
+
+**Note:** Version bump only for package decap-cms-core
+
+# [3.7.0](https://github.com/decaporg/decap-cms/compare/decap-cms-core@3.6.3...decap-cms-core@3.7.0) (2025-06-26)
+
+### Bug Fixes
+
+- **#7375:** fix dependency issues ([#7394](https://github.com/decaporg/decap-cms/issues/7394)) ([871ee26](https://github.com/decaporg/decap-cms/commit/871ee2653bb26b500efb39b6862e8d3681ec0338))
+
+## [3.6.3](https://github.com/decaporg/decap-cms/compare/decap-cms-core@3.6.2...decap-cms-core@3.6.3) (2025-06-06)
+
+### Bug Fixes
+
+- dropdown menu with adjusts to content ([#7490](https://github.com/decaporg/decap-cms/issues/7490)) ([0a47bc4](https://github.com/decaporg/decap-cms/commit/0a47bc4dd41019e0ba5a520881b4ac2441e7250c))
+
 ## [3.6.2](https://github.com/decaporg/decap-cms/compare/decap-cms-core@3.6.1...decap-cms-core@3.6.2) (2025-05-15)
 
 ### Bug Fixes

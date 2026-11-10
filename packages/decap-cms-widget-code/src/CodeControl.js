@@ -1,10 +1,12 @@
-import React from 'react';
+import { Component } from 'react';
 import PropTypes from 'prop-types';
 import ImmutablePropTypes from 'react-immutable-proptypes';
 import { ClassNames } from '@emotion/react';
 import { Map } from 'immutable';
-import { uniq, isEqual, isEmpty, debounce } from 'lodash';
-import { v4 as uuid } from 'uuid';
+import uniq from 'lodash/uniq';
+import isEqual from 'lodash/isEqual';
+import isEmpty from 'lodash/isEmpty';
+import debounce from 'lodash/debounce';
 import { UnControlled as ReactCodeMirror } from 'react-codemirror2';
 import CodeMirror from 'codemirror';
 import 'codemirror/keymap/vim';
@@ -16,6 +18,7 @@ import materialTheme from 'codemirror/theme/material.css';
 import SettingsPane from './SettingsPane';
 import SettingsButton from './SettingsButton';
 import languageData from '../data/languages.json';
+import { getLanguageLoader } from './languageLoaders';
 
 // TODO: relocate as a utility function
 function getChangedProps(previous, next, keys) {
@@ -60,7 +63,7 @@ const settingsPersistKeys = {
   keyMap: 'cms.codemirror.keymap',
 };
 
-export default class CodeControl extends React.Component {
+export default class CodeControl extends Component {
   static propTypes = {
     field: ImmutablePropTypes.map.isRequired,
     onChange: PropTypes.func.isRequired,
@@ -80,7 +83,7 @@ export default class CodeControl extends React.Component {
     lang: '',
     keyMap: localStorage.getItem(settingsPersistKeys['keyMap']) || 'default',
     settingsVisible: false,
-    codeMirrorKey: uuid(),
+    codeMirrorKey: crypto.randomUUID(),
     theme: localStorage.getItem(settingsPersistKeys['theme']) || themes[themes.length - 1],
     lastKnownValue: this.valueIsMap() ? this.props.value?.get(this.keys.code) : this.props.value,
   };
@@ -99,6 +102,9 @@ export default class CodeControl extends React.Component {
   }
 
   componentDidMount() {
+    // Manually validate PropTypes - React 19 breaking change
+    PropTypes.checkPropTypes(CodeControl.propTypes, this.props, 'prop', 'CodeControl');
+
     const lang = this.getInitialLang() || '';
     // No initial lang means no init write to ignore, so the next lang change is the user's
     this.setState({ lang, isLangInitialized: !lang });
@@ -116,7 +122,7 @@ export default class CodeControl extends React.Component {
     }
   }
 
-  updateCodeMirrorProps(prevState) {
+  async updateCodeMirrorProps(prevState) {
     const keys = ['lang', 'theme', 'keyMap'];
     const changedProps = getChangedProps(prevState, this.state, keys);
     if (changedProps) {
@@ -128,7 +134,7 @@ export default class CodeControl extends React.Component {
 
       this.setState({ isLangInitialized: true });
 
-      this.handleChangeCodeMirrorProps(changedProps, shouldIgnoreLangChange);
+      await this.handleChangeCodeMirrorProps(changedProps, shouldIgnoreLangChange);
     }
   }
 
@@ -202,7 +208,14 @@ export default class CodeControl extends React.Component {
     if (changedProps.lang) {
       const { mode } = this.getLanguageByName(changedProps.lang) || {};
       if (mode) {
-        require(`codemirror/mode/${mode}/${mode}.js`);
+        const loader = getLanguageLoader(mode);
+        if (loader) {
+          try {
+            await loader();
+          } catch (e) {
+            console.warn(`Failed to load CodeMirror mode: ${mode}`, e);
+          }
+        }
       }
     }
 
@@ -212,7 +225,7 @@ export default class CodeControl extends React.Component {
     if (this.cm) {
       const cursor = this.cm.doc.getCursor();
       const selections = this.cm.doc.listSelections();
-      this.setState({ codeMirrorKey: uuid() }, () => {
+      this.setState({ codeMirrorKey: crypto.randomUUID() }, () => {
         this.cm.doc.setCursor(cursor);
         this.cm.doc.setSelections(selections);
       });
@@ -272,10 +285,13 @@ export default class CodeControl extends React.Component {
   setInactive = () => this.setState({ isActive: false });
 
   render() {
-    const { classNameWrapper, forID, widget, isNewEditorComponent } = this.props;
+    const { classNameWrapper, forID, widget, isEditorComponent, isNewEditorComponent } = this.props;
     const { lang, settingsVisible, keyMap, codeMirrorKey, theme, lastKnownValue } = this.state;
     const langInfo = this.getLanguageByName(lang);
     const mode = langInfo?.mimeType || langInfo?.mode;
+    // A code block inside the markdown editor is as tall as its content, so a
+    // short snippet does not leave a tall empty box in the middle of the text.
+    const minHeight = isEditorComponent ? '0' : '300px';
 
     return (
       <ClassNames>
@@ -318,11 +334,11 @@ export default class CodeControl extends React.Component {
                 .CodeMirror {
                   height: auto !important;
                   cursor: text;
-                  min-height: 300px;
+                  min-height: ${minHeight};
                 }
 
                 .CodeMirror-scroll {
-                  min-height: 300px;
+                  min-height: ${minHeight};
                 }
               `}
               options={{

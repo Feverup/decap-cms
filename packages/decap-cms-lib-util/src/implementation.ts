@@ -1,5 +1,6 @@
 import semaphore from 'semaphore';
-import { unionBy, sortBy } from 'lodash';
+import unionBy from 'lodash/unionBy';
+import sortBy from 'lodash/sortBy';
 
 import { basename } from './path';
 
@@ -63,6 +64,60 @@ export type DataFile = {
   newPath?: string;
 };
 
+export interface Note {
+  id: string;
+  avatarUrl?: string;
+  content: string;
+  timestamp: string;
+  author: string; // not unique - do not use for comparison
+  authorId?: string; // unique note author id; absent when the poster IS the author
+  isOwn?: boolean; // whether signed-in editor wrote this note
+  entrySlug: string;
+  resolved: boolean;
+  issueUrl?: string;
+}
+
+export interface IssueState {
+  number: number;
+  title: string;
+  body: string;
+  state: 'open' | 'closed';
+  updated_at: string;
+  comments: CommentData[];
+  labels: Array<{ name: string; color: string }>;
+  html_url: string;
+}
+
+export interface CommentData {
+  id: number | string;
+  body: string;
+  user: {
+    login: string;
+    avatar_url: string;
+  } | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type ChangeType =
+  | 'comment_added'
+  | 'comment_updated'
+  | 'comment_deleted'
+  | 'issue_state_changed'
+  | 'issue_labels_changed';
+
+export type IssueChangeData =
+  | CommentData
+  | { from: 'open' | 'closed'; to: 'open' | 'closed' }
+  | { from: Array<{ name: string; color: string }>; to: Array<{ name: string; color: string }> };
+
+export interface IssueChange {
+  type: ChangeType;
+  data: IssueChangeData;
+  previousData?: CommentData;
+  timestamp: string;
+}
+
 export type AssetProxy = {
   path: string;
   fileObj?: File;
@@ -82,6 +137,7 @@ export type PersistOptions = {
   publishStack?: boolean;
   unpublished?: boolean;
   status?: string;
+  hasSubfolders?: boolean;
 };
 
 export type DeleteOptions = {};
@@ -97,6 +153,7 @@ export type Credentials = {
 export type User = Credentials & {
   backendName?: string;
   login?: string;
+  email?: string;
   name: string;
   useOpenAuthoring?: boolean;
 };
@@ -124,8 +181,30 @@ export type Config = {
     auth_type?: string;
     app_id?: string;
     base_url?: string;
+    auth_endpoint?: string;
     cms_label_prefix?: string;
     api_version?: string;
+    status_endpoint?: string;
+    // decap-turbo backend
+    turbo_site_id?: string;
+    turbo_config_url?: string;
+    supabase_app_id?: string;
+    supabase_anon_key?: string;
+    /** Decap Turbo, experimental: set true to turn on the editor bridge (AI agents setting fields in the open entry). Off by default. */
+    editor_bridge?: boolean;
+  };
+  auth: {
+    use_oidc?: boolean;
+    base_url?: string;
+    auth_endpoint?: string;
+    auth_token_endpoint?: string;
+    app_id?: string;
+    auth_token_endpoint_content_type?: string;
+    email_claim?: string;
+    full_name_claim?: string;
+    first_name_claim?: string;
+    last_name_claim?: string;
+    avatar_url_claim?: string;
   };
   media_folder: string;
   base_url?: string;
@@ -162,6 +241,34 @@ export interface Implementation {
     collection: string,
     slug: string,
   ) => void;
+
+  getNotes?: (collection: string, slug: string) => Promise<Note[]>;
+  addNote?: (
+    collection: string,
+    slug: string,
+    note: Omit<Note, 'id'>,
+    entryTitle?: string,
+  ) => Promise<Note>;
+  updateNote?: (
+    collection: string,
+    slug: string,
+    noteId: string,
+    updates: Partial<Note>,
+  ) => Promise<Note>;
+  deleteNote?: (collection: string, slug: string, noteId: string) => Promise<void>;
+  toggleNoteResolution?: (collection: string, slug: string, noteId: string) => Promise<Note>;
+  syncNotes?: (collection: string, slug: string, localNotes: Note[]) => Promise<Note[]>;
+  reopenIssueForUnpublishedEntry?: (collection: string, slug: string) => Promise<void>;
+
+  getPRMetadata?: (
+    collection: string,
+    slug: string,
+  ) => Promise<{
+    id: string;
+    url: string;
+    author: string;
+    createdAt: string;
+  } | null>;
 
   unpublishedEntries: () => Promise<string[]>;
   unpublishedEntry: (args: {
@@ -205,13 +312,30 @@ export interface Implementation {
     depth: number,
     indexFile: string,
     pathRegex?: RegExp,
+    searchTerm?: string,
+    /**
+     * Selects the i18n locale files `pathRegex` excludes — the listing wants
+     * one file per entry, the editor wants every locale. Advisory: a backend
+     * that caches can warm those files, and one that does not may ignore it.
+     * The returned entries must not include them either way.
+     */
+    localeSiblingRegex?: RegExp,
   ) => Promise<ImplementationEntry[]>;
+  /**
+   * True when `allEntriesByFolder` already matched `searchTerm` against entry
+   * bodies, so core's own search pass may include the body without changing
+   * results on backends that only search the listed fields.
+   */
+  searchesEntryBody?: boolean;
   traverseCursor?: (
     cursor: Cursor,
     action: string,
   ) => Promise<{ entries: ImplementationEntry[]; cursor: Cursor }>;
 
   isGitBackend?: () => boolean;
+
+  reloadEntriesAfterPersist?: boolean;
+
   status: () => Promise<{
     auth: { status: boolean };
     api: { status: boolean; statusPage: string };

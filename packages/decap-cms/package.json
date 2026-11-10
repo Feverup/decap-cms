@@ -1,14 +1,13 @@
 {
   "name": "decap-cms",
   "description": "An extensible, open source, Git-based, React CMS for static sites.",
-  "version": "3.6.3",
+  "version": "3.17.3",
   "homepage": "https://www.decapcms.org",
   "repository": "https://github.com/decaporg/decap-cms",
   "bugs": "https://github.com/decaporg/decap-cms/issues",
   "main": "dist/decap-cms.js",
   "scripts": {
-    "webpack": "node --max_old_space_size=4096 ../../node_modules/webpack/bin/webpack.js",
-    "build": "cross-env NODE_ENV=production run-s webpack",
+    "build": "cross-env NODE_ENV=production NODE_OPTIONS=--max-old-space-size=4096 webpack",
     "build-preview": "cross-env NODE_ENV=production webpack serve --open",
     "develop": "webpack serve --hot"
   },
@@ -20,15 +19,19 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "codemirror": "^5.46.0",
-    "create-react-class": "^15.7.0",
-    "decap-cms-app": "^3.6.3",
-    "decap-cms-media-library-cloudinary": "^3.0.3",
-    "decap-cms-media-library-uploadcare": "^3.0.2",
-    "file-loader": "^6.2.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "svgo-loader": "^3.0.3"
+    "codemirror": "catalog:",
+    "create-react-class": "catalog:",
+    "decap-cms-app": "workspace:*",
+    "decap-cms-media-library-cloudinary": "workspace:*",
+    "decap-cms-media-library-s3": "workspace:*",
+    "decap-cms-media-library-uploadcare": "workspace:*",
+    "file-loader": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "svgo-loader": "catalog:"
   },
-  "incrementToForceBump": 2
+  "incrementToForceBump": 2,
+  "files": [
+    "dist"
+  ]
 }

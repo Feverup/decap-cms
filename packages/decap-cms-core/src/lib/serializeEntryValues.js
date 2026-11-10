@@ -1,4 +1,4 @@
-import { isNil } from 'lodash';
+import isNil from 'lodash/isNil';
 import { Map, List } from 'immutable';
 
 import { getWidgetValueSerializer } from './registry';
@@ -60,8 +60,12 @@ function runSerializer(values, fields, method) {
     return acc;
   }, Map());
 
-  //preserve unknown fields value
-  serializedData = values.mergeDeep(serializedData);
+  // Preserve the values of fields that have no matching entry in `fields`.
+  // This is deliberately a shallow merge: `serializedData` already holds the
+  // fully (recursively) serialized value for every known field, and immutable
+  // 4's `mergeDeep` concatenates Lists instead of merging them by index, which
+  // would duplicate every item of a list field.
+  serializedData = values.merge(serializedData);
 
   return serializedData;
 }

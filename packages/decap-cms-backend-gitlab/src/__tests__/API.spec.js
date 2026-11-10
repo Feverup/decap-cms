@@ -145,6 +145,80 @@ describe('GitLab API', () => {
     });
   });
 
+  describe('readFile', () => {
+    test('does not request GitLab LFS content by default', async () => {
+      const api = new API({ repo: 'foo/bar' });
+
+      api.request = jest.fn().mockResolvedValue({});
+      api.responseToText = jest.fn().mockReturnValue('file content');
+
+      await expect(api.readFile('static/uploads/image.png', null)).resolves.toBe('file content');
+
+      expect(api.request).toHaveBeenCalledWith({
+        url: '/projects/foo%2Fbar/repository/files/static%2Fuploads%2Fimage.png/raw',
+        params: { ref: 'master' },
+        cache: 'no-store',
+      });
+    });
+
+    test('requests GitLab LFS content when requested', async () => {
+      const api = new API({ repo: 'foo/bar' });
+      const blob = new Blob(['image content']);
+
+      api.request = jest.fn().mockResolvedValue({});
+      api.responseToBlob = jest.fn().mockReturnValue(blob);
+
+      await expect(
+        api.readFile('static/uploads/image.png', null, { parseText: false, lfs: true }),
+      ).resolves.toBe(blob);
+
+      expect(api.request).toHaveBeenCalledWith({
+        url: '/projects/foo%2Fbar/repository/files/static%2Fuploads%2Fimage.png/raw',
+        params: { ref: 'master', lfs: true },
+        cache: 'no-store',
+      });
+    });
+  });
+
+  describe('publishUnpublishedEntry', () => {
+    test.each([false, true])(
+      'merges the fetched head SHA with squashMerges=%s',
+      async squashMerges => {
+        const api = new API({ repo: 'foo/bar', squashMerges });
+        const mergeRequest = { iid: 42, sha: 'reviewed-head-sha' };
+        api.getBranchMergeRequest = jest.fn().mockResolvedValue(mergeRequest);
+        api.requestJSON = jest.fn().mockResolvedValue({ state: 'merged' });
+
+        await api.publishUnpublishedEntry('posts', 'title');
+
+        expect(api.getBranchMergeRequest).toHaveBeenCalledWith('cms/posts/title');
+        expect(api.requestJSON).toHaveBeenCalledTimes(1);
+        expect(api.requestJSON).toHaveBeenCalledWith({
+          method: 'PUT',
+          url: '/projects/foo%2Fbar/merge_requests/42/merge',
+          params: expect.objectContaining({
+            sha: 'reviewed-head-sha',
+            squash: squashMerges,
+            should_remove_source_branch: true,
+          }),
+        });
+      },
+    );
+
+    test('propagates a changed-head rejection without retrying the merge', async () => {
+      const api = new API({ repo: 'foo/bar' });
+      const error = new Error('SHA does not match HEAD of source branch');
+      api.getBranchMergeRequest = jest.fn().mockResolvedValue({ iid: 42, sha: 'old-head-sha' });
+      api.requestJSON = jest.fn().mockRejectedValue(error);
+
+      await expect(api.publishUnpublishedEntry('posts', 'title')).rejects.toBe(error);
+
+      expect(api.getBranchMergeRequest).toHaveBeenCalledTimes(1);
+      expect(api.requestJSON).toHaveBeenCalledTimes(1);
+      expect(api.requestJSON.mock.calls[0][0].params.sha).toBe('old-head-sha');
+    });
+  });
+
   describe('getStatuses', () => {
     test('should get preview statuses', async () => {
       const api = new API({ repo: 'repo' });

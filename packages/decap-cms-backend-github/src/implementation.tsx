@@ -1,4 +1,3 @@
-import * as React from 'react';
 import semaphore from 'semaphore';
 import trimStart from 'lodash/trimStart';
 import { stripIndent } from 'common-tags';
@@ -21,13 +20,15 @@ import {
   contentKeyFromBranch,
   unsentRequest,
   branchFromContentKey,
+  NotesPollingManager,
+  markOwnNotes,
 } from 'decap-cms-lib-util';
 
 import AuthenticationPage from './AuthenticationPage';
 import API, { API_NAME } from './API';
 import GraphQLAPI from './GraphQLAPI';
 
-import type { Octokit } from '@octokit/rest';
+import type { Endpoints } from '@octokit/types';
 import type {
   AsyncLock,
   Implementation,
@@ -42,10 +43,12 @@ import type {
   Entry,
   ApiRequest,
   GoogleCredentials,
+  Note,
+  IssueChange,
 } from 'decap-cms-lib-util';
 import type { Semaphore } from 'semaphore';
 
-export type GitHubUser = Octokit.UsersGetAuthenticatedResponse;
+export type GitHubUser = Endpoints['GET /user']['response']['data'];
 
 const MAX_CONCURRENT_DOWNLOADS = 10;
 
@@ -101,6 +104,8 @@ export default class GitHub implements Implementation {
     [key: string]: Promise<boolean>;
   };
   _mediaDisplayURLSem?: Semaphore;
+  pollingManager?: NotesPollingManager;
+  unwatchFunctions: Map<string, () => void> = new Map();
 
   constructor(config: Config, options = {}) {
     this.options = {
@@ -245,13 +250,20 @@ export default class GitHub implements Implementation {
     return Promise.resolve();
   }
 
-  async currentUser({ token }: { token: string }) {
+  async currentUser({ token }: { token: string }): Promise<GitHubUser> {
     if (!this._currentUserPromise) {
-      this._currentUserPromise = fetch(`${this.apiRoot}/user`, {
-        headers: {
-          Authorization: `${this.tokenKeyword} ${token}`,
-        },
-      }).then(res => res.json());
+      this._currentUserPromise = (async () => {
+        const res = await fetch(`${this.apiRoot}/user`, {
+          headers: {
+            Authorization: `${this.tokenKeyword} ${token}`,
+          },
+        });
+        const user = await res.json();
+        return {
+          ...user,
+          name: user.name || 'Unknown',
+        } as GitHubUser;
+      })();
     }
     return this._currentUserPromise;
   }
@@ -354,7 +366,7 @@ export default class GitHub implements Implementation {
     }
   }
 
-  async authenticate(state: Credentials) {
+  async authenticate(state: Credentials): Promise<User> {
     this.token = state.token as string;
     this.googleAuth = state.google_auth;
     // Query the default branch name when the `branch` property is missing
@@ -385,7 +397,7 @@ export default class GitHub implements Implementation {
       useOpenAuthoring: this.useOpenAuthoring,
       initialWorkflowStatus: this.options.initialWorkflowStatus,
       baseUrl: this.baseUrl,
-      getUser: this.currentUser,
+      getUser: this.currentUser.bind(this),
     });
     const user = await this.api!.user();
     const isCollab =
@@ -415,6 +427,9 @@ export default class GitHub implements Implementation {
     //   }
     // }
 
+    if (this.api && !this.pollingManager) {
+      this.pollingManager = new NotesPollingManager(this.api, 15000);
+    }
     // Authorized user
     return {
       ...user,
@@ -447,6 +462,13 @@ export default class GitHub implements Implementation {
   logout() {
     this.token = null;
     this.googleAuth = null;
+    // Clean up polling
+    if (this.pollingManager) {
+      this.pollingManager.destroy();
+      this.pollingManager = undefined;
+    }
+    this.unwatchFunctions.clear();
+
     if (this.api && this.api.reset && typeof this.api.reset === 'function') {
       return this.api.reset();
     }
@@ -785,7 +807,15 @@ export default class GitHub implements Implementation {
     // deleteUnpublishedEntry is a transactional operation
     return runWithLock(
       this.lock,
-      () => this.api!.deleteUnpublishedEntry(collection, slug),
+      async () => {
+        await this.api!.deleteUnpublishedEntry(collection, slug);
+        // Clean up associated notes issue
+        try {
+          await this.api!.closeEntryNotesIssue(collection, slug);
+        } catch (error) {
+          console.warn('Failed to close notes issue during entry deletion:', error);
+        }
+      },
       'Failed to acquire delete entry lock',
     );
   }
@@ -807,7 +837,10 @@ export default class GitHub implements Implementation {
     // publishUnpublishedEntry is a transactional operation
     return runWithLock(
       this.lock,
-      () => this.api!.publishUnpublishedEntry(collection, slug),
+      async () => {
+        await this.api!.publishUnpublishedEntry(collection, slug);
+        await this.api!.closeIssueOnPublish(collection, slug);
+      },
       'Failed to acquire publish entry lock',
     );
   }
@@ -851,5 +884,208 @@ export default class GitHub implements Implementation {
       () => title && this.api!.createStackPR(title),
       'Failed to close stack status lock',
     );
+  }
+
+  // Notes implementation, which is an abstraction to Github's PR issue comments.
+
+  /**
+   * Who the signed-in editor is, as a note records them: a display name for the
+   * pane and a stable id for the ownership check behind Edit/Resolve/Delete.
+   */
+  async noteAuthorIdentity(): Promise<{ author: string; authorId?: string }> {
+    const currentUser = await this.currentUser({ token: this.token! });
+    return {
+      author: currentUser.login || currentUser.name || '',
+      // No id on purpose: GitHub reports the author's current login on every
+      // read, so ownership follows a rename. Recording it here would freeze it.
+      authorId: undefined,
+    };
+  }
+
+  /**
+   * Resolves each note's `isOwn` here rather than in the pane, because only the
+   * backend knows how its identities compare. Falls back to the display name
+   * for notes with no recorded id.
+   */
+  private async markOwnNotes(notes: Note[]): Promise<Note[]> {
+    return markOwnNotes(notes, await this.noteAuthorIdentity());
+  }
+
+  // Notes implementation using GitHub Issues
+  async getNotes(collection: string, slug: string): Promise<Note[]> {
+    try {
+      const notes = await this.api!.getEntryNotes(collection, slug);
+      return this.markOwnNotes(notes.map(note => ({ ...note, entrySlug: slug })));
+    } catch (error) {
+      console.error('Failed to get notes:', error);
+      return [];
+    }
+  }
+
+  async addNote(
+    collection: string,
+    slug: string,
+    noteData: Omit<Note, 'id'>,
+    entryTitle?: string,
+  ): Promise<Note> {
+    const currentUser = await this.currentUser({ token: this.token! });
+    const identity = await this.noteAuthorIdentity();
+
+    const note: Note = {
+      ...noteData,
+      id: 'temp-' + Date.now(),
+      author: identity.author,
+      authorId: identity.authorId,
+      isOwn: true,
+      avatarUrl: currentUser.avatar_url,
+      entrySlug: slug,
+      timestamp: noteData.timestamp || new Date().toISOString(),
+      resolved: noteData.resolved || false,
+      issueUrl: undefined,
+    };
+
+    const { commentId, issueUrl } = await this.api!.addNoteToEntry(
+      collection,
+      slug,
+      note,
+      entryTitle,
+    );
+
+    return {
+      ...note,
+      id: commentId,
+      issueUrl,
+    };
+  }
+
+  async updateNote(
+    collection: string,
+    slug: string,
+    noteId: string,
+    updates: Partial<Note>,
+  ): Promise<Note> {
+    const currentNotes = await this.getNotes(collection, slug);
+    const existingNote = currentNotes.find(note => note.id === noteId);
+    if (!existingNote) {
+      throw new Error(`Note with ID ${noteId} not found`);
+    }
+
+    const updatedNote: Note = {
+      ...existingNote,
+      ...updates,
+      id: noteId,
+      entrySlug: slug,
+    };
+
+    await this.api!.updateEntryNote(noteId, updatedNote);
+    return updatedNote;
+  }
+
+  async deleteNote(collection: string, slug: string, noteId: string): Promise<void> {
+    const currentNotes = await this.getNotes(collection, slug);
+    const noteExists = currentNotes.some(note => note.id === noteId);
+    if (!noteExists) {
+      throw new Error(`Note with ID ${noteId} not found`);
+    }
+
+    await this.api!.deleteEntryNote(noteId);
+  }
+
+  async toggleNoteResolution(collection: string, slug: string, noteId: string): Promise<Note> {
+    const currentNotes = await this.getNotes(collection, slug);
+    const note = currentNotes.find(n => n.id === noteId);
+    if (!note) {
+      throw new Error(`Note with ID ${noteId} not found`);
+    }
+
+    return this.updateNote(collection, slug, noteId, {
+      resolved: !note.resolved,
+    });
+  }
+
+  async reopenIssueForUnpublishedEntry(collection: string, slug: string) {
+    await this.api!.reopenIssueOnUnpublish(collection, slug);
+  }
+  /**
+   * Start watching notes for changes
+   * Called from Redux action
+   */
+  async startNotesPolling(
+    collection: string,
+    slug: string,
+    callbacks: {
+      onUpdate: (notes: Note[], changes: IssueChange[]) => void;
+      onChange?: (change: IssueChange) => void;
+    },
+  ): Promise<void> {
+    if (!this.pollingManager) {
+      console.warn('[DecapNotes Polling] Polling manager not initialized');
+      return;
+    }
+
+    const issueKey = `${collection}/${slug}`;
+
+    // Check if already watching this exact entry - if so, skip
+    if (this.pollingManager.getStatus().currentWatch === issueKey) {
+      return;
+    }
+
+    // First, ensure any previous polling for this entry is completely stopped
+    const existingUnwatch = this.unwatchFunctions.get(issueKey);
+    if (existingUnwatch) {
+      existingUnwatch();
+      this.unwatchFunctions.delete(issueKey);
+    }
+
+    try {
+      const unwatchFn = await this.pollingManager.watchIssueWithRetry(
+        collection,
+        slug,
+        {
+          ...callbacks,
+          // The polling manager rebuilds notes straight from the issue's
+          // comments, so they arrive without the ownership flag getNotes adds.
+          // Without this, a poll silently strips Edit/Resolve/Delete off the
+          // editor's own notes ~15s after they appear.
+          prepareNotes: notes => this.markOwnNotes(notes),
+        },
+        5, // maxRetries - will try up to 5 times
+        2000, // retryDelay - 2 seconds between attempts
+      );
+
+      // Store the new unwatch function
+      this.unwatchFunctions.set(issueKey, unwatchFn);
+    } catch (error) {
+      console.error('[DecapNotes Polling] Failed to start polling after retries:', error);
+    }
+  }
+
+  /**
+   * Stop watching notes for changes
+   * Called from Redux action: dispatch(stopNotesPolling(collection, slug))
+   *
+   * Ensures complete cleanup of polling for this entry
+   */
+  async stopNotesPolling(collection: string, slug: string): Promise<void> {
+    const issueKey = `${collection}/${slug}`;
+    const unwatchFn = this.unwatchFunctions.get(issueKey);
+
+    if (unwatchFn) {
+      unwatchFn();
+      this.unwatchFunctions.delete(issueKey);
+    }
+
+    this.pollingManager?.stopWatching(collection, slug);
+  }
+
+  /**
+   * Manually refresh notes (force check now)
+   * Called from Redux action: dispatch(refreshNotesNow(collection, slug))
+   */
+  async refreshNotesNow(collection: string, slug: string): Promise<void> {
+    if (!this.pollingManager) {
+      throw new Error('Polling manager not initialized');
+    }
+    await this.pollingManager.checkIssueNow(collection, slug);
   }
 }

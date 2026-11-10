@@ -1,4 +1,4 @@
-import React from 'react';
+import { Component, Fragment } from 'react';
 import PropTypes from 'prop-types';
 import styled from '@emotion/styled';
 import { NetlifyAuthenticator } from 'decap-cms-lib-auth';
@@ -21,7 +21,7 @@ const ForkButtonsContainer = styled.div`
   align-items: center;
 `;
 
-export default class GitHubAuthenticationPage extends React.Component {
+export default class GitHubAuthenticationPage extends Component {
   static propTypes = {
     onLogin: PropTypes.func.isRequired,
     inProgress: PropTypes.bool,
@@ -34,6 +34,16 @@ export default class GitHubAuthenticationPage extends React.Component {
   };
 
   state = {};
+
+  componentDidMount() {
+    // Manually validate PropTypes - React 19 breaking change
+    PropTypes.checkPropTypes(
+      GitHubAuthenticationPage.propTypes,
+      this.props,
+      'prop',
+      'GitHubAuthenticationPage',
+    );
+  }
 
   getPermissionToFork = () => {
     return new Promise((resolve, reject) => {
@@ -97,10 +107,10 @@ export default class GitHubAuthenticationPage extends React.Component {
     return inProgress || this.state.findingFork ? (
       t('auth.loggingIn')
     ) : (
-      <React.Fragment>
+      <Fragment>
         <LoginButtonIcon type="github" />
         {t('auth.loginWithGitHub')}
-      </React.Fragment>
+      </Fragment>
     );
   };
 
@@ -141,7 +151,8 @@ export default class GitHubAuthenticationPage extends React.Component {
         onLogin={this.handleLogin}
         loginDisabled={inProgress || findingFork || requestingFork}
         loginErrorMessage={loginError}
-        logoUrl={config.logo_url}
+        logoUrl={config.logo_url} // Deprecated, replaced by `logo.src`
+        logo={config.logo}
         siteUrl={config.site_url}
         {...this.getAuthenticationPageRenderArgs()}
         t={t}

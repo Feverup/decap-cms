@@ -1,4 +1,4 @@
-import React from 'react';
+import { Component, Fragment } from 'react';
 import PropTypes from 'prop-types';
 import styled from '@emotion/styled';
 import { NetlifyAuthenticator, ImplicitAuthenticator } from 'decap-cms-lib-auth';
@@ -8,7 +8,7 @@ const LoginButtonIcon = styled(Icon)`
   margin-right: 18px;
 `;
 
-export default class BitbucketAuthenticationPage extends React.Component {
+export default class BitbucketAuthenticationPage extends Component {
   static propTypes = {
     onLogin: PropTypes.func.isRequired,
     inProgress: PropTypes.bool,
@@ -23,6 +23,14 @@ export default class BitbucketAuthenticationPage extends React.Component {
   state = {};
 
   componentDidMount() {
+    // Manually validate PropTypes - React 19 breaking change
+    PropTypes.checkPropTypes(
+      BitbucketAuthenticationPage.propTypes,
+      this.props,
+      'prop',
+      'BitbucketAuthenticationPage',
+    );
+
     const { auth_type: authType = '' } = this.props.config.backend;
 
     if (authType === 'implicit') {
@@ -79,13 +87,14 @@ export default class BitbucketAuthenticationPage extends React.Component {
         onLogin={this.handleLogin}
         loginDisabled={inProgress}
         loginErrorMessage={this.state.loginError}
-        logoUrl={config.logo_url}
+        logoUrl={config.logo_url} // Deprecated, replaced by `logo.src`
+        logo={config.logo}
         siteUrl={config.site_url}
         renderButtonContent={() => (
-          <React.Fragment>
+          <Fragment>
             <LoginButtonIcon type="bitbucket" />
             {inProgress ? t('auth.loggingIn') : t('auth.loginWithBitbucket')}
-          </React.Fragment>
+          </Fragment>
         )}
         t={t}
       />

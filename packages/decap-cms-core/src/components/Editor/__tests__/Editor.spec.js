@@ -1,4 +1,3 @@
-import React from 'react';
 import { render } from '@testing-library/react';
 import { fromJS } from 'immutable';
 
@@ -65,10 +64,9 @@ describe('Editor', () => {
     expect(asFragment()).toMatchSnapshot();
     expect(console.error).toHaveBeenCalledTimes(1);
     expect(console.error).toHaveBeenCalledWith(
-      'Warning: Failed %s type: %s%s',
-      'prop',
-      'Required prop `entryDraft` was not specified in `Editor`.',
-      expect.anything(),
+      expect.stringContaining(
+        'Warning: Failed prop type: Required prop `entryDraft` was not specified in `Editor`.',
+      ),
     );
   });
 

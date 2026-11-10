@@ -1,4 +1,4 @@
-import React from 'react';
+import { Component } from 'react';
 import PropTypes from 'prop-types';
 import styled from '@emotion/styled';
 import { css } from '@emotion/react';
@@ -49,7 +49,7 @@ const AddButton = styled.button`
   }
 `;
 
-class ObjectWidgetTopBar extends React.Component {
+class ObjectWidgetTopBar extends Component {
   static propTypes = {
     allowAdd: PropTypes.bool,
     types: ImmutablePropTypes.list,
@@ -61,6 +61,16 @@ class ObjectWidgetTopBar extends React.Component {
     label: PropTypes.string,
     t: PropTypes.func.isRequired,
   };
+
+  componentDidMount() {
+    // Manually validate PropTypes - React 19 breaking change
+    PropTypes.checkPropTypes(
+      ObjectWidgetTopBar.propTypes,
+      this.props,
+      'prop',
+      'ObjectWidgetTopBar',
+    );
+  }
 
   renderAddUI() {
     if (!this.props.allowAdd) {
@@ -103,12 +113,20 @@ class ObjectWidgetTopBar extends React.Component {
   }
 
   render() {
-    const { onCollapseToggle, collapsed, heading = null } = this.props;
+    const { onCollapseToggle, collapsed, heading = null, t } = this.props;
 
     return (
       <TopBarContainer>
         <ExpandButtonContainer hasHeading={!!heading}>
-          <ExpandButton onClick={onCollapseToggle} data-testid="expand-button">
+          <ExpandButton
+            onClick={onCollapseToggle}
+            data-testid="expand-button"
+            aria-label={
+              collapsed
+                ? t('editor.editorWidgets.object.expand')
+                : t('editor.editorWidgets.object.collapse')
+            }
+          >
             <Icon type="chevron" direction={collapsed ? 'right' : 'down'} size="small" />
           </ExpandButton>
           {heading}

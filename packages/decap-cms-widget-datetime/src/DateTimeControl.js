@@ -1,7 +1,6 @@
-/** @jsx jsx */
 import React from 'react';
 import PropTypes from 'prop-types';
-import { jsx, css } from '@emotion/react';
+import { css } from '@emotion/react';
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
 import localizedFormat from 'dayjs/plugin/localizedFormat';
@@ -12,7 +11,7 @@ dayjs.extend(customParseFormat);
 dayjs.extend(localizedFormat);
 dayjs.extend(utc);
 
-function Buttons({ t, handleChange, getNow }) {
+function Buttons({ t, fieldName, handleChange, getNow }) {
   return (
     <div
       css={css`
@@ -22,6 +21,7 @@ function Buttons({ t, handleChange, getNow }) {
       `}
     >
       <button
+        aria-label={t('editor.editorWidgets.datetime.setToNow', { fieldLabel: fieldName })}
         css={css`
           ${buttons.button}
           ${buttons.widget}
@@ -62,12 +62,14 @@ class DateTimeControl extends React.Component {
     isDisabled: false,
   };
 
-  // While focused, show what the user typed: re-formatting a partial year ("0002") mangles it.
   state = {
     inputValue: null,
   };
 
   componentDidMount() {
+    // Manually validate PropTypes - React 19 breaking change
+    PropTypes.checkPropTypes(DateTimeControl.propTypes, this.props, 'prop', 'DateTimeControl');
+
     const { value } = this.props;
     if (value === '{{now}}') {
       this.handleChange(this.getNow());
@@ -175,7 +177,7 @@ class DateTimeControl extends React.Component {
   };
 
   render() {
-    const { forID, value, classNameWrapper, t, isDisabled } = this.props;
+    const { forID, field, value, classNameWrapper, t, isDisabled } = this.props;
     const { inputType } = this.getFormat();
     const { inputValue } = this.state;
 
@@ -209,7 +211,12 @@ class DateTimeControl extends React.Component {
           </span>
         )}
         {!isDisabled && (
-          <Buttons t={t} handleChange={v => this.handleChange(v)} getNow={() => this.getNow()} />
+          <Buttons
+            t={t}
+            fieldName={field.get('name')}
+            handleChange={v => this.handleChange(v)}
+            getNow={() => this.getNow()}
+          />
         )}
       </div>
     );

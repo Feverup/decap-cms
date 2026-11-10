@@ -3,6 +3,88 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [3.7.2](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-gitlab@3.7.1...decap-cms-backend-gitlab@3.7.2) (2026-10-26)
+
+### Bug Fixes
+
+- **gitlab:** include merge request SHA when publishing ([#7991](https://github.com/decaporg/decap-cms/issues/7991)) ([b759e3b](https://github.com/decaporg/decap-cms/commit/b759e3b85f37bc740d75346dc47ff5f2b7d2be80)), closes [#7963](https://github.com/decaporg/decap-cms/issues/7963)
+
+## [3.7.1](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-gitlab@3.7.0...decap-cms-backend-gitlab@3.7.1) (2026-10-14)
+
+**Note:** Version bump only for package decap-cms-backend-gitlab
+
+# [3.7.0](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-gitlab@3.7.0-beta.3...decap-cms-backend-gitlab@3.7.0) (2026-10-14)
+
+**Note:** Version bump only for package decap-cms-backend-gitlab
+
+# [3.7.0-beta.3](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-gitlab@3.7.0-beta.1...decap-cms-backend-gitlab@3.7.0-beta.3) (2026-10-13)
+
+**Note:** Version bump only for package decap-cms-backend-gitlab
+
+# [3.7.0-beta.2](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-gitlab@3.7.0-beta.1...decap-cms-backend-gitlab@3.7.0-beta.2) (2026-10-12)
+
+**Note:** Version bump only for package decap-cms-backend-gitlab
+
+# [3.7.0-beta.1](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-gitlab@3.7.0-beta.0...decap-cms-backend-gitlab@3.7.0-beta.1) (2026-10-08)
+
+**Note:** Version bump only for package decap-cms-backend-gitlab
+
+# [3.7.0-beta.0](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-gitlab@3.6.4-beta.0...decap-cms-backend-gitlab@3.7.0-beta.0) (2026-09-22)
+
+### Features
+
+- attribute Turbo notes to signed-in editor and fix github issue lookup ([2414aca](https://github.com/decaporg/decap-cms/commit/2414aca6e024ad8e3d417ac7b547491592cca66e))
+
+## [3.6.4](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-gitlab@3.6.3...decap-cms-backend-gitlab@3.6.4) (2026-09-22)
+
+**Note:** Version bump only for package decap-cms-backend-gitlab
+
+## [3.6.4-beta.0](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-gitlab@3.6.3...decap-cms-backend-gitlab@3.6.4-beta.0) (2026-09-10)
+
+**Note:** Version bump only for package decap-cms-backend-gitlab
+
+## [3.6.3](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-gitlab@3.6.2...decap-cms-backend-gitlab@3.6.3) (2026-09-10)
+
+**Note:** Version bump only for package decap-cms-backend-gitlab
+
+## [3.6.2](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-gitlab@3.6.1...decap-cms-backend-gitlab@3.6.2) (2026-09-08)
+
+### Bug Fixes
+
+- **gitlab:** refresh expired tokens for GraphQL and REST 401s ([#7932](https://github.com/decaporg/decap-cms/issues/7932)) ([cec9441](https://github.com/decaporg/decap-cms/commit/cec9441e1660a5c28d305419e06de167889649a5))
+
+## [3.6.1](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-gitlab@3.6.0...decap-cms-backend-gitlab@3.6.1) (2026-06-15)
+
+### Bug Fixes
+
+- **gitlab:** refresh expired PKCE access tokens ([#7854](https://github.com/decaporg/decap-cms/issues/7854)) ([18be93a](https://github.com/decaporg/decap-cms/commit/18be93a85804bb49058cbbc1a18f128c1cee14da))
+- **gitlab:** use Bearer auth scheme for GraphQL requests ([#7855](https://github.com/decaporg/decap-cms/issues/7855)) ([d7bef89](https://github.com/decaporg/decap-cms/commit/d7bef898443b4dbe17bafd940412a8e81db6d904))
+
+# [3.6.0](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-gitlab@3.5.0...decap-cms-backend-gitlab@3.6.0) (2026-06-08)
+
+### Bug Fixes
+
+- **gitlab:** load lfs media content ([#7815](https://github.com/decaporg/decap-cms/issues/7815)) ([c76586b](https://github.com/decaporg/decap-cms/commit/c76586b151f83c805012d1a19ae3e0188faf963e))
+- remove unused dependencies and specify missing dependencies ([#7833](https://github.com/decaporg/decap-cms/issues/7833)) ([e324a14](https://github.com/decaporg/decap-cms/commit/e324a142f7f0ba63c760b2e8524d971c35200f87))
+
+# [3.5.0](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-gitlab@3.4.0...decap-cms-backend-gitlab@3.5.0) (2026-06-01)
+
+**Note:** Version bump only for package decap-cms-backend-gitlab
+
+# [3.4.0](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-gitlab@3.3.1...decap-cms-backend-gitlab@3.4.0) (2025-07-15)
+
+### Features
+
+- add logo to header ([#7487](https://github.com/decaporg/decap-cms/issues/7487)) ([b540ace](https://github.com/decaporg/decap-cms/commit/b540acec943eb231df6aac7b1d515d9b4b84fa5d))
+
+## [3.3.1](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-gitlab@3.3.0...decap-cms-backend-gitlab@3.3.1) (2025-07-10)
+
+**Note:** Version bump only for package decap-cms-backend-gitlab
+
+# [3.3.0](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-gitlab@3.2.2...decap-cms-backend-gitlab@3.3.0) (2025-06-26)
+
+**Note:** Version bump only for package decap-cms-backend-gitlab
+
 ## [3.2.2](https://github.com/decaporg/decap-cms/compare/decap-cms-backend-gitlab@3.2.1...decap-cms-backend-gitlab@3.2.2) (2024-08-13)
 
 ### Reverts

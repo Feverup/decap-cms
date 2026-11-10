@@ -1,4 +1,3 @@
-import React from 'react';
 import PropTypes from 'prop-types';
 import styled from '@emotion/styled';
 
@@ -50,7 +49,17 @@ function DragHandle({ Wrapper, id }) {
 }
 
 function ListItemTopBar(props) {
-  const { className, collapsed, onCollapseToggle, onDuplicate, onRemove, dragHandle, id } = props;
+  const {
+    className,
+    collapsed,
+    onCollapseToggle,
+    onDuplicate,
+    onRemove,
+    allowRemove,
+    dragHandle,
+    allowReorder,
+    id,
+  } = props;
   return (
     <TopBar className={className}>
       {onCollapseToggle ? (
@@ -58,14 +67,14 @@ function ListItemTopBar(props) {
           <Icon type="chevron" size="small" direction={collapsed ? 'right' : 'down'} />
         </TopBarButton>
       ) : null}
-      {dragHandle ? <DragHandle Wrapper={dragHandle} id={id} /> : null}
+      {dragHandle && allowReorder ? <DragHandle Wrapper={dragHandle} id={id} /> : <span></span>}
       <TopBarButtonGroups>
         {onDuplicate ? (
           <TopBarButton onClick={onDuplicate}>
             <Icon type="pages-alt" size="small" />
           </TopBarButton>
         ) : null}
-        {onRemove ? (
+        {onRemove && allowRemove ? (
           <TopBarButton onClick={onRemove}>
             <Icon type="close" size="small" />
           </TopBarButton>
@@ -79,7 +88,10 @@ ListItemTopBar.propTypes = {
   className: PropTypes.string,
   collapsed: PropTypes.bool,
   onCollapseToggle: PropTypes.func,
+  onDuplicate: PropTypes.func,
   onRemove: PropTypes.func,
+  allowRemove: PropTypes.bool,
+  allowReorder: PropTypes.bool,
 };
 
 const StyledListItemTopBar = styled(ListItemTopBar)`

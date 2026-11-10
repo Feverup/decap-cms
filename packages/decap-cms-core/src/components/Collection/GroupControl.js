@@ -1,4 +1,3 @@
-import React from 'react';
 import { translate } from 'react-polyglot';
 import { Dropdown, DropdownItem } from 'decap-cms-ui-default';
 
@@ -19,7 +18,7 @@ function GroupControl({ viewGroups, t, onGroupClick, group }) {
       }}
       closeOnSelection={false}
       dropdownTopOverlap="30px"
-      dropdownWidth="160px"
+      dropdownWidth="max-content"
       dropdownPosition="left"
     >
       {viewGroups.map(viewGroup => {

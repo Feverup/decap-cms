@@ -1,4 +1,4 @@
-import React from 'react';
+import { Component } from 'react';
 import PropTypes from 'prop-types';
 import ImmutablePropTypes from 'react-immutable-proptypes';
 import { List, Map } from 'immutable';
@@ -22,7 +22,7 @@ export function getEditorComponents() {
   return _getEditorComponents();
 }
 
-export default class MarkdownControl extends React.Component {
+export default class MarkdownControl extends Component {
   static propTypes = {
     onChange: PropTypes.func.isRequired,
     onAddAsset: PropTypes.func.isRequired,
@@ -42,16 +42,32 @@ export default class MarkdownControl extends React.Component {
   constructor(props) {
     super(props);
     editorControl = props.editorControl;
-    const preferredMode = localStorage.getItem(MODE_STORAGE_KEY) ?? 'rich_text';
+    // Without a saved preference, start in the first mode listed in `modes`.
+    const preferredMode = localStorage.getItem(MODE_STORAGE_KEY) ?? this.getAllowedModes()[0];
 
     _getEditorComponents = props.getEditorComponents;
     this.state = {
       mode:
-        this.getAllowedModes().indexOf(preferredMode) !== -1
+        // When used inside a container/shortcode editor component, default to
+        // raw mode — the widget type already implies the editing surface.
+        props.isEditorComponent
+          ? 'raw'
+          : this.getAllowedModes().indexOf(preferredMode) !== -1
           ? preferredMode
           : this.getAllowedModes()[0],
       pendingFocus: false,
     };
+  }
+
+  componentDidMount() {
+    // Manually validate PropTypes - React 19 breaking change
+    PropTypes.checkPropTypes(MarkdownControl.propTypes, this.props, 'prop', 'MarkdownControl');
+
+    // Ensure containerised widgets start in the correct mode even if the
+    // constructor ran before the prop was available (e.g. HMR / late prop).
+    if (this.props.isEditorComponent && this.state.mode !== 'raw') {
+      this.setState({ mode: 'raw' });
+    }
   }
 
   handleMode = mode => {
@@ -87,7 +103,8 @@ export default class MarkdownControl extends React.Component {
     } = this.props;
 
     const { mode, pendingFocus } = this.state;
-    const isShowModeToggle = this.getAllowedModes().length > 1;
+    const isEditorComponent = this.props.isEditorComponent;
+    const isShowModeToggle = this.getAllowedModes().length > 1 && !isEditorComponent;
     const visualEditor = (
       <div className="cms-editor-visual" ref={this.processRef}>
         <VisualEditor

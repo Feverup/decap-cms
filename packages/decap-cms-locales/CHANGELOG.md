@@ -3,6 +3,82 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [3.9.0](https://github.com/decaporg/decap-cms/compare/decap-cms-locales@3.9.0-beta.2...decap-cms-locales@3.9.0) (2026-10-14)
+
+**Note:** Version bump only for package decap-cms-locales
+
+# [3.9.0-beta.2](https://github.com/decaporg/decap-cms/compare/decap-cms-locales@3.9.0-beta.0...decap-cms-locales@3.9.0-beta.2) (2026-10-13)
+
+### Bug Fixes
+
+- **core:** search body only on backends that search it, and other GA fixes ([e57639b](https://github.com/decaporg/decap-cms/commit/e57639bcd7f91a3541cd95280dd0125ec13ecc9e))
+
+# [3.9.0-beta.1](https://github.com/decaporg/decap-cms/compare/decap-cms-locales@3.9.0-beta.0...decap-cms-locales@3.9.0-beta.1) (2026-10-12)
+
+### Bug Fixes
+
+- **core:** search body only on backends that search it, and other GA fixes ([e57639b](https://github.com/decaporg/decap-cms/commit/e57639bcd7f91a3541cd95280dd0125ec13ecc9e))
+
+# [3.9.0-beta.0](https://github.com/decaporg/decap-cms/compare/decap-cms-locales@3.8.2...decap-cms-locales@3.9.0-beta.0) (2026-09-10)
+
+### Bug Fixes
+
+- **deploys:** name the success state in the filter ([a32ba30](https://github.com/decaporg/decap-cms/commit/a32ba3051b20d59478913b97a9f9792760cb0a37))
+
+### Features
+
+- **core,turbo-github:** async, entry-scoped deploy notifications (A4b) ([ce3ef09](https://github.com/decaporg/decap-cms/commit/ce3ef092ab65d73502d3340ab281b33c26050ce9))
+- **core:** follow a save's deploy in one updating toast (A4) ([4aa5b0a](https://github.com/decaporg/decap-cms/commit/4aa5b0afc2c14dd62097eecb9967e843a49d29d9))
+- **deploy-status:** a Deploys page and a header state indicator (A8) ([1827898](https://github.com/decaporg/decap-cms/commit/18278989b65d3f5dcef1f433feed7e84e00d346f))
+- **deploy-status:** saved entry and published-to columns, stateful nav ([6bce67b](https://github.com/decaporg/decap-cms/commit/6bce67b506ef075f412107ff0be8e114910a216d))
+- **deploys:** filter by the state shown, and sort every column ([b3b3a6a](https://github.com/decaporg/decap-cms/commit/b3b3a6a43d01b2381d83dccb4736c3fbefa966fe))
+- **deploys:** live per branch, a stalled state, and table controls ([feb232e](https://github.com/decaporg/decap-cms/commit/feb232e87f57c5558bd6c29da2470d8c509f6340))
+
+## [3.8.2](https://github.com/decaporg/decap-cms/compare/decap-cms-locales@3.8.1...decap-cms-locales@3.8.2) (2026-09-10)
+
+**Note:** Version bump only for package decap-cms-locales
+
+## [3.8.1](https://github.com/decaporg/decap-cms/compare/decap-cms-locales@3.8.0...decap-cms-locales@3.8.1) (2026-09-08)
+
+**Note:** Version bump only for package decap-cms-locales
+
+# [3.8.0](https://github.com/decaporg/decap-cms/compare/decap-cms-locales@3.7.0...decap-cms-locales@3.8.0) (2026-07-23)
+
+### Bug Fixes
+
+- add separator and sorting for unpublished entries ([#7624](https://github.com/decaporg/decap-cms/issues/7624)) ([2f5c54d](https://github.com/decaporg/decap-cms/commit/2f5c54d96d3eaf657d0b75a0a2578073731907a7)), closes [#7542](https://github.com/decaporg/decap-cms/issues/7542)
+
+# [3.7.0](https://github.com/decaporg/decap-cms/compare/decap-cms-locales@3.6.0...decap-cms-locales@3.7.0) (2026-06-15)
+
+### Features
+
+- **locales:** add Slovak locale support ([#7844](https://github.com/decaporg/decap-cms/issues/7844)) ([eaace64](https://github.com/decaporg/decap-cms/commit/eaace64271801c0496fc95175802ae66565348f6))
+- **locales:** unify "New entry" button label to "＋ %{collectionLabel}" across all locales ([#7842](https://github.com/decaporg/decap-cms/issues/7842)) ([0e82bc5](https://github.com/decaporg/decap-cms/commit/0e82bc5fbf4670cf64a933e9abda89e7ac3a0637))
+
+# [3.6.0](https://github.com/decaporg/decap-cms/compare/decap-cms-locales@3.5.1...decap-cms-locales@3.6.0) (2026-06-08)
+
+### Features
+
+- Croatian and serbian locale ([#7829](https://github.com/decaporg/decap-cms/issues/7829)) ([0a5e6f9](https://github.com/decaporg/decap-cms/commit/0a5e6f9331ca9d00689c90cf288a53ccface9987))
+
+## [3.5.1](https://github.com/decaporg/decap-cms/compare/decap-cms-locales@3.5.0...decap-cms-locales@3.5.1) (2026-02-23)
+
+### Bug Fixes
+
+- **a11y:** aria-labels ([#7720](https://github.com/decaporg/decap-cms/issues/7720)) ([cc92370](https://github.com/decaporg/decap-cms/commit/cc92370595a85590ffede50a99259d52ba3eb76b))
+
+# [3.5.0](https://github.com/decaporg/decap-cms/compare/decap-cms-locales@3.4.0...decap-cms-locales@3.5.0) (2025-11-04)
+
+### Features
+
+- implement strikethrough functionality to markdown editor ([#7625](https://github.com/decaporg/decap-cms/issues/7625)) ([0c7d327](https://github.com/decaporg/decap-cms/commit/0c7d327341f785940da4fa88e5c2ed755215f010))
+
+# [3.4.0](https://github.com/decaporg/decap-cms/compare/decap-cms-locales@3.3.0...decap-cms-locales@3.4.0) (2025-06-26)
+
+### Features
+
+- update locale (it) ([#7508](https://github.com/decaporg/decap-cms/issues/7508)) ([30c4fd2](https://github.com/decaporg/decap-cms/commit/30c4fd293aba9672eb4be5a6a4517340e01ca2dc))
+
 # [3.3.0](https://github.com/decaporg/decap-cms/compare/decap-cms-locales@3.2.0...decap-cms-locales@3.3.0) (2025-01-15)
 
 ### Features

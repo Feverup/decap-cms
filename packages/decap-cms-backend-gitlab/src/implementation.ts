@@ -1,8 +1,10 @@
 import trimStart from 'lodash/trimStart';
 import semaphore from 'semaphore';
-import { trim } from 'lodash';
+import trim from 'lodash/trim';
 import { stripIndent } from 'common-tags';
 import {
+  NotesPollingManager,
+  markOwnNotes,
   CURSOR_COMPATIBILITY_SYMBOL,
   basename,
   entriesByFolder,
@@ -23,12 +25,18 @@ import {
   branchFromContentKey,
   filterByIndexFile,
   getDefaultBranchName,
+  unsentRequest,
+  AccessTokenError,
 } from 'decap-cms-lib-util';
+import { PkceAuthenticator } from 'decap-cms-lib-auth';
 
 import AuthenticationPage from './AuthenticationPage';
 import API, { API_NAME } from './API';
+import { GitLabNotesAPI } from './notesApi';
 
 import type {
+  Note,
+  IssueChange,
   Entry,
   AssetProxy,
   PersistOptions,
@@ -41,17 +49,25 @@ import type {
   ImplementationFile,
   UnpublishedEntryMediaFile,
   AsyncLock,
+  ApiRequest,
 } from 'decap-cms-lib-util';
 import type { Semaphore } from 'semaphore';
 
 const MAX_CONCURRENT_DOWNLOADS = 10;
 
 export default class GitLab implements Implementation {
+  notesApi?: GitLabNotesAPI;
+  pollingManager?: NotesPollingManager;
+  private unwatchNotes = new Map<string, () => void>();
+  private notesUserPromise?: Promise<{ username?: string; name?: string }>;
+
   lock: AsyncLock;
   api: API | null;
+  updateUserCredentials: (args: { token: string; refresh_token?: string }) => Promise<null>;
   options: {
     proxied: boolean;
     API: API | null;
+    updateUserCredentials: (args: { token: string; refresh_token?: string }) => Promise<null>;
     initialWorkflowStatus: string;
   };
   repo: string;
@@ -65,6 +81,13 @@ export default class GitLab implements Implementation {
   previewContext: string;
   useGraphQL: boolean;
   graphQLAPIRoot: string;
+  authType: string;
+  baseUrl: string;
+  authEndpoint: string;
+  appID: string;
+  refreshToken?: string;
+  refreshedTokenPromise?: Promise<string>;
+  authenticator?: PkceAuthenticator;
 
   _mediaDisplayURLSem?: Semaphore;
 
@@ -72,6 +95,7 @@ export default class GitLab implements Implementation {
     this.options = {
       proxied: false,
       API: null,
+      updateUserCredentials: async () => null,
       initialWorkflowStatus: '',
       ...options,
     };
@@ -85,6 +109,8 @@ export default class GitLab implements Implementation {
 
     this.api = this.options.API || null;
 
+    this.updateUserCredentials = this.options.updateUserCredentials;
+
     this.repo = config.backend.repo || '';
     this.branch = config.backend.branch || 'master';
     this.isBranchConfigured = config.backend.branch ? true : false;
@@ -96,6 +122,10 @@ export default class GitLab implements Implementation {
     this.previewContext = config.backend.preview_context || '';
     this.useGraphQL = config.backend.use_graphql || false;
     this.graphQLAPIRoot = config.backend.graphql_api_root || 'https://gitlab.com/api/graphql';
+    this.authType = config.backend.auth_type || '';
+    this.baseUrl = config.backend.base_url || 'https://gitlab.com';
+    this.authEndpoint = config.backend.auth_endpoint || 'oauth/authorize';
+    this.appID = config.backend.app_id || '';
     this.lock = asyncLock();
   }
 
@@ -126,6 +156,7 @@ export default class GitLab implements Implementation {
 
   async authenticate(state: Credentials) {
     this.token = state.token as string;
+    this.refreshToken = state.refresh_token;
     this.api = new API({
       token: this.token,
       branch: this.branch,
@@ -136,6 +167,7 @@ export default class GitLab implements Implementation {
       initialWorkflowStatus: this.options.initialWorkflowStatus,
       useGraphQL: this.useGraphQL,
       graphQLAPIRoot: this.graphQLAPIRoot,
+      requestFunction: this.apiRequestFunction,
     });
     const user = await this.api.user();
     const isCollab = await this.api.hasWriteAccess().catch((error: Error) => {
@@ -165,18 +197,106 @@ export default class GitLab implements Implementation {
         this.branch = defaultBranchName;
       }
     }
+    this.destroyNotesPolling();
+    this.notesApi = new GitLabNotesAPI(this.api);
+    this.pollingManager = new NotesPollingManager(this.notesApi.asPollingAPI(), 15000);
+
     // Authorized user
-    return { ...user, login: user.username, token: state.token as string };
+    return {
+      ...user,
+      login: user.username,
+      token: this.token as string,
+      refresh_token: this.refreshToken,
+    };
+  }
+
+  getRefreshedAccessToken() {
+    if (this.authType !== 'pkce' || !this.refreshToken) {
+      throw new AccessTokenError(`Can't refresh access token when using implicit auth`);
+    }
+    if (this.refreshedTokenPromise) {
+      return this.refreshedTokenPromise;
+    }
+
+    if (!this.authenticator) {
+      this.authenticator = new PkceAuthenticator({
+        base_url: this.baseUrl,
+        auth_endpoint: this.authEndpoint,
+        app_id: this.appID,
+        auth_token_endpoint: 'oauth/token',
+        auth_token_endpoint_content_type: 'application/json; charset=utf-8',
+      });
+    }
+
+    this.refreshedTokenPromise = this.authenticator!.refresh({
+      refresh_token: this.refreshToken,
+    }).then(({ token, refresh_token }) => {
+      this.token = token;
+      this.refreshToken = refresh_token;
+      this.refreshedTokenPromise = undefined;
+
+      this.updateUserCredentials({ token, refresh_token });
+      if (this.api) {
+        this.api.token = token;
+      }
+      return token;
+    });
+
+    return this.refreshedTokenPromise;
+  }
+
+  protected destroyNotesPolling() {
+    this.pollingManager?.destroy();
+    this.pollingManager = undefined;
+    this.unwatchNotes.clear();
+    this.notesUserPromise = undefined;
   }
 
   async logout() {
     this.token = null;
+    this.destroyNotesPolling();
     return;
   }
 
   getToken() {
+    if (this.refreshedTokenPromise) {
+      return this.refreshedTokenPromise;
+    }
+
     return Promise.resolve(this.token);
   }
+
+  apiRequestFunction = async (req: ApiRequest) => {
+    const token = (
+      this.refreshedTokenPromise ? await this.refreshedTokenPromise : this.token
+    ) as string;
+
+    const authorizedRequest = unsentRequest.withHeaders({ Authorization: `Bearer ${token}` }, req);
+    const response: Response = await unsentRequest.performRequest(authorizedRequest);
+    if (response.status === 401) {
+      const json = await response
+        .clone()
+        .json()
+        .catch(() => null);
+      const isInvalidToken =
+        json &&
+        (json.error === 'invalid_token' ||
+          json.message === '401 Unauthorized' ||
+          (Array.isArray(json.errors) &&
+            json.errors.some(({ message }: { message?: string }) => message === 'Invalid token')));
+      if (isInvalidToken) {
+        const newToken = await this.getRefreshedAccessToken();
+        const reqWithNewToken = unsentRequest.withHeaders(
+          {
+            Authorization: `Bearer ${newToken}`,
+          },
+          req,
+        ) as ApiRequest;
+        return unsentRequest.performRequest(reqWithNewToken);
+      }
+    }
+    return response;
+  };
 
   filterFile(
     folder: string,
@@ -274,16 +394,23 @@ export default class GitLab implements Implementation {
 
   getMediaDisplayURL(displayURL: DisplayURL) {
     this._mediaDisplayURLSem = this._mediaDisplayURLSem || semaphore(MAX_CONCURRENT_DOWNLOADS);
-    return getMediaDisplayURL(
-      displayURL,
-      this.api!.readFile.bind(this.api!),
-      this._mediaDisplayURLSem,
-    );
+    const readMediaFile = (
+      path: string,
+      id: string | null | undefined,
+      { parseText }: { parseText: boolean },
+    ) => this.api!.readFile(path, id, { parseText, lfs: true });
+
+    return getMediaDisplayURL(displayURL, readMediaFile, this._mediaDisplayURLSem);
   }
 
   async getMediaFile(path: string) {
     const name = basename(path);
-    const blob = await getMediaAsBlob(path, null, this.api!.readFile.bind(this.api!));
+    const readMediaFile = (
+      path: string,
+      id: string | null | undefined,
+      { parseText }: { parseText: boolean },
+    ) => this.api!.readFile(path, id, { parseText, lfs: true });
+    const blob = await getMediaAsBlob(path, null, readMediaFile);
     const fileObj = blobToFileObj(name, blob);
     const url = URL.createObjectURL(fileObj);
     const id = await getBlobSHA(blob);
@@ -364,7 +491,7 @@ export default class GitLab implements Implementation {
       path: string,
       id: string | null | undefined,
       { parseText }: { parseText: boolean },
-    ) => this.api!.readFile(path, id, { branch, parseText });
+    ) => this.api!.readFile(path, id, { branch, parseText, lfs: true });
 
     return getMediaAsBlob(file.path, null, readFile).then(blob => {
       const name = basename(file.path);
@@ -448,7 +575,12 @@ export default class GitLab implements Implementation {
     // deleteUnpublishedEntry is a transactional operation
     return runWithLock(
       this.lock,
-      () => this.api!.deleteUnpublishedEntry(collection, slug),
+      async () => {
+        await this.api!.deleteUnpublishedEntry(collection, slug);
+        // Best effort: losing the thread's label does not make the entry any
+        // less deleted, and failing the delete over it would be worse.
+        await this.notesApi?.closeEntryNotesIssue(collection, slug);
+      },
       'Failed to acquire delete entry lock',
     );
   }
@@ -457,9 +589,178 @@ export default class GitLab implements Implementation {
     // publishUnpublishedEntry is a transactional operation
     return runWithLock(
       this.lock,
-      () => this.api!.publishUnpublishedEntry(collection, slug),
+      async () => {
+        await this.api!.publishUnpublishedEntry(collection, slug);
+        await this.notesApi?.closeIssueOnPublish(collection, slug);
+      },
       'Failed to acquire publish entry lock',
     );
+  }
+
+  /**
+   * Who the signed-in editor is, as a note records them. No id: GitLab reports
+   * the current username on every read, so ownership follows a rename.
+   */
+  async noteAuthorIdentity(): Promise<{ author: string; authorId?: string }> {
+    const user = await this.currentNotesUser();
+    return { author: user.username || user.name || '', authorId: undefined };
+  }
+
+  private currentNotesUser() {
+    if (!this.notesUserPromise) {
+      const promise: Promise<{ username?: string; name?: string }> = this.api!.user();
+      this.notesUserPromise = promise;
+      promise.catch(() => {
+        if (this.notesUserPromise === promise) {
+          this.notesUserPromise = undefined;
+        }
+      });
+    }
+    return this.notesUserPromise;
+  }
+
+  /**
+   * Resolved here rather than in the pane, because only the backend knows how
+   * its own identities compare.
+   */
+  private async markOwnNotes(notes: Note[]): Promise<Note[]> {
+    return markOwnNotes(notes, await this.noteAuthorIdentity());
+  }
+
+  async getNotes(collection: string, slug: string): Promise<Note[]> {
+    const notes = (await this.notesApi!.getEntryNotes(collection, slug)).map(note => ({
+      ...note,
+      entrySlug: slug,
+    }));
+
+    try {
+      return await this.markOwnNotes(notes);
+    } catch (error) {
+      console.warn('Failed to resolve note ownership:', error);
+      return notes;
+    }
+  }
+
+  async addNote(
+    collection: string,
+    slug: string,
+    noteData: Omit<Note, 'id'>,
+    entryTitle?: string,
+  ): Promise<Note> {
+    const identity = await this.noteAuthorIdentity();
+    const note: Note = {
+      ...noteData,
+      id: `temp-${Date.now()}`,
+      author: identity.author,
+      authorId: identity.authorId,
+      isOwn: true,
+      entrySlug: slug,
+      timestamp: noteData.timestamp || new Date().toISOString(),
+      resolved: noteData.resolved || false,
+    };
+
+    const { commentId, issueUrl } = await this.notesApi!.addNoteToEntry(
+      collection,
+      slug,
+      note,
+      entryTitle,
+    );
+
+    return { ...note, id: commentId, issueUrl };
+  }
+
+  private async findNote(collection: string, slug: string, noteId: string) {
+    const notes = await this.notesApi!.getEntryNotes(collection, slug);
+    const note = notes.find(candidate => candidate.id === noteId);
+    if (!note) {
+      throw new Error(`Note with ID ${noteId} not found`);
+    }
+    return note;
+  }
+
+  async updateNote(
+    collection: string,
+    slug: string,
+    noteId: string,
+    updates: Partial<Note>,
+  ): Promise<Note> {
+    const note = await this.findNote(collection, slug, noteId);
+    return this.applyNoteUpdate(collection, slug, note, updates);
+  }
+
+  private async applyNoteUpdate(
+    collection: string,
+    slug: string,
+    note: Note,
+    updates: Partial<Note>,
+  ): Promise<Note> {
+    const updated = { ...note, ...updates };
+    await this.notesApi!.updateEntryNote(collection, slug, note.id, updated);
+    return (await this.markOwnNotes([updated]))[0];
+  }
+
+  async deleteNote(collection: string, slug: string, noteId: string): Promise<void> {
+    await this.notesApi!.deleteEntryNote(collection, slug, noteId);
+  }
+
+  async toggleNoteResolution(collection: string, slug: string, noteId: string): Promise<Note> {
+    const note = await this.findNote(collection, slug, noteId);
+    return this.applyNoteUpdate(collection, slug, note, { resolved: !note.resolved });
+  }
+
+  async reopenIssueForUnpublishedEntry(collection: string, slug: string) {
+    await this.notesApi?.reopenIssueOnUnpublish(collection, slug);
+  }
+
+  async startNotesPolling(
+    collection: string,
+    slug: string,
+    callbacks: {
+      onUpdate: (notes: Note[], changes: IssueChange[]) => void;
+      onChange?: (change: IssueChange) => void;
+    },
+  ): Promise<void> {
+    if (!this.pollingManager) {
+      return;
+    }
+
+    const key = `${collection}/${slug}`;
+    if (this.pollingManager.getStatus().currentWatch === key) {
+      return;
+    }
+
+    this.unwatchNotes.get(key)?.();
+    this.unwatchNotes.delete(key);
+
+    try {
+      const unwatch = await this.pollingManager.watchIssueWithRetry(
+        collection,
+        slug,
+        {
+          ...callbacks,
+          // Polled notes are rebuilt from the thread's comments and so arrive
+          // without the ownership flag getNotes adds; without this a poll would
+          // strip the actions off the editor's own notes moments after writing.
+          prepareNotes: notes => this.markOwnNotes(notes),
+        },
+        5,
+        2000,
+      );
+      this.unwatchNotes.set(key, unwatch);
+    } catch (error) {
+      console.error('[DecapNotes Polling] Failed to start polling after retries:', error);
+    }
+  }
+
+  async stopNotesPolling(collection: string, slug: string): Promise<void> {
+    const key = `${collection}/${slug}`;
+    this.unwatchNotes.get(key)?.();
+    this.unwatchNotes.delete(key);
+    this.pollingManager?.stopWatching(collection, slug);
+  }
+
+  async refreshNotesNow(collection: string, slug: string): Promise<void> {
+    await this.pollingManager?.checkIssueNow(collection, slug);
   }
 
   async getDeployPreview(collection: string, slug: string) {

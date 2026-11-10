@@ -9,6 +9,7 @@ import {
 } from '../backend';
 import { getBackend } from '../lib/registry';
 import { FOLDER, FILES } from '../constants/collectionTypes';
+import { EDITORIAL_WORKFLOW } from '../constants/publishModes';
 
 jest.mock('../lib/registry');
 jest.mock('decap-cms-lib-util');
@@ -115,6 +116,108 @@ describe('Backend', () => {
       );
 
       expect(result.length).toBe(1);
+    });
+  });
+
+  describe('processEntries', () => {
+    let backend;
+
+    function createBackend() {
+      getBackend.mockReturnValue({
+        init: jest.fn(),
+      });
+      return resolveBackend({
+        backend: {
+          name: 'git-gateway',
+        },
+      });
+    }
+
+    function createCollection(i18n) {
+      return fromJS({
+        name: 'posts',
+        type: FOLDER,
+        folder: '_posts',
+        format: 'yaml',
+        extension: 'yml',
+        filter: { field: 'draft', value: false },
+        fields: [{ name: 'title' }, { name: 'draft' }],
+        ...(i18n && { i18n }),
+      });
+    }
+
+    function loadedEntry(path, data) {
+      return { file: { path }, data };
+    }
+
+    beforeEach(() => {
+      backend = createBackend();
+    });
+
+    it('filters entries of a single file i18n collection on the default locale data', () => {
+      const collection = createCollection({
+        structure: 'single_file',
+        locales: ['en', 'de'],
+        default_locale: 'en',
+      });
+
+      const result = backend.processEntries(
+        [
+          loadedEntry(
+            '_posts/published.yml',
+            'en:\n  title: Published\n  draft: false\nde:\n  title: Veröffentlicht\n  draft: false\n',
+          ),
+          loadedEntry(
+            '_posts/drafted.yml',
+            'en:\n  title: Drafted\n  draft: true\nde:\n  title: Entwurf\n  draft: true\n',
+          ),
+        ],
+        collection,
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0].slug).toBe('published');
+      expect(result[0].data).toEqual({ title: 'Published', draft: false });
+      expect(result[0].i18n).toEqual({
+        de: { data: { title: 'Veröffentlicht', draft: false } },
+      });
+    });
+
+    it('keeps translations of a multiple files i18n collection whose filter field is not translated', () => {
+      const collection = createCollection({
+        structure: 'multiple_files',
+        locales: ['en', 'de'],
+        default_locale: 'en',
+      });
+
+      const result = backend.processEntries(
+        [
+          loadedEntry('_posts/published.en.yml', 'title: Published\ndraft: false\n'),
+          loadedEntry('_posts/published.de.yml', 'title: Veröffentlicht\n'),
+          loadedEntry('_posts/drafted.en.yml', 'title: Drafted\ndraft: true\n'),
+          loadedEntry('_posts/drafted.de.yml', 'title: Entwurf\n'),
+        ],
+        collection,
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0].slug).toBe('published');
+      expect(result[0].data).toEqual({ title: 'Published', draft: false });
+      expect(result[0].i18n).toEqual({ de: { data: { title: 'Veröffentlicht' } } });
+    });
+
+    it('filters entries of a collection without i18n', () => {
+      const result = backend.processEntries(
+        [
+          loadedEntry('_posts/published.yml', 'title: Published\ndraft: false\n'),
+          loadedEntry('_posts/drafted.yml', 'title: Drafted\ndraft: true\n'),
+        ],
+        createCollection(),
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0].slug).toBe('published');
+      expect(result[0].data).toEqual({ title: 'Published', draft: false });
     });
   });
 
@@ -391,6 +494,210 @@ describe('Backend', () => {
       expect(backend.entryToRaw).toHaveBeenCalledTimes(1);
       expect(backend.entryToRaw).toHaveBeenCalledWith(collection, newEntry);
     });
+
+    it('should reject new entries when collection limit is reached', async () => {
+      const implementation = {
+        init: jest.fn(() => implementation),
+        persistEntry: jest.fn(() => implementation),
+      };
+
+      const config = {
+        backend: {
+          commit_messages: 'commit-messages',
+        },
+      };
+      const collection = Map({
+        name: 'posts',
+        type: FOLDER,
+        create: true,
+        limit: 1,
+      });
+      const entry = Map({
+        data: Map({}),
+        newRecord: true,
+      });
+      const entryDraft = Map({
+        entry,
+      });
+
+      const user = { login: 'login', name: 'name' };
+      const backend = new Backend(implementation, { config, backendName: 'github' });
+
+      backend.currentUser = jest.fn().mockResolvedValue(user);
+      backend.invokePreSaveEvent = jest.fn().mockReturnValueOnce(entry);
+      backend.listAllEntries = jest.fn().mockResolvedValue([{ slug: 'existing' }]);
+
+      await expect(
+        backend.persistEntry({
+          config,
+          collection,
+          entryDraft,
+          assetProxies: [],
+          usedSlugs: List(),
+        }),
+      ).rejects.toThrow('Entry limit of 1 reached for collection posts');
+
+      expect(backend.listAllEntries).toHaveBeenCalledWith(collection);
+      expect(implementation.persistEntry).toHaveBeenCalledTimes(0);
+    });
+
+    it('should include unpublished workflow entries when checking collection limits', async () => {
+      const implementation = {
+        init: jest.fn(() => implementation),
+        persistEntry: jest.fn(() => implementation),
+        unpublishedEntries: jest.fn().mockResolvedValue(['posts/draft']),
+        unpublishedEntry: jest.fn().mockResolvedValue({
+          collection: 'posts',
+          slug: 'draft',
+          status: 'draft',
+          diffs: [],
+          updatedAt: '',
+        }),
+      };
+
+      const config = {
+        backend: {
+          commit_messages: 'commit-messages',
+        },
+        publish_mode: EDITORIAL_WORKFLOW,
+      };
+      const collection = Map({
+        name: 'posts',
+        type: FOLDER,
+        create: true,
+        limit: 1,
+      });
+      const entry = Map({
+        data: Map({}),
+        newRecord: true,
+      });
+      const entryDraft = Map({
+        entry,
+      });
+
+      const backend = new Backend(implementation, { config, backendName: 'github' });
+
+      backend.invokePreSaveEvent = jest.fn().mockReturnValueOnce(entry);
+      backend.listAllEntries = jest.fn().mockResolvedValue([]);
+
+      await expect(
+        backend.persistEntry({
+          config,
+          collection,
+          entryDraft,
+          assetProxies: [],
+          usedSlugs: List(),
+        }),
+      ).rejects.toThrow('Entry limit of 1 reached for collection posts');
+
+      expect(implementation.unpublishedEntries).toHaveBeenCalledTimes(1);
+      expect(implementation.persistEntry).toHaveBeenCalledTimes(0);
+    });
+
+    it('should use complete published entries instead of loaded slugs when checking limits', async () => {
+      const implementation = {
+        init: jest.fn(() => implementation),
+        persistEntry: jest.fn(() => implementation),
+      };
+
+      const config = {
+        backend: {
+          commit_messages: 'commit-messages',
+        },
+      };
+      const collection = Map({
+        name: 'posts',
+        type: FOLDER,
+        create: true,
+        limit: 2,
+      });
+      const entry = Map({
+        data: Map({}),
+        newRecord: true,
+      });
+      const entryDraft = Map({
+        entry,
+      });
+
+      const backend = new Backend(implementation, { config, backendName: 'github' });
+
+      backend.invokePreSaveEvent = jest.fn().mockReturnValueOnce(entry);
+      backend.listAllEntries = jest.fn().mockResolvedValue([{ slug: 'one' }, { slug: 'two' }]);
+
+      await expect(
+        backend.persistEntry({
+          config,
+          collection,
+          entryDraft,
+          assetProxies: [],
+          usedSlugs: List(['one']),
+        }),
+      ).rejects.toThrow('Entry limit of 2 reached for collection posts');
+
+      expect(implementation.persistEntry).toHaveBeenCalledTimes(0);
+    });
+
+    it('should preserve slug when preSave event handler modifies file collection entry', async () => {
+      const implementation = {
+        init: jest.fn(() => implementation),
+        persistEntry: jest.fn(() => implementation),
+      };
+
+      const config = {
+        backend: {
+          commit_messages: 'commit-messages',
+        },
+      };
+
+      // File collection with a single file
+      const collection = Map({
+        name: 'settings',
+        type: FILES,
+        files: List([
+          Map({
+            name: 'config',
+            file: 'data/config.json',
+            fields: List([Map({ name: 'title', widget: 'string' })]),
+          }),
+        ]),
+      });
+
+      const originalEntry = Map({
+        slug: 'config',
+        path: 'data/config.json',
+        data: Map({ title: 'original' }),
+        meta: Map({ path: 'data/config.json' }),
+      });
+
+      const entryDraft = Map({
+        entry: originalEntry,
+      });
+
+      const user = { login: 'login', name: 'name' };
+      const backend = new Backend(implementation, { config, backendName: 'github' });
+
+      backend.currentUser = jest.fn().mockResolvedValue(user);
+      backend.entryToRaw = jest.fn().mockReturnValue('content');
+
+      // Mock invokePreSaveEvent to simulate a preSave handler that modifies data
+      // This is what happens when custom widgets or event handlers modify entry data
+      // The key is that it returns the FULL entry with slug, not just the data
+      backend.invokePreSaveEvent = jest.fn().mockImplementation(async entry => {
+        // Simulate a preSave handler modifying the data field
+        return entry.setIn(['data', 'title'], 'modified');
+      });
+
+      await backend.persistEntry({ config, collection, entryDraft });
+
+      // Verify entryToRaw was called with an entry that has the slug
+      expect(backend.entryToRaw).toHaveBeenCalledTimes(1);
+      const entryPassedToRaw = backend.entryToRaw.mock.calls[0][1];
+
+      // Critical assertion: slug must be preserved
+      expect(entryPassedToRaw.get('slug')).toBe('config');
+      expect(entryPassedToRaw.get('path')).toBe('data/config.json');
+      expect(entryPassedToRaw.getIn(['data', 'title'])).toBe('modified');
+    });
   });
 
   describe('persistMedia', () => {
@@ -565,6 +872,298 @@ describe('Backend', () => {
         'sub_dir/some-post-title-1',
       );
     });
+
+    it('should probe the localised path for multiple_files i18n collections', async () => {
+      const { sanitizeSlug, sanitizeChar } = require('../lib/urlHelper');
+      sanitizeSlug.mockReturnValue('some-post-title');
+      sanitizeChar.mockReturnValue('-');
+
+      function notFound() {
+        return Promise.reject(Object.assign(new Error('Not Found'), { status: 404 }));
+      }
+
+      const implementation = {
+        init: jest.fn(() => implementation),
+        // Only the localised file exists, which is the real shape on disk.
+        getEntry: jest.fn(p =>
+          p === 'posts/some-post-title.en.md' ? Promise.resolve({ data: 'data' }) : notFound(),
+        ),
+      };
+
+      const collection = fromJS({
+        name: 'posts',
+        fields: [{ name: 'title' }],
+        type: FOLDER,
+        folder: 'posts',
+        slug: '{{slug}}',
+        i18n: { structure: 'multiple_files', locales: ['en', 'de'], default_locale: 'en' },
+      });
+
+      const backend = new Backend(implementation, { config: {}, backendName: 'github' });
+
+      // Probing the unlocalised 'posts/some-post-title.md' would miss, and the
+      // caller would reuse the slug and overwrite the existing entry.
+      await expect(
+        backend.generateUniqueSlug(collection, Map({ title: 'some post title' }), Map({}), []),
+      ).resolves.toBe('some-post-title-1');
+
+      expect(implementation.getEntry).toHaveBeenCalledWith('posts/some-post-title.en.md');
+    });
+
+    describe('length', () => {
+      const encoder = new (require('util').TextEncoder)();
+      const longVietnamese = 'hướng-dẫn-chăm-sóc-da-mặt-cho-làn-da-nhạy-cảm-'.repeat(20) + 'end';
+      const collection = fromJS({
+        name: 'posts',
+        fields: [{ name: 'title' }],
+        type: FOLDER,
+        folder: 'posts',
+        slug: '{{slug}}',
+      });
+
+      function notFound() {
+        return Promise.reject(Object.assign(new Error('Not Found'), { status: 404 }));
+      }
+
+      function bytes(str) {
+        return encoder.encode(str).length;
+      }
+
+      it('caps a newly generated slug so its workflow branch is a valid ref', async () => {
+        const { sanitizeSlug } = require('../lib/urlHelper');
+        sanitizeSlug.mockReturnValue(longVietnamese);
+        const implementation = { init: jest.fn(() => implementation), getEntry: notFound };
+        const backend = new Backend(implementation, { config: {}, backendName: 'github' });
+
+        const slug = await backend.generateUniqueSlug(
+          collection,
+          Map({ title: 'unused, sanitizeSlug is mocked' }),
+          { slug: { encoding: 'unicode', sanitize_replacement: '-' } },
+          [],
+        );
+
+        expect(bytes(slug)).toBeLessThanOrEqual(200);
+        expect(bytes(`refs/heads/cms/posts/${slug}`)).toBeLessThanOrEqual(255);
+        expect(slug).not.toMatch(/-$/);
+        expect(longVietnamese.startsWith(slug)).toBe(true);
+      });
+
+      it('keeps the uniqueness suffix within the cap', async () => {
+        const { sanitizeSlug, sanitizeChar } = require('../lib/urlHelper');
+        sanitizeSlug.mockReturnValue('a'.repeat(300));
+        sanitizeChar.mockReturnValue('-');
+        const implementation = { init: jest.fn(() => implementation), getEntry: notFound };
+        const backend = new Backend(implementation, { config: {}, backendName: 'github' });
+        const taken = 'a'.repeat(200);
+
+        const slug = await backend.generateUniqueSlug(
+          collection,
+          Map({ title: 'unused' }),
+          { slug: { sanitize_replacement: '-' } },
+          [taken],
+        );
+
+        expect(slug).toBe(`${'a'.repeat(198)}-1`);
+      });
+
+      it('leaves a slug from a custom path alone', async () => {
+        const implementation = { init: jest.fn(() => implementation), getEntry: notFound };
+        const backend = new Backend(implementation, { config: {}, backendName: 'github' });
+        const customPath = `posts/${'d'.repeat(250)}/index.md`;
+
+        const slug = await backend.generateUniqueSlug(
+          collection.set('nested', fromJS({ depth: 10 })),
+          Map({ title: 'unused' }),
+          {},
+          [],
+          customPath,
+        );
+
+        expect(slug).toBe(`${'d'.repeat(250)}/index`);
+      });
+    });
+
+    it('should fail the save when it cannot tell whether the entry exists', async () => {
+      const { sanitizeSlug, sanitizeChar } = require('../lib/urlHelper');
+      sanitizeSlug.mockReturnValue('some-post-title');
+      sanitizeChar.mockReturnValue('-');
+
+      const implementation = {
+        init: jest.fn(() => implementation),
+        // Not a 404 — the answer is unknown, not "absent".
+        getEntry: jest
+          .fn()
+          .mockRejectedValue(Object.assign(new Error('API rate limit exceeded'), { status: 403 })),
+      };
+
+      const collection = fromJS({
+        name: 'posts',
+        fields: [{ name: 'title' }],
+        type: FOLDER,
+        folder: 'posts',
+        slug: '{{slug}}',
+      });
+
+      const backend = new Backend(implementation, { config: {}, backendName: 'github' });
+
+      // Reporting "absent" would overwrite; reporting "present" would spin the
+      // uniqueness loop forever. Rejecting is the only safe answer.
+      await expect(
+        backend.generateUniqueSlug(collection, Map({ title: 'some post title' }), Map({}), []),
+      ).rejects.toThrow('API rate limit exceeded');
+    });
+
+    it('should suffix the slug placeholder before a fixed path filename', async () => {
+      const { sanitizeSlug, sanitizeChar } = require('../lib/urlHelper');
+      sanitizeSlug.mockReturnValue('some-post-title');
+      sanitizeChar.mockReturnValue('-');
+
+      const implementation = {
+        init: jest.fn(() => implementation),
+        getEntry: jest
+          .fn()
+          .mockResolvedValueOnce({ data: 'data' })
+          .mockResolvedValueOnce({ data: 'data' })
+          .mockResolvedValueOnce(undefined),
+      };
+
+      const collection = fromJS({
+        name: 'posts',
+        fields: [{ name: 'title' }],
+        type: FOLDER,
+        folder: 'posts',
+        slug: '{{slug}}',
+        path: '{{slug}}/index',
+      });
+      const entry = Map({ title: 'some post title' });
+      const backend = new Backend(implementation, { config: {}, backendName: 'github' });
+
+      await expect(backend.generateUniqueSlug(collection, entry, Map({}), [])).resolves.toBe(
+        'some-post-title-2/index',
+      );
+      expect(implementation.getEntry).toHaveBeenNthCalledWith(1, 'posts/some-post-title/index.md');
+      expect(implementation.getEntry).toHaveBeenNthCalledWith(
+        2,
+        'posts/some-post-title-1/index.md',
+      );
+      expect(implementation.getEntry).toHaveBeenNthCalledWith(
+        3,
+        'posts/some-post-title-2/index.md',
+      );
+    });
+
+    it('keeps a nested collision candidate distinct within the byte cap', async () => {
+      const { sanitizeSlug, sanitizeChar } = require('../lib/urlHelper');
+      const longSlug = 'a'.repeat(210);
+      sanitizeSlug.mockReturnValue(longSlug);
+      sanitizeChar.mockReturnValue('-');
+
+      const implementation = {
+        init: jest.fn(() => implementation),
+        getEntry: jest.fn().mockResolvedValue(undefined),
+      };
+      const collection = fromJS({
+        name: 'posts',
+        fields: [{ name: 'title' }],
+        type: FOLDER,
+        folder: 'posts',
+        slug: '{{slug}}',
+        path: '{{slug}}/index',
+      });
+      const backend = new Backend(implementation, { config: {}, backendName: 'github' });
+
+      const result = await backend.generateUniqueSlug(
+        collection,
+        Map({ title: longSlug }),
+        Map({}),
+        List(['a'.repeat(200)]),
+      );
+
+      expect(result).not.toBe('a'.repeat(200));
+      expect(Buffer.byteLength(result, 'utf8')).toBeLessThanOrEqual(200);
+    });
+  });
+
+  describe('deleteEntry with i18n', () => {
+    const collection = fromJS({
+      name: 'posts',
+      fields: [{ name: 'title' }],
+      type: FOLDER,
+      folder: 'posts',
+      slug: '{{slug}}',
+      i18n: { structure: 'multiple_files', locales: ['en', 'de', 'fr'], default_locale: 'en' },
+    });
+
+    function notFound() {
+      return Promise.reject(Object.assign(new Error('Not Found'), { status: 404 }));
+    }
+
+    function setup(getEntry, entity) {
+      const implementation = {
+        init: jest.fn(() => implementation),
+        getEntry: jest.fn(getEntry),
+        deleteFiles: jest.fn().mockResolvedValue(),
+      };
+      const backend = new Backend(implementation, { config: {}, backendName: 'github' });
+      backend.currentUser = jest.fn().mockResolvedValue({ login: 'login', name: 'name' });
+      backend.invokePreUnpublishEvent = jest.fn();
+      backend.invokePostUnpublishEvent = jest.fn();
+      const state = {
+        config: { backend: { name: 'github' } },
+        entries: fromJS({ entities: entity ? { 'posts.hello': entity } : {} }),
+      };
+      return { implementation, backend, state };
+    }
+
+    it('deletes only the locales the loaded entry has files for', async () => {
+      // GitHub answers a missing file with empty content, not a 404.
+      const { implementation, backend, state } = setup(() => Promise.resolve({ data: '' }), {
+        slug: 'hello',
+        i18nLocales: ['en', 'fr'],
+      });
+
+      await backend.deleteEntry(state, collection, 'hello');
+
+      expect(implementation.deleteFiles).toHaveBeenCalledWith(
+        ['posts/hello.en.md', 'posts/hello.fr.md'],
+        expect.any(String),
+      );
+      // Only the locale not known to exist was checked.
+      expect(implementation.getEntry).toHaveBeenCalledTimes(1);
+      expect(implementation.getEntry).toHaveBeenCalledWith('posts/hello.de.md');
+    });
+
+    it('still deletes a translation written after the entry was loaded', async () => {
+      const { implementation, backend, state } = setup(
+        p => Promise.resolve({ data: p === 'posts/hello.de.md' ? '---\ntitle: Hallo\n---\n' : '' }),
+        { slug: 'hello', i18nLocales: ['en'] },
+      );
+
+      await backend.deleteEntry(state, collection, 'hello');
+
+      expect(implementation.deleteFiles).toHaveBeenCalledWith(
+        ['posts/hello.en.md', 'posts/hello.de.md'],
+        expect.any(String),
+      );
+    });
+
+    it('checks every translation when the entry is not loaded, keeping the default locale', async () => {
+      const { implementation, backend, state } = setup(p =>
+        p === 'posts/hello.de.md'
+          ? Promise.reject(Object.assign(new Error('Server Error'), { status: 500 }))
+          : notFound(),
+      );
+
+      await backend.deleteEntry(state, collection, 'hello');
+
+      // fr is a confirmed 404 and is skipped. de could not be checked, so it is
+      // kept: a failed delete can be retried, an orphaned translation cannot.
+      expect(implementation.deleteFiles).toHaveBeenCalledWith(
+        ['posts/hello.en.md', 'posts/hello.de.md'],
+        expect.any(String),
+      );
+      expect(implementation.getEntry).not.toHaveBeenCalledWith('posts/hello.en.md');
+    });
   });
 
   describe('extractSearchFields', () => {
@@ -667,7 +1266,7 @@ describe('Backend', () => {
     ];
 
     const implementation = {
-      init: jest.fn(() => implementation),
+      init: () => implementation,
     };
 
     let backend;
@@ -745,6 +1344,30 @@ describe('Backend', () => {
       });
       expect(await backend.search(collections, 'find me by other')).toEqual({
         entries: [files[1]],
+      });
+    });
+
+    describe('entry body', () => {
+      const body =
+        'The cat sat on the mat. Lorem ipsum dolor sit amet, consectetur adipiscing elit, ' +
+        'sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim ' +
+        'veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo.';
+      const bodyPosts = [
+        { path: 'posts/hello.md', slug: 'hello', data: { title: 'Hello world', body } },
+      ];
+
+      it('does not match the body on a backend that does not search it', async () => {
+        backend.listAllEntries = jest.fn(() => Promise.resolve(bodyPosts));
+
+        expect(await backend.search([collections[0]], 'cat')).toEqual({ entries: [] });
+      });
+
+      it('matches the body on a backend that searches it server-side', async () => {
+        const bodyImplementation = { init: () => bodyImplementation, searchesEntryBody: true };
+        backend = new Backend(bodyImplementation, { config: {}, backendName: 'turbo-github' });
+        backend.listAllEntries = jest.fn(() => Promise.resolve(bodyPosts));
+
+        expect(await backend.search([collections[0]], 'cat')).toEqual({ entries: bodyPosts });
       });
     });
 
@@ -1024,6 +1647,231 @@ describe('Backend', () => {
           },
         },
       ]);
+    });
+  });
+
+  describe('persistEntry with nested collections', () => {
+    it('should pass hasSubfolders=true when subfolders is true (default)', async () => {
+      const implementation = {
+        init: jest.fn(() => implementation),
+        persistEntry: jest.fn(),
+      };
+
+      const config = {
+        backend: { commit_messages: {} },
+      };
+      const collection = Map({
+        name: 'pages',
+        type: FOLDER,
+        folder: '_pages',
+        create: true,
+        fields: List([Map({ name: 'title', widget: 'string' })]),
+        nested: Map({ depth: 10, subfolders: true }),
+        meta: Map({ path: Map({ label: 'Path', widget: 'string' }) }),
+      });
+      const entryDraft = Map({
+        entry: Map({
+          data: Map({ title: 'Test' }),
+          meta: Map({ path: 'blog' }),
+          newRecord: true,
+        }),
+      });
+      const user = { login: 'user', name: 'User' };
+      const backend = new Backend(implementation, { config, backendName: 'test' });
+
+      backend.currentUser = jest.fn().mockResolvedValue(user);
+      backend.entryToRaw = jest.fn().mockReturnValue('content');
+      backend.generateUniqueSlug = jest.fn().mockResolvedValue('test-slug');
+      backend.invokePreSaveEvent = jest.fn().mockResolvedValue(entryDraft.get('entry'));
+      backend.invokePostSaveEvent = jest.fn().mockResolvedValue();
+
+      await backend.persistEntry({
+        config,
+        collection,
+        entryDraft,
+        assetProxies: [],
+        usedSlugs: List(),
+      });
+
+      expect(implementation.persistEntry).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          hasSubfolders: true,
+        }),
+      );
+    });
+
+    it('should pass hasSubfolders=false when subfolders is false', async () => {
+      const implementation = {
+        init: jest.fn(() => implementation),
+        persistEntry: jest.fn(),
+      };
+
+      const config = {
+        backend: { commit_messages: {} },
+      };
+      const collection = Map({
+        name: 'pages',
+        type: FOLDER,
+        folder: '_pages',
+        create: true,
+        fields: List([Map({ name: 'title', widget: 'string' })]),
+        nested: Map({ depth: 10, subfolders: false }),
+        meta: Map({ path: Map({ label: 'Path', widget: 'string' }) }),
+      });
+      const entryDraft = Map({
+        entry: Map({
+          data: Map({ title: 'Test' }),
+          meta: Map({ path: 'blog' }),
+          newRecord: true,
+        }),
+      });
+      const user = { login: 'user', name: 'User' };
+      const backend = new Backend(implementation, { config, backendName: 'test' });
+
+      backend.currentUser = jest.fn().mockResolvedValue(user);
+      backend.entryToRaw = jest.fn().mockReturnValue('content');
+      backend.generateUniqueSlug = jest.fn().mockResolvedValue('test-slug');
+      backend.invokePreSaveEvent = jest.fn().mockResolvedValue(entryDraft.get('entry'));
+      backend.invokePostSaveEvent = jest.fn().mockResolvedValue();
+
+      await backend.persistEntry({
+        config,
+        collection,
+        entryDraft,
+        assetProxies: [],
+        usedSlugs: List(),
+      });
+
+      expect(implementation.persistEntry).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          hasSubfolders: false,
+        }),
+      );
+    });
+
+    it('should default to hasSubfolders=true when subfolders is not specified', async () => {
+      const implementation = {
+        init: jest.fn(() => implementation),
+        persistEntry: jest.fn(),
+      };
+
+      const config = {
+        backend: { commit_messages: {} },
+      };
+      const collection = Map({
+        name: 'pages',
+        type: FOLDER,
+        folder: '_pages',
+        create: true,
+        fields: List([Map({ name: 'title', widget: 'string' })]),
+        nested: Map({ depth: 10 }),
+        meta: Map({ path: Map({ label: 'Path', widget: 'string' }) }),
+      });
+      const entryDraft = Map({
+        entry: Map({
+          data: Map({ title: 'Test' }),
+          meta: Map({ path: 'blog' }),
+          newRecord: true,
+        }),
+      });
+      const user = { login: 'user', name: 'User' };
+      const backend = new Backend(implementation, { config, backendName: 'test' });
+
+      backend.currentUser = jest.fn().mockResolvedValue(user);
+      backend.entryToRaw = jest.fn().mockReturnValue('content');
+      backend.generateUniqueSlug = jest.fn().mockResolvedValue('test-slug');
+      backend.invokePreSaveEvent = jest.fn().mockResolvedValue(entryDraft.get('entry'));
+      backend.invokePostSaveEvent = jest.fn().mockResolvedValue();
+
+      await backend.persistEntry({
+        config,
+        collection,
+        entryDraft,
+        assetProxies: [],
+        usedSlugs: List(),
+      });
+
+      expect(implementation.persistEntry).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          hasSubfolders: true,
+        }),
+      );
+    });
+  });
+
+  describe('listAllEntries locale siblings', () => {
+    // A listing wants one file per entry, so the path regex it sends narrows to
+    // the default locale. The EDITOR reads every locale as its own file, so a
+    // backend that caches on the listing's selector caches `slug.en.md` and
+    // misses `slug.de.md` and `slug.si.md` on every entry open. The extra
+    // selector below is how such a backend learns which files those are.
+    function collectionWithI18n(structure) {
+      return fromJS({
+        name: 'posts',
+        type: FOLDER,
+        folder: 'content/posts',
+        extension: 'md',
+        i18n: { structure, locales: ['en', 'de', 'si'], default_locale: 'en' },
+      });
+    }
+
+    function backendWith(implementation) {
+      return new Backend(implementation, { config: { backend: {} }, backendName: 'github' });
+    }
+
+    it('passes a selector for the locales the listing leaves out', async () => {
+      const implementation = {
+        init: jest.fn(() => implementation),
+        allEntriesByFolder: jest.fn().mockResolvedValue([]),
+      };
+      const backend = backendWith(implementation);
+
+      await backend.listAllEntries(collectionWithI18n('multiple_files'));
+
+      // Fever: core passes the index file 4th, so the selectors move one place along.
+      const [, , , , pathRegex, , siblingRegex] = implementation.allEntriesByFolder.mock.calls[0];
+
+      // The listing selector takes the default locale and nothing else...
+      expect(pathRegex.test('content/posts/slug.en.md')).toBe(true);
+      expect(pathRegex.test('content/posts/slug.de.md')).toBe(false);
+
+      // ...and the sibling selector is its exact complement across the
+      // configured locales, so between them every locale file is accounted for
+      // and none is claimed twice.
+      expect(siblingRegex.test('content/posts/slug.de.md')).toBe(true);
+      expect(siblingRegex.test('content/posts/slug.si.md')).toBe(true);
+      expect(siblingRegex.test('content/posts/slug.en.md')).toBe(false);
+    });
+
+    it('passes no sibling selector when every locale lives in one file', async () => {
+      const implementation = {
+        init: jest.fn(() => implementation),
+        allEntriesByFolder: jest.fn().mockResolvedValue([]),
+      };
+      const backend = backendWith(implementation);
+
+      await backend.listAllEntries(collectionWithI18n('single_file'));
+
+      const [, , , , , siblingRegex] = implementation.allEntriesByFolder.mock.calls[0];
+      expect(siblingRegex).toBeUndefined();
+    });
+
+    it('passes no sibling selector for a collection without i18n', async () => {
+      const implementation = {
+        init: jest.fn(() => implementation),
+        allEntriesByFolder: jest.fn().mockResolvedValue([]),
+      };
+      const backend = backendWith(implementation);
+
+      await backend.listAllEntries(
+        fromJS({ name: 'posts', type: FOLDER, folder: 'content/posts', extension: 'md' }),
+      );
+
+      const [, , , , , siblingRegex] = implementation.allEntriesByFolder.mock.calls[0];
+      expect(siblingRegex).toBeUndefined();
     });
   });
 });

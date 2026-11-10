@@ -1,8 +1,8 @@
-import React from 'react';
+import { Component } from 'react';
 import PropTypes from 'prop-types';
-import { debounce } from 'lodash';
+import debounce from 'lodash/debounce';
 
-export default class StringControl extends React.Component {
+export default class StringControl extends Component {
   constructor(props) {
     super(props);
     this.state = {
@@ -28,6 +28,11 @@ export default class StringControl extends React.Component {
 
   // The input element ref
   _el = null;
+
+  componentDidMount() {
+    // Manually validate PropTypes - React 19 breaking change
+    PropTypes.checkPropTypes(StringControl.propTypes, this.props, 'prop', 'StringControl');
+  }
 
   shouldComponentUpdate(nextProps, nextState = {}) {
     return Boolean(

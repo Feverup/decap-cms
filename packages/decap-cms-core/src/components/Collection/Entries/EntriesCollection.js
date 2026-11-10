@@ -1,10 +1,10 @@
-import React from 'react';
+import { Component, Fragment } from 'react';
 import PropTypes from 'prop-types';
 import ImmutablePropTypes from 'react-immutable-proptypes';
 import { connect } from 'react-redux';
 import styled from '@emotion/styled';
 import { translate } from 'react-polyglot';
-import { partial } from 'lodash';
+import partial from 'lodash/partial';
 import { Cursor } from 'decap-cms-lib-util';
 import { colors } from 'decap-cms-ui-default';
 
@@ -12,12 +12,15 @@ import {
   loadEntries as actionLoadEntries,
   traverseCollectionCursor as actionTraverseCollectionCursor,
 } from '../../../actions/entries';
+import { loadUnpublishedEntries } from '../../../actions/editorialWorkflow';
 import {
   selectEntries,
   selectEntriesLoaded,
   selectIsFetching,
   selectGroups,
+  selectEntriesSortFields,
 } from '../../../reducers/entries';
+import { selectUnpublishedEntry, selectUnpublishedEntriesByStatus } from '../../../reducers';
 import { selectCollectionEntriesCursor } from '../../../reducers/cursors';
 import Entries from './Entries';
 
@@ -25,7 +28,6 @@ const GroupHeading = styled.h2`
   font-size: 22px;
   font-weight: 600;
   line-height: 37px;
-  padding-inline-start: 20px;
   color: ${colors.textLead};
 `;
 
@@ -52,15 +54,19 @@ function withGroups(groups, entries, EntriesToRender, t) {
     return (
       <GroupContainer key={group.id} id={group.id}>
         <GroupHeading>{title}</GroupHeading>
-        <EntriesToRender entries={getGroupEntries(entries, group.paths)} />
+        <EntriesToRender
+          entries={getGroupEntries(entries, group.paths)}
+          showUnpublishedEntries={false}
+        />
       </GroupContainer>
     );
   });
 }
 
-export class EntriesCollection extends React.Component {
+export class EntriesCollection extends Component {
   static propTypes = {
     collection: ImmutablePropTypes.map.isRequired,
+    collections: ImmutablePropTypes.iterable,
     page: PropTypes.number,
     entries: ImmutablePropTypes.list,
     groups: PropTypes.array,
@@ -70,19 +76,62 @@ export class EntriesCollection extends React.Component {
     loadEntries: PropTypes.func.isRequired,
     traverseCollectionCursor: PropTypes.func.isRequired,
     entriesLoaded: PropTypes.bool,
+    loadUnpublishedEntries: PropTypes.func.isRequired,
+    unpublishedEntriesLoaded: PropTypes.bool,
+    unpublishedEntriesFailed: PropTypes.bool,
+    isEditorialWorkflowEnabled: PropTypes.bool,
+    getWorkflowStatus: PropTypes.func.isRequired,
+    getUnpublishedEntries: PropTypes.func.isRequired,
   };
 
   componentDidMount() {
-    const { collection, entriesLoaded, loadEntries } = this.props;
+    // Manually validate PropTypes - React 19 breaking change
+    PropTypes.checkPropTypes(EntriesCollection.propTypes, this.props, 'prop', 'EntriesCollection');
+
+    const {
+      collection,
+      collections,
+      entriesLoaded,
+      loadEntries,
+      unpublishedEntriesLoaded,
+      loadUnpublishedEntries,
+      isEditorialWorkflowEnabled,
+    } = this.props;
+
     if (collection && !entriesLoaded) {
       loadEntries(collection);
+    }
+
+    if (isEditorialWorkflowEnabled && !unpublishedEntriesLoaded) {
+      loadUnpublishedEntries(collections);
     }
   }
 
   componentDidUpdate(prevProps) {
-    const { collection, entriesLoaded, loadEntries } = this.props;
-    if (collection !== prevProps.collection && !entriesLoaded) {
+    const {
+      collection,
+      collections,
+      entriesLoaded,
+      loadEntries,
+      unpublishedEntriesLoaded,
+      unpublishedEntriesFailed,
+      loadUnpublishedEntries,
+      isEditorialWorkflowEnabled,
+    } = this.props;
+
+    const collectionChanged = collection !== prevProps.collection;
+
+    if (collectionChanged && !entriesLoaded) {
       loadEntries(collection);
+    }
+
+    // After a failed load, wait for a navigation or an explicit load: every
+    // re-render, the failure's own toast included, would otherwise retry.
+    if (
+      isEditorialWorkflowEnabled &&
+      ((!unpublishedEntriesLoaded && !unpublishedEntriesFailed) || collectionChanged)
+    ) {
+      loadUnpublishedEntries(collections);
     }
   }
 
@@ -92,9 +141,30 @@ export class EntriesCollection extends React.Component {
   };
 
   render() {
-    const { collection, entries, groups, isFetching, viewStyle, cursor, page, t } = this.props;
+    const {
+      collection,
+      entries,
+      groups,
+      isFetching,
+      viewStyle,
+      cursor,
+      page,
+      t,
+      getWorkflowStatus,
+      getUnpublishedEntries,
+      filterTerm,
+      sortFields,
+    } = this.props;
 
-    const EntriesToRender = ({ entries }) => {
+    const EntriesToRender = ({ entries, showPublishedEntries, showUnpublishedEntries }) => {
+      const visibilityProps = {};
+      if (showPublishedEntries !== undefined) {
+        visibilityProps.showPublishedEntries = showPublishedEntries;
+      }
+      if (showUnpublishedEntries !== undefined) {
+        visibilityProps.showUnpublishedEntries = showUnpublishedEntries;
+      }
+
       return (
         <Entries
           collections={collection}
@@ -105,12 +175,22 @@ export class EntriesCollection extends React.Component {
           cursor={cursor}
           handleCursorActions={partial(this.handleCursorActions, cursor)}
           page={page}
+          getWorkflowStatus={getWorkflowStatus}
+          getUnpublishedEntries={getUnpublishedEntries}
+          filterTerm={filterTerm}
+          sortFields={sortFields}
+          {...visibilityProps}
         />
       );
     };
 
     if (groups && groups.length > 0) {
-      return withGroups(groups, entries, EntriesToRender, t);
+      return (
+        <Fragment>
+          {withGroups(groups, entries, EntriesToRender, t)}
+          <EntriesToRender entries={entries} showPublishedEntries={false} />
+        </Fragment>
+      );
     }
 
     return <EntriesToRender entries={entries} />;
@@ -147,8 +227,11 @@ function mapStateToProps(state, ownProps) {
   const { collection, viewStyle, filterTerm } = ownProps;
   const page = state.entries.getIn(['pages', collection.get('name'), 'page']);
 
+  const collections = state.collections;
+
   let entries = selectEntries(state.entries, collection);
   const groups = selectGroups(state.entries, collection);
+  const sortFields = selectEntriesSortFields(state.entries, collection.get('name'));
 
   if (collection.has('nested')) {
     const collectionFolder = collection.get('folder');
@@ -165,12 +248,58 @@ function mapStateToProps(state, ownProps) {
   const rawCursor = selectCollectionEntriesCursor(state.cursors, collection.get('name'));
   const cursor = Cursor.create(rawCursor).clearData();
 
-  return { collection, page, entries, groups, entriesLoaded, isFetching, viewStyle, cursor };
+  const isEditorialWorkflowEnabled = state.config?.publish_mode === 'editorial_workflow';
+  const unpublishedEntriesLoaded = isEditorialWorkflowEnabled
+    ? !!state.editorialWorkflow?.getIn(['pages', 'ids'], false)
+    : true;
+  const unpublishedEntriesFailed =
+    isEditorialWorkflowEnabled && !!state.editorialWorkflow?.getIn(['pages', 'error']);
+
+  return {
+    collection,
+    collections,
+    page,
+    entries,
+    groups,
+    sortFields,
+    entriesLoaded,
+    isFetching,
+    viewStyle,
+    cursor,
+    unpublishedEntriesLoaded,
+    unpublishedEntriesFailed,
+    isEditorialWorkflowEnabled,
+    getWorkflowStatus: (collectionName, slug) => {
+      const unpublishedEntry = selectUnpublishedEntry(state, collectionName, slug);
+      return unpublishedEntry ? unpublishedEntry.get('status') : null;
+    },
+    getUnpublishedEntries: collectionName => {
+      if (!isEditorialWorkflowEnabled) return [];
+
+      const allStatuses = ['draft', 'pending_review', 'pending_publish'];
+      const unpublishedEntries = [];
+
+      allStatuses.forEach(statusKey => {
+        const entriesForStatus = selectUnpublishedEntriesByStatus(state, statusKey);
+        if (entriesForStatus) {
+          entriesForStatus.forEach(entry => {
+            if (entry.get('collection') === collectionName) {
+              const entryWithCollection = entry.set('collection', collectionName);
+              unpublishedEntries.push(entryWithCollection);
+            }
+          });
+        }
+      });
+
+      return unpublishedEntries;
+    },
+  };
 }
 
 const mapDispatchToProps = {
   loadEntries: actionLoadEntries,
   traverseCollectionCursor: actionTraverseCollectionCursor,
+  loadUnpublishedEntries: collections => loadUnpublishedEntries(collections),
 };
 
 const ConnectedEntriesCollection = connect(mapStateToProps, mapDispatchToProps)(EntriesCollection);

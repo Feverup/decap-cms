@@ -1,4 +1,3 @@
-import React from 'react';
 import PropTypes from 'prop-types';
 import styled from '@emotion/styled';
 
@@ -18,6 +17,8 @@ const StyledAuthenticationPage = styled.section`
 const CustomIconWrapper = styled.span`
   width: 300px;
   height: auto;
+  text-align: center;
+  margin-bottom: 1rem;
 `;
 
 const DecapLogoIcon = styled(Icon)`
@@ -78,13 +79,15 @@ function AuthenticationPage({
   loginErrorMessage,
   renderButtonContent,
   renderPageContent,
-  logoUrl,
+  logoUrl, // Deprecated, replaced by `logo.src`
+  logo,
   siteUrl,
   t,
 }) {
+  const authLogoUrl = logoUrl || logo?.src;
   return (
     <StyledAuthenticationPage>
-      {renderPageLogo(logoUrl)}
+      {renderPageLogo(authLogoUrl)}
       {loginErrorMessage ? <p>{loginErrorMessage}</p> : null}
       {!renderPageContent
         ? null
@@ -95,14 +98,18 @@ function AuthenticationPage({
         </LoginButton>
       )}
       {siteUrl && <GoBackButton href={siteUrl} t={t} />}
-      {logoUrl ? <NetlifyCreditIcon size="100px" type="decap-cms" /> : null}
+      {authLogoUrl ? <NetlifyCreditIcon size="100px" type="decap-cms" /> : null}
     </StyledAuthenticationPage>
   );
 }
 
 AuthenticationPage.propTypes = {
   onLogin: PropTypes.func,
-  logoUrl: PropTypes.string,
+  logoUrl: PropTypes.string, // Deprecated, replaced by `logo.src`
+  logo: PropTypes.shape({
+    src: PropTypes.string,
+    show_in_header: PropTypes.bool,
+  }),
   siteUrl: PropTypes.string,
   loginDisabled: PropTypes.bool,
   loginErrorMessage: PropTypes.node,

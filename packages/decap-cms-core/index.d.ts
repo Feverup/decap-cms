@@ -8,8 +8,11 @@ declare module 'decap-cms-core' {
     | 'azure'
     | 'git-gateway'
     | 'github'
+    | 'turbo-github'
+    | 'turbo-gitlab'
     | 'gitlab'
     | 'gitea'
+    | 'forgejo'
     | 'bitbucket'
     | 'test-repo'
     | 'proxy';
@@ -56,10 +59,11 @@ declare module 'decap-cms-core' {
     label?: string;
     required?: boolean;
     hint?: string;
-    pattern?: [string, string];
+    pattern?: [string | RegExp, string];
     i18n?: boolean | 'translate' | 'duplicate' | 'none';
     media_folder?: string;
     public_folder?: string;
+    media_processing?: CmsMediaProcessing;
     comment?: string;
   }
 
@@ -134,6 +138,8 @@ declare module 'decap-cms-core' {
     default?: any;
 
     allow_add?: boolean;
+    allow_remove?: boolean;
+    allow_reorder?: boolean;
     collapsed?: boolean;
     summary?: string;
     minimize_collapsed?: boolean;
@@ -156,6 +162,21 @@ declare module 'decap-cms-core' {
 
   export interface CmsFieldMarkdown {
     widget: 'markdown';
+    default?: string;
+
+    minimal?: boolean;
+    buttons?: CmsMarkdownWidgetButton[];
+    editor_components?: string[];
+    modes?: ('raw' | 'rich_text')[];
+
+    /**
+     * @deprecated Use editor_components instead
+     */
+    editorComponents?: string[];
+  }
+
+  export interface CmsFieldRichText {
+    widget: 'richtext';
     default?: string;
 
     minimal?: boolean;
@@ -205,6 +226,8 @@ declare module 'decap-cms-core' {
     file?: string;
     display_fields?: string[];
     multiple?: boolean;
+    min?: number;
+    max?: number;
     options_length?: number;
 
     /**
@@ -234,6 +257,7 @@ declare module 'decap-cms-core' {
     // This is the default widget, so declaring its type is optional.
     widget?: 'string' | 'text';
     default?: string;
+    visualEditing?: boolean;
   }
 
   export interface CmsFieldMeta {
@@ -255,6 +279,7 @@ declare module 'decap-cms-core' {
       | CmsFieldList
       | CmsFieldMap
       | CmsFieldMarkdown
+      | CmsFieldRichText
       | CmsFieldNumber
       | CmsFieldObject
       | CmsFieldRelation
@@ -281,13 +306,19 @@ declare module 'decap-cms-core' {
   export interface ViewFilter {
     label: string;
     field: string;
-    pattern: string;
+    pattern: string | boolean;
   }
 
   export interface ViewGroup {
     label: string;
     field: string;
     pattern?: string;
+  }
+
+  export interface SortableField {
+    field: string;
+    label?: string;
+    default_sort?: boolean | 'asc' | 'desc';
   }
 
   export interface CmsCollection {
@@ -302,18 +333,20 @@ declare module 'decap-cms-core' {
     slug?: string;
     preview_path?: string;
     preview_path_date_field?: string;
+    preview_path_preserve_slashes?: boolean;
     create?: boolean;
     delete?: boolean;
     hide?: boolean;
     editor?: {
       preview?: boolean;
+      visualEditing?: boolean;
     };
     publish?: boolean;
     nested?: {
       depth: number;
       subfolders?: boolean;
     };
-    meta?: { path?: { label: string; widget: string; index_file: string } };
+    meta?: { path?: { label: string; widget: string; index_file?: string } };
 
     /**
      * It accepts the following values: yml, yaml, toml, json, md, markdown, html
@@ -329,15 +362,16 @@ declare module 'decap-cms-core' {
     path?: string;
     media_folder?: string;
     public_folder?: string;
-    sortable_fields?: string[];
+    sortable_fields?: (string | SortableField)[];
     view_filters?: ViewFilter[];
     view_groups?: ViewGroup[];
     i18n?: boolean | CmsI18nConfig;
+    limit?: number;
 
     /**
      * @deprecated Use sortable_fields instead
      */
-    sortableFields?: string[];
+    sortableFields?: (string | SortableField)[];
   }
 
   export interface CmsBackend {
@@ -352,9 +386,19 @@ declare module 'decap-cms-core' {
     base_url?: string;
     auth_endpoint?: string;
     app_id?: string;
+    turbo_site_id?: string;
+    turbo_config_url?: string;
+    supabase_app_id?: string;
+    supabase_anon_key?: string;
+    /**
+     * Decap Turbo: set true to turn on the editor bridge (AI agents setting fields in the open entry). Off by default.
+     * @experimental Still in development; may change or go away in any release.
+     */
+    editor_bridge?: boolean;
     auth_type?: 'implicit' | 'pkce';
     cms_label_prefix?: string;
     squash_merges?: boolean;
+    signoff_commits?: boolean;
     proxy_url?: string;
     commit_messages?: {
       create?: string;
@@ -377,19 +421,44 @@ declare module 'decap-cms-core' {
     allowed_hosts?: string[];
   }
 
+  export interface CmsIssueReports {
+    url?: string;
+  }
+
+  export type CmsMediaProcessingFormat = 'jpeg' | 'webp';
+
+  export interface CmsMediaProcessing {
+    enabled: boolean;
+    format?: {
+      enabled: boolean;
+      default: CmsMediaProcessingFormat;
+    };
+    quality?: number;
+    strip_metadata?: boolean;
+    width?: number | null;
+    height?: number | null;
+    aspect_ratio?: number | string | null;
+  }
+
   export interface CmsConfig {
     backend: CmsBackend;
     collections: CmsCollection[];
     locale?: string;
     site_url?: string;
     display_url?: string;
-    logo_url?: string;
+    logo_url?: string; // Deprecated, replaced by `logo.src`
+    logo?: {
+      src: string;
+      show_in_header?: boolean;
+    };
     show_preview_links?: boolean;
     media_folder?: string;
     public_folder?: string;
     media_folder_relative?: boolean;
+    media_processing?: CmsMediaProcessing;
     media_library?: CmsMediaLibrary;
     publish_mode?: CmsPublishMode;
+    issue_reports?: CmsIssueReports;
     load_config_file?: boolean;
     integrations?: {
       hooks: string[];
@@ -403,6 +472,7 @@ declare module 'decap-cms-core' {
     i18n?: CmsI18nConfig;
     local_backend?: boolean | CmsLocalBackend;
     editor?: {
+      notes?: boolean;
       preview?: boolean;
     };
   }
@@ -430,9 +500,10 @@ declare module 'decap-cms-core' {
         fields?: EditorComponentField[];
       };
 
-  export interface EditorComponentOptions {
+  export interface BlockEditorComponentOptions {
     id: string;
     label: string;
+    type?: 'block';
     fields?: EditorComponentField[];
     pattern: RegExp;
     allow_add?: boolean;
@@ -440,6 +511,24 @@ declare module 'decap-cms-core' {
     toBlock: (data: any) => string;
     toPreview: (data: any) => string | JSX.Element;
   }
+
+  export interface InlineEditorComponentOptions {
+    id: string;
+    label: string;
+    type: 'inline';
+    trigger?: string;
+    pattern: RegExp;
+    fromInline: (match: RegExpExecArray) => Record<string, any>;
+    toInline: (data: Record<string, any>) => string;
+    toPreview: (data: Record<string, any>) => React.ReactNode;
+    onInsert?: (context: {
+      selectedText: string;
+      cmsContext: any;
+    }) => Promise<Record<string, any> | null>;
+    onEdit?: (context: { data: Record<string, any> }) => Promise<Record<string, any> | null>;
+  }
+
+  export type EditorComponentOptions = BlockEditorComponentOptions | InlineEditorComponentOptions;
 
   export interface PreviewStyleOptions {
     raw: boolean;
@@ -590,6 +679,93 @@ declare module 'decap-cms-core' {
     document: Document;
   };
 
+  /**
+   * The entry open in the editor, as `CMS.editor` reports it.
+   * @experimental Not yet a stable public API; see `CMS.editor`.
+   */
+  export interface CmsEditorSnapshot {
+    collection: string;
+    collectionLabel: string;
+    /** The entry's slug, or the file's name in a file collection; null for a new entry. */
+    slug: string | null;
+    newRecord: boolean;
+    path: string | null;
+    /** The collection's field definitions, as in config.yml. */
+    fields: Record<string, unknown>[];
+    /** The current, possibly unsaved, values of the default locale. */
+    data: Record<string, unknown>;
+    /** Other locales' values, keyed by locale, when the collection has i18n. */
+    i18n: Record<string, { data: Record<string, unknown> }> | null;
+    locales: string[] | null;
+    defaultLocale: string | null;
+    hasChanged: boolean;
+  }
+
+  /**
+   * One change to the open entry: `path` is a field name, or a dotted path into
+   * an object or list (`seo.description`, `tags.0`).
+   * @experimental Not yet a stable public API; see `CMS.editor`.
+   */
+  export interface CmsFieldPatch {
+    path: string;
+    value: unknown;
+  }
+
+  /** @experimental Not yet a stable public API; see `CMS.editor`. */
+  export interface CmsFieldPatchResult {
+    applied: string[];
+    rejected: { path: string; reason: string }[];
+  }
+
+  /**
+   * The editor, reachable from outside React. Nothing here saves: patches
+   * change the draft the way typing would, and the entry is written only when
+   * someone presses Save.
+   * @experimental Not yet a stable public API; see `CMS.editor`.
+   */
+  export interface CmsEditorApi {
+    /** The open entry, or null when no entry is open. */
+    getCurrentEntry: () => CmsEditorSnapshot | null;
+    /** Changes fields of the open entry without saving; each patch is applied or rejected with a reason. */
+    applyFieldPatch: (
+      patches: CmsFieldPatch[],
+      options?: { locale?: string },
+    ) => CmsFieldPatchResult;
+    /** Calls `listener` on every change to the open entry; returns the unsubscribe function. */
+    onEditorChange: (listener: (snapshot: CmsEditorSnapshot | null) => void) => () => void;
+  }
+
+  /**
+   * What a field action's `onClick` and `isAvailable` receive. Plain values,
+   * not the editor's Immutable state.
+   * @experimental Not yet a stable public API; see `CMS.registerFieldAction`.
+   */
+  export interface CmsFieldActionContext {
+    /** The field's definition, as in config.yml. */
+    field: Record<string, unknown>;
+    /** The collection's name. */
+    collection?: string;
+    locale?: string;
+    /** The open entry, read when accessed. */
+    readonly entry: CmsEditorSnapshot | null;
+    applyFieldPatch: CmsEditorApi['applyFieldPatch'];
+  }
+
+  /**
+   * A button shown beside each top-level field's label in the editor.
+   * @experimental Not yet a stable public API; see `CMS.registerFieldAction`.
+   */
+  export interface CmsFieldAction {
+    /** Registering another action with the same id replaces it. */
+    id: string;
+    label: string;
+    /** Tooltip; defaults to `label`. */
+    title?: string;
+    onClick: (context: CmsFieldActionContext) => void;
+    /** Leave out to show the action on every field. */
+    isAvailable?: (context: CmsFieldActionContext) => boolean;
+  }
+
   export interface CMS {
     getBackend: (name: string) => CmsRegistryBackend | undefined;
     getEditorComponents: () => Map<string, ComponentType<any>>;
@@ -626,6 +802,21 @@ declare module 'decap-cms-core' {
     ) => void;
     resolveWidget: (name: string) => CmsWidget | undefined;
     registerCustomFormat: (name: string, extension: string, formatter: Formatter) => void;
+    /**
+     * Adds a button beside each top-level field's label in the editor.
+     * @experimental Not yet a stable public API: built for the Decap Turbo
+     * editor bridge, and may change or be removed in any release, minor and
+     * patch included.
+     */
+    registerFieldAction: (action: CmsFieldAction) => void;
+    /**
+     * Reads the entry open in the editor and changes its fields without
+     * saving.
+     * @experimental Not yet a stable public API: built for the Decap Turbo
+     * editor bridge, and may change or be removed in any release, minor and
+     * patch included.
+     */
+    editor: CmsEditorApi;
   }
 
   export const DecapCmsCore: CMS;

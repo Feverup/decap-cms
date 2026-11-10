@@ -1,4 +1,4 @@
-import { fromJS, Map } from 'immutable';
+import { fromJS, List, Map } from 'immutable';
 import configureMockStore from 'redux-mock-store';
 import thunk from 'redux-thunk';
 
@@ -8,6 +8,7 @@ import {
   retrieveLocalBackup,
   persistLocalBackup,
   getMediaAssets,
+  persistEntry,
   validateMetaField,
 } from '../entries';
 import AssetProxy from '../../valueObjects/AssetProxy';
@@ -84,6 +85,41 @@ describe('entries', () => {
               author: '',
               collection: undefined,
               data: { title: 'title', boolean: true },
+              meta: {},
+              i18n: {},
+              isModification: null,
+              label: null,
+              mediaFiles: [],
+              partial: false,
+              path: '',
+              raw: '',
+              slug: '',
+              status: '',
+              updatedOn: '',
+            },
+            type: 'DRAFT_CREATE_EMPTY',
+          });
+        });
+    });
+
+    it('should populate draft entry from repeated URL param', () => {
+      const store = mockStore({ mediaLibrary: fromJS({ files: [] }) });
+
+      const collection = fromJS({
+        fields: [{ name: 'post', multiple: true }],
+      });
+
+      return store
+        .dispatch(createLocalEmptyDraft(collection, '?post=2026-05-07-test&post=2026-05-08-test'))
+        .then(() => {
+          const actions = store.getActions();
+          expect(actions).toHaveLength(1);
+
+          expect(actions[0]).toEqual({
+            payload: {
+              author: '',
+              collection: undefined,
+              data: { post: List(['2026-05-07-test', '2026-05-08-test']) },
               meta: {},
               i18n: {},
               isModification: null,
@@ -572,6 +608,194 @@ describe('entries', () => {
       ).toEqual({
         error: false,
       });
+    });
+
+    it('should not return error on path with uppercase characters', () => {
+      selectCustomPath.mockReturnValue('folder/Parent/Child/index.md');
+      selectEntryByPath.mockReturnValue(undefined);
+      expect(
+        validateMetaField(
+          {
+            ...state,
+            entryDraft: fromJS({
+              entry: {},
+            }),
+          },
+          collection,
+          fromJS({ meta: true, name: 'path' }),
+          'Parent/Child',
+          t,
+        ),
+      ).toEqual({
+        error: false,
+      });
+    });
+
+    it('should return error on path with uppercase and invalid characters', () => {
+      expect(
+        validateMetaField(state, null, fromJS({ meta: true, name: 'path' }), 'Invalid Path', t),
+      ).toEqual({
+        error: {
+          message: {
+            key: 'editor.editorControlPane.widget.invalidPath',
+            args: { path: 'Invalid Path' },
+          },
+          type: 'CUSTOM',
+        },
+      });
+    });
+  });
+
+  describe('persistEntry', () => {
+    const { currentBackend } = require('../../backend');
+    const { loadMedia } = require('../mediaLibrary');
+    const { selectPublishedSlugs } = require('../../reducers/entries');
+    const collections = require('../../reducers/collections');
+
+    // `type` matters: selectFields dispatches on it, and this suite does not
+    // mock reducers/collections.
+    const collection = fromJS({
+      name: 'posts',
+      type: 'folder',
+      folder: 'content',
+      fields: [{ name: 'title' }],
+    });
+
+    function storeWithDraft() {
+      return mockStore({
+        config: fromJS({}),
+        collections: fromJS({ posts: collection }),
+        entryDraft: fromJS({
+          entry: {
+            slug: 'hello',
+            path: 'content/hello.md',
+            data: { title: 'Hello' },
+            mediaFiles: [],
+          },
+          fieldsErrors: {},
+        }),
+        mediaLibrary: fromJS({ files: [] }),
+      });
+    }
+
+    function typesOf(store) {
+      return store.getActions().map(action => action.type);
+    }
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+      selectPublishedSlugs.mockReturnValue(List());
+      loadMedia.mockReturnValue({ type: 'MEDIA_LOAD_SUCCESS' });
+      // reducers/collections is not mocked by this suite, and its real
+      // selectFields keys a selector map on constants that come from the
+      // auto-mocked decap-cms-lib-util — so they are undefined here. Stub the
+      // one function this path needs rather than mocking the whole module.
+      jest.spyOn(collections, 'selectFields').mockReturnValue(List());
+    });
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    // Characterization of a plain save: request, commit, toast, release, and
+    // nothing else. Note this one passes with or without the B3 reordering —
+    // with no assets there is no media reload to be ordered against. It is
+    // here to pin the sequence, not to guard the change; the test below is
+    // what guards the change.
+    it('dispatches request, toast and release in order for a save with no media', async () => {
+      currentBackend.mockReturnValue({
+        persistEntry: jest.fn().mockResolvedValue('hello'),
+        implementation: {},
+      });
+
+      const store = storeWithDraft();
+      await store.dispatch(persistEntry(collection));
+
+      expect(typesOf(store)).toEqual([
+        'ENTRY_PERSIST_REQUEST',
+        'NOTIFICATION_SEND',
+        'ENTRY_PERSIST_SUCCESS',
+      ]);
+      expect(loadMedia).not.toHaveBeenCalled();
+    });
+
+    // The save spinner must not wait for a media library reload.
+    it('releases the editor before reloading the media library', async () => {
+      let mediaReloadStarted = false;
+      loadMedia.mockImplementation(() => {
+        mediaReloadStarted = true;
+        return { type: 'MEDIA_LOAD_SUCCESS' };
+      });
+
+      currentBackend.mockReturnValue({
+        persistEntry: jest.fn().mockResolvedValue('hello'),
+        implementation: {},
+      });
+
+      const asset = new AssetProxy({ path: 'static/img/a.png', file: new File([''], 'a.png') });
+      const store = mockStore({
+        config: fromJS({}),
+        collections: fromJS({ posts: collection }),
+        entryDraft: fromJS({
+          entry: {
+            slug: 'hello',
+            path: 'content/hello.md',
+            data: { title: 'Hello' },
+            mediaFiles: [{ path: 'static/img/a.png', draft: true, ...asset }],
+          },
+          fieldsErrors: {},
+        }),
+        mediaLibrary: fromJS({ files: [] }),
+      });
+
+      await store.dispatch(persistEntry(collection));
+
+      // Asserted, not guarded by an `if`: a fixture that stopped producing
+      // asset proxies would make the ordering assertion below vacuous and this
+      // test would pass while guarding nothing.
+      expect(mediaReloadStarted).toBe(true);
+
+      const types = typesOf(store);
+      expect(types.indexOf('ENTRY_PERSIST_SUCCESS')).toBeLessThan(
+        types.indexOf('MEDIA_LOAD_SUCCESS'),
+      );
+    });
+
+    it('reports a committed save as saved when the title cannot be computed', async () => {
+      const backendModule = require('../../backend');
+      backendModule.safeEntryLabel.mockImplementation(
+        jest.requireActual('../../backend').safeEntryLabel,
+      );
+      // What a preSave handler that reshapes the data can cause.
+      jest.spyOn(collections, 'selectEntryCollectionTitle').mockImplementation(() => {
+        throw new TypeError("Cannot read properties of undefined (reading 'get')");
+      });
+      currentBackend.mockReturnValue({
+        persistEntry: jest.fn().mockResolvedValue('hello'),
+        implementation: {},
+      });
+
+      const store = storeWithDraft();
+      await store.dispatch(persistEntry(collection));
+
+      const types = typesOf(store);
+      expect(types).toContain('ENTRY_PERSIST_SUCCESS');
+      expect(types).not.toContain('ENTRY_PERSIST_FAILURE');
+    });
+
+    it('does not release the editor when the commit fails', async () => {
+      currentBackend.mockReturnValue({
+        persistEntry: jest.fn().mockRejectedValue(new Error('conflict')),
+        implementation: {},
+      });
+
+      const store = storeWithDraft();
+      await expect(store.dispatch(persistEntry(collection))).rejects.toBeDefined();
+
+      const types = typesOf(store);
+      expect(types).toContain('ENTRY_PERSIST_FAILURE');
+      expect(types).not.toContain('ENTRY_PERSIST_SUCCESS');
+      expect(loadMedia).not.toHaveBeenCalled();
     });
   });
 });

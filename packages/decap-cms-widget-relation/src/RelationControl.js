@@ -1,9 +1,14 @@
-import React from 'react';
+import { Component } from 'react';
 import PropTypes from 'prop-types';
 import ImmutablePropTypes from 'react-immutable-proptypes';
 import { components } from 'react-select';
 import AsyncSelect from 'react-select/async';
-import { debounce, find, get, isEmpty, last, uniqBy } from 'lodash';
+import debounce from 'lodash/debounce';
+import find from 'lodash/find';
+import get from 'lodash/get';
+import isEmpty from 'lodash/isEmpty';
+import last from 'lodash/last';
+import uniqBy from 'lodash/uniqBy';
 import { fromJS, List, Map } from 'immutable';
 import { reactSelectStyles } from 'decap-cms-ui-default';
 import { stringTemplate, validations } from 'decap-cms-lib-widgets';
@@ -19,7 +24,8 @@ import {
 import { SortableContext, horizontalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { restrictToParentElement } from '@dnd-kit/modifiers';
 import { CSS } from '@dnd-kit/utilities';
-import { v4 as uuid } from 'uuid';
+
+import relationCache from './RelationCache';
 
 function arrayMove(array, from, to) {
   const slicedArray = array.slice();
@@ -44,7 +50,7 @@ function MultiValue(props) {
 
   const innerProps = { ...props.innerProps, onMouseDown };
   return (
-    <div ref={setNodeRef} style={style}>
+    <div ref={setNodeRef} style={style} title={props.data.label}>
       <components.MultiValue {...props} innerProps={innerProps} />
     </div>
   );
@@ -56,7 +62,16 @@ function MultiValueLabel(props) {
   });
 
   return (
-    <div {...attributes} {...listeners}>
+    <div
+      {...attributes}
+      {...listeners}
+      style={{
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        maxWidth: '300px',
+      }}
+    >
       <components.MultiValueLabel {...props} />
     </div>
   );
@@ -99,7 +114,14 @@ function SortableSelect(props) {
 }
 
 function Option({ index, style, data }) {
-  return <div style={style}>{data.options[index]}</div>;
+  const option = data.options[index];
+  const label = option.props.label || (option.props.data && option.props.data.label) || '';
+
+  return (
+    <div style={style} title={typeof label === 'string' ? label : ''}>
+      {option}
+    </div>
+  );
 }
 
 function MenuList(props) {
@@ -130,6 +152,7 @@ function convertToOption(raw) {
   if (typeof raw === 'string') {
     return { label: raw, value: raw };
   }
+
   return Map.isMap(raw) ? raw.toJS() : raw;
 }
 
@@ -155,6 +178,21 @@ function getFieldArray(field) {
   return List.isList(field) ? field.toJS() : [field];
 }
 
+function isFilterMatch(data, filter) {
+  // resolve wildcard paths the same way as value_field, and for list fields
+  // match if any of the items is in the filter values
+  const values = stringTemplate.expandPath({ data, path: filter.field }).flatMap(path => {
+    const value = get(data, path);
+    return Array.isArray(value) ? value : [value];
+  });
+  // compare as strings, since entry data may be parsed as numbers or booleans
+  // while filter values are strings (and vice versa)
+  const filterValues = filter.values.map(String);
+  return values.some(
+    value => value != null && typeof value !== 'object' && filterValues.includes(String(value)),
+  );
+}
+
 function getSelectedValue({ value, options, isMultiple }) {
   if (isMultiple) {
     const selectedOptions = getSelectedOptions(value);
@@ -178,12 +216,12 @@ function convertToSortableOption(raw) {
     ...option,
     data: {
       ...option.data,
-      id: uuid(),
+      id: crypto.randomUUID(),
     },
   };
 }
 
-export default class RelationControl extends React.Component {
+export default class RelationControl extends Component {
   mounted = false;
 
   state = {
@@ -232,46 +270,98 @@ export default class RelationControl extends React.Component {
     );
   }
 
-  async loadInitialOptions() {
-    const { forID, field, value, query, onChange } = this.props;
-    const collection = field.get('collection');
-    const file = field.get('file');
-    const initialSearchValues = value && (this.isMultiple() ? getSelectedOptions(value) : [value]);
-    if (!initialSearchValues || initialSearchValues.length === 0) return;
+  async componentDidMount() {
+    // Manually validate PropTypes - React 19 breaking change
+    PropTypes.checkPropTypes(RelationControl.propTypes, this.props, 'prop', 'RelationControl');
 
-    let hits;
-    try {
-      const searchFieldsArray = getFieldArray(field.get('search_fields'));
-      const { payload } = await query(forID, collection, searchFieldsArray, '', file);
-      hits = payload.hits;
-    } catch (error) {
-      console.error('Failed to load initial options:', error);
-      return;
-    }
-    if (!hits) return;
-
-    const metadata = {};
-    const options = this.parseHitOptions(hits);
-    const initialOptions = initialSearchValues
-      .map(v => {
-        const selectedOption = options.find(o => o.value === v);
-        metadata[v] = selectedOption?.data;
-        return selectedOption;
-      })
-      .filter(Boolean);
-
-    this.mounted && this.setState({ initialOptions });
-
-    // PNW-3165 (upstream #7497): only report metadata, never rewrite the saved value.
-    // A miss or a failed query used to overwrite it with [].
-    if (this.mounted && initialOptions.length > 0) {
-      onChange(value, { [field.get('name')]: { [collection]: metadata } });
+    this.mounted = true;
+    const { value } = this.props;
+    if (value && this.hasInitialValues(value)) {
+      await this.loadInitialOptions();
     }
   }
 
-  async componentDidMount() {
-    this.mounted = true;
-    await this.loadInitialOptions();
+  hasInitialValues(value) {
+    if (this.isMultiple()) {
+      const selectedOptions = getSelectedOptions(value);
+      return selectedOptions && selectedOptions.length > 0;
+    }
+    return value && value !== '';
+  }
+
+  async loadInitialOptions() {
+    const { field, query, forID, value } = this.props;
+    const collection = field.get('collection');
+    const searchFieldsArray = getFieldArray(field.get('search_fields'));
+    const file = field.get('file');
+
+    try {
+      const result = await relationCache.getOptions(
+        collection,
+        searchFieldsArray,
+        '', // empty term for initial load
+        file,
+        () => query(forID, collection, searchFieldsArray, '', file),
+      );
+
+      const hits = result.payload.hits || [];
+      let options = this.parseHitOptions(hits);
+      if (this.isMultiple()) {
+        const selectedOptions = getSelectedOptions(value);
+        options = options.filter(o => selectedOptions.includes(o.value));
+      }
+
+      if (this.mounted) {
+        this.setState({ initialOptions: options });
+
+        // Call onChange with metadata for initial values
+        if (value && this.hasInitialValues(value)) {
+          this.triggerInitialOnChange(value, options);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load initial options:', error);
+    }
+  }
+
+  triggerInitialOnChange(value, options) {
+    const { onChange, field } = this.props;
+
+    if (this.isMultiple()) {
+      const selectedOptions = getSelectedOptions(value);
+      if (selectedOptions && selectedOptions.length > 0) {
+        const matchedOptions = selectedOptions
+          .map(val => options.find(opt => opt.value === (val.value || val)))
+          .filter(Boolean);
+
+        if (matchedOptions.length > 0) {
+          const metadata = {
+            [field.get('name')]: {
+              [field.get('collection')]: matchedOptions.reduce(
+                (acc, option) => ({
+                  ...acc,
+                  [option.value]: option.data,
+                }),
+                {},
+              ),
+            },
+          };
+          onChange(value, metadata);
+        }
+      }
+    } else {
+      const matchedOption = options.find(opt => opt.value === value);
+      if (matchedOption) {
+        const metadata = {
+          [field.get('name')]: {
+            [field.get('collection')]: {
+              [matchedOption.value]: matchedOption.data,
+            },
+          },
+        };
+        onChange(value, metadata);
+      }
+    }
   }
 
   componentWillUnmount() {
@@ -325,12 +415,16 @@ export default class RelationControl extends React.Component {
     }
   };
 
-  parseNestedFields = (hit, field) => {
+  getHitData = hit => {
     const { locale } = this.props;
-    const hitData =
-      locale != null && hit.i18n != null && hit.i18n[locale] != null
-        ? hit.i18n[locale].data
-        : hit.data;
+    const localeData = locale != null ? hit.i18n?.[locale]?.data : null;
+    // a translation only has its translatable fields, so fall back to the
+    // default locale for the rest (e.g. a filter on an `i18n: none` field)
+    return localeData ? { ...hit.data, ...localeData } : hit.data;
+  };
+
+  parseNestedFields = (hit, field) => {
+    const hitData = this.getHitData(hit);
     const templateVars = stringTemplate.extractTemplateVars(field);
     // return non template fields as is
     if (templateVars.length <= 0) {
@@ -352,21 +446,8 @@ export default class RelationControl extends React.Component {
     const filters = getFieldArray(field.get('filters'));
 
     const options = hits.reduce((acc, hit) => {
-      if (
-        filters.every(filter => {
-          // check if the value for the (nested) filter field is in the filter values
-          const fieldKeys = filter.field.split('.');
-          let value = hit.data;
-          for (let i = 0; i < fieldKeys.length; i++) {
-            if (Object.prototype.hasOwnProperty.call(value, fieldKeys[i])) {
-              value = value[fieldKeys[i]];
-            } else {
-              return false;
-            }
-          }
-          return filter.values.includes(value);
-        })
-      ) {
+      const hitData = this.getHitData(hit);
+      if (filters.every(filter => isFilterMatch(hitData, filter))) {
         const valuesPaths = stringTemplate.expandPath({ data: hit.data, path: valueField });
         for (let i = 0; i < valuesPaths.length; i++) {
           const label = displayField
@@ -390,22 +471,21 @@ export default class RelationControl extends React.Component {
   loadOptions = debounce((term, callback) => {
     const { field, query, forID } = this.props;
     const collection = field.get('collection');
-    const optionsLength = field.get('options_length') || 20;
     const searchFieldsArray = getFieldArray(field.get('search_fields'));
     const file = field.get('file');
 
-    query(forID, collection, searchFieldsArray, term, file)
-      .then(({ payload }) => {
-        const hits = payload.hits || [];
+    relationCache
+      .getOptions(collection, searchFieldsArray, term, file, () =>
+        query(forID, collection, searchFieldsArray, term, file),
+      )
+      .then(result => {
+        const hits = result.payload.hits || [];
         const options = this.parseHitOptions(hits);
-        // With a search term, matches go first so selected options can't crowd them out.
-        const uniq = term
-          ? uniqOptions(options, this.state.initialOptions).slice(0, optionsLength)
-          : uniqOptions(this.state.initialOptions, options).slice(0, optionsLength);
+        const optionsLength = field.get('options_length') || 20;
+        const uniq = uniqOptions(options, this.state.initialOptions).slice(0, optionsLength);
         callback(uniq);
       })
       .catch(error => {
-        // Without a callback the menu stays on "Loading..." forever.
         console.error('Failed to load options:', error);
         callback([]);
       });
@@ -425,6 +505,16 @@ export default class RelationControl extends React.Component {
       isMultiple,
     });
 
+    const customStyles = {
+      ...reactSelectStyles,
+      option: (provided, state) => ({
+        ...reactSelectStyles.option(provided, state),
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+      }),
+    };
+
     return (
       <SortableSelect
         useDragHandle
@@ -437,11 +527,12 @@ export default class RelationControl extends React.Component {
         cacheOptions
         defaultOptions={options?.length ? options : true}
         loadOptions={this.loadOptions}
+        loadingMessage={() => 'Loading options…'}
         onChange={this.handleChange}
         className={classNameWrapper}
         onFocus={setActiveStyle}
         onBlur={setInactiveStyle}
-        styles={reactSelectStyles}
+        styles={customStyles}
         isMulti={isMultiple}
         isClearable={isClearable}
         placeholder=""

@@ -1,7 +1,7 @@
-import React from 'react';
+import { Component } from 'react';
 import PropTypes from 'prop-types';
 import ImmutablePropTypes from 'react-immutable-proptypes';
-import { debounce } from 'lodash';
+import debounce from 'lodash/debounce';
 
 const ValidationErrorTypes = {
   PRESENCE: 'PRESENCE',
@@ -50,7 +50,7 @@ export function validateMinMax(value, min, max, field, t) {
   return error;
 }
 
-export default class NumberControl extends React.Component {
+export default class NumberControl extends Component {
   constructor(props) {
     super(props);
     this.state = {
@@ -76,6 +76,11 @@ export default class NumberControl extends React.Component {
   static defaultProps = {
     value: '',
   };
+
+  componentDidMount() {
+    // Manually validate PropTypes - React 19 breaking change
+    PropTypes.checkPropTypes(NumberControl.propTypes, this.props, 'prop', 'NumberControl');
+  }
 
   componentDidUpdate(prevProps) {
     if (prevProps.value !== this.props.value) {

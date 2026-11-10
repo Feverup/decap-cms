@@ -1,4 +1,5 @@
-import React from 'react';
+
+import { Component, Fragment } from 'react';
 import PropTypes from 'prop-types';
 import styled from '@emotion/styled';
 import {
@@ -39,7 +40,7 @@ const clientSideAuthenticators = {
     }),
 };
 
-export default class GitLabAuthenticationPage extends React.Component {
+export default class GitLabAuthenticationPage extends Component {
   static propTypes = {
     onLogin: PropTypes.func.isRequired,
     inProgress: PropTypes.bool,
@@ -54,6 +55,9 @@ export default class GitLabAuthenticationPage extends React.Component {
   state = {};
 
   componentDidMount() {
+    // Manually validate PropTypes - React 19 breaking change
+    PropTypes.checkPropTypes(GitLabAuthenticationPage.propTypes, this.props, 'prop', 'GitLabAuthenticationPage');
+
     const {
       auth_type: authType = '',
       base_url = 'https://gitlab.com',
@@ -107,13 +111,14 @@ export default class GitLabAuthenticationPage extends React.Component {
         onLogin={this.handleLogin}
         loginDisabled={inProgress}
         loginErrorMessage={this.state.loginError}
-        logoUrl={config.logo_url}
+        logoUrl={config.logo_url} // Deprecated, replaced by `logo.src`
+        logo={config.logo}
         siteUrl={config.site_url}
         renderButtonContent={() => (
-          <React.Fragment>
+          <Fragment>
             <LoginButtonIcon type="gitlab" />{' '}
             {inProgress ? t('auth.loggingIn') : t('auth.loginWithGitLab')}
-          </React.Fragment>
+          </Fragment>
         )}
         t={t}
       />

@@ -3,6 +3,50 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [3.3.4](https://github.com/decaporg/decap-cms/compare/decap-cms-lib-auth@3.3.3...decap-cms-lib-auth@3.3.4) (2026-10-26)
+
+### Bug Fixes
+
+- several small issues ([#8043](https://github.com/decaporg/decap-cms/issues/8043)) ([70d8e25](https://github.com/decaporg/decap-cms/commit/70d8e2560fc424f220a957a5c35a8161bd173bed)), closes [#2209](https://github.com/decaporg/decap-cms/issues/2209) [#3562](https://github.com/decaporg/decap-cms/issues/3562) [#3622](https://github.com/decaporg/decap-cms/issues/3622) [#3828](https://github.com/decaporg/decap-cms/issues/3828) [#4753](https://github.com/decaporg/decap-cms/issues/4753) [#5125](https://github.com/decaporg/decap-cms/issues/5125) [#6215](https://github.com/decaporg/decap-cms/issues/6215) [#7105](https://github.com/decaporg/decap-cms/issues/7105) [#7203](https://github.com/decaporg/decap-cms/issues/7203)
+
+## [3.3.3](https://github.com/decaporg/decap-cms/compare/decap-cms-lib-auth@3.3.3-beta.0...decap-cms-lib-auth@3.3.3) (2026-10-14)
+
+**Note:** Version bump only for package decap-cms-lib-auth
+
+## [3.3.3-beta.0](https://github.com/decaporg/decap-cms/compare/decap-cms-lib-auth@3.3.2...decap-cms-lib-auth@3.3.3-beta.0) (2026-09-10)
+
+**Note:** Version bump only for package decap-cms-lib-auth
+
+## [3.3.2](https://github.com/decaporg/decap-cms/compare/decap-cms-lib-auth@3.3.1...decap-cms-lib-auth@3.3.2) (2026-09-10)
+
+**Note:** Version bump only for package decap-cms-lib-auth
+
+## [3.3.1](https://github.com/decaporg/decap-cms/compare/decap-cms-lib-auth@3.3.0...decap-cms-lib-auth@3.3.1) (2026-09-08)
+
+**Note:** Version bump only for package decap-cms-lib-auth
+
+# [3.3.0](https://github.com/decaporg/decap-cms/compare/decap-cms-lib-auth@3.2.1...decap-cms-lib-auth@3.3.0) (2026-08-31)
+
+**Note:** Version bump only for package decap-cms-lib-auth
+
+## [3.2.1](https://github.com/decaporg/decap-cms/compare/decap-cms-lib-auth@3.2.0...decap-cms-lib-auth@3.2.1) (2026-06-15)
+
+### Bug Fixes
+
+- **gitlab:** refresh expired PKCE access tokens ([#7854](https://github.com/decaporg/decap-cms/issues/7854)) ([18be93a](https://github.com/decaporg/decap-cms/commit/18be93a85804bb49058cbbc1a18f128c1cee14da))
+
+# [3.2.0](https://github.com/decaporg/decap-cms/compare/decap-cms-lib-auth@3.1.0...decap-cms-lib-auth@3.2.0) (2026-06-08)
+
+**Note:** Version bump only for package decap-cms-lib-auth
+
+# [3.1.0](https://github.com/decaporg/decap-cms/compare/decap-cms-lib-auth@3.0.6...decap-cms-lib-auth@3.1.0) (2026-06-01)
+
+**Note:** Version bump only for package decap-cms-lib-auth
+
+## [3.0.6](https://github.com/decaporg/decap-cms/compare/decap-cms-lib-auth@3.0.5...decap-cms-lib-auth@3.0.6) (2025-07-31)
+
+**Note:** Version bump only for package decap-cms-lib-auth
+
 ## [3.0.5](https://github.com/decaporg/decap-cms/compare/decap-cms-lib-auth@3.0.4...decap-cms-lib-auth@3.0.5) (2024-03-21)
 
 **Note:** Version bump only for package decap-cms-lib-auth

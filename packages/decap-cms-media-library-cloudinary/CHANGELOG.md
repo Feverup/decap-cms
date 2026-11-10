@@ -3,6 +3,56 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [3.1.6](https://github.com/decaporg/decap-cms/compare/decap-cms-media-library-cloudinary@3.1.5...decap-cms-media-library-cloudinary@3.1.6) (2026-10-26)
+
+### Bug Fixes
+
+- several small issues ([#8043](https://github.com/decaporg/decap-cms/issues/8043)) ([70d8e25](https://github.com/decaporg/decap-cms/commit/70d8e2560fc424f220a957a5c35a8161bd173bed)), closes [#2209](https://github.com/decaporg/decap-cms/issues/2209) [#3562](https://github.com/decaporg/decap-cms/issues/3562) [#3622](https://github.com/decaporg/decap-cms/issues/3622) [#3828](https://github.com/decaporg/decap-cms/issues/3828) [#4753](https://github.com/decaporg/decap-cms/issues/4753) [#5125](https://github.com/decaporg/decap-cms/issues/5125) [#6215](https://github.com/decaporg/decap-cms/issues/6215) [#7105](https://github.com/decaporg/decap-cms/issues/7105) [#7203](https://github.com/decaporg/decap-cms/issues/7203)
+
+## [3.1.5](https://github.com/decaporg/decap-cms/compare/decap-cms-media-library-cloudinary@3.1.4...decap-cms-media-library-cloudinary@3.1.5) (2026-10-14)
+
+**Note:** Version bump only for package decap-cms-media-library-cloudinary
+
+## [3.1.4](https://github.com/decaporg/decap-cms/compare/decap-cms-media-library-cloudinary@3.1.4-beta.2...decap-cms-media-library-cloudinary@3.1.4) (2026-10-14)
+
+**Note:** Version bump only for package decap-cms-media-library-cloudinary
+
+## [3.1.4-beta.2](https://github.com/decaporg/decap-cms/compare/decap-cms-media-library-cloudinary@3.1.3-beta.2...decap-cms-media-library-cloudinary@3.1.4-beta.2) (2026-10-13)
+
+**Note:** Version bump only for package decap-cms-media-library-cloudinary
+
+## [3.1.4-beta.1](https://github.com/decaporg/decap-cms/compare/decap-cms-media-library-cloudinary@3.1.3-beta.2...decap-cms-media-library-cloudinary@3.1.4-beta.1) (2026-10-12)
+
+**Note:** Version bump only for package decap-cms-media-library-cloudinary
+
+## [3.1.3-beta.2](https://github.com/decaporg/decap-cms/compare/decap-cms-media-library-cloudinary@3.1.3-beta.1...decap-cms-media-library-cloudinary@3.1.3-beta.2) (2026-10-08)
+
+**Note:** Version bump only for package decap-cms-media-library-cloudinary
+
+## [3.1.3-beta.1](https://github.com/decaporg/decap-cms/compare/decap-cms-media-library-cloudinary@3.1.3-beta.0...decap-cms-media-library-cloudinary@3.1.3-beta.1) (2026-09-22)
+
+**Note:** Version bump only for package decap-cms-media-library-cloudinary
+
+## [3.1.3](https://github.com/decaporg/decap-cms/compare/decap-cms-media-library-cloudinary@3.1.2...decap-cms-media-library-cloudinary@3.1.3) (2026-09-22)
+
+**Note:** Version bump only for package decap-cms-media-library-cloudinary
+
+## [3.1.3-beta.0](https://github.com/decaporg/decap-cms/compare/decap-cms-media-library-cloudinary@3.1.2...decap-cms-media-library-cloudinary@3.1.3-beta.0) (2026-09-10)
+
+**Note:** Version bump only for package decap-cms-media-library-cloudinary
+
+## [3.1.2](https://github.com/decaporg/decap-cms/compare/decap-cms-media-library-cloudinary@3.1.1...decap-cms-media-library-cloudinary@3.1.2) (2026-09-10)
+
+**Note:** Version bump only for package decap-cms-media-library-cloudinary
+
+## [3.1.1](https://github.com/decaporg/decap-cms/compare/decap-cms-media-library-cloudinary@3.1.0...decap-cms-media-library-cloudinary@3.1.1) (2026-09-08)
+
+**Note:** Version bump only for package decap-cms-media-library-cloudinary
+
+# [3.1.0](https://github.com/decaporg/decap-cms/compare/decap-cms-media-library-cloudinary@3.0.3...decap-cms-media-library-cloudinary@3.1.0) (2025-06-26)
+
+**Note:** Version bump only for package decap-cms-media-library-cloudinary
+
 ## [3.0.3](https://github.com/decaporg/decap-cms/compare/decap-cms-media-library-cloudinary@3.0.2...decap-cms-media-library-cloudinary@3.0.3) (2024-03-21)
 
 **Note:** Version bump only for package decap-cms-media-library-cloudinary

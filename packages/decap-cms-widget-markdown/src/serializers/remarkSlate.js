@@ -1,4 +1,9 @@
-import { isEmpty, isArray, flatMap, map, flatten, isEqual } from 'lodash';
+import isEmpty from 'lodash/isEmpty';
+import isArray from 'lodash/isArray';
+import flatMap from 'lodash/flatMap';
+import map from 'lodash/map';
+import flatten from 'lodash/flatten';
+import isEqual from 'lodash/isEqual';
 
 /**
  * Map of MDAST node types to Slate node types.
@@ -16,6 +21,7 @@ const typeMap = {
   link: 'link',
   image: 'image',
   shortcode: 'shortcode',
+  'inline-shortcode': 'inline-shortcode',
 };
 
 /**
@@ -272,6 +278,12 @@ export default function remarkToSlate({ voidCodeBlock } = {}) {
         const nodes = [createText('')];
         const data = { ...node.data, id: node.data.shortcode, shortcodeNew: true };
         return createBlock(typeMap[node.type], nodes, { data });
+      }
+
+      case 'inline-shortcode': {
+        const nodes = [createText('')];
+        const data = { ...node.data, id: node.data.shortcode, shortcodeNew: true };
+        return createInline(typeMap[node.type], { data }, nodes);
       }
 
       case 'text': {
