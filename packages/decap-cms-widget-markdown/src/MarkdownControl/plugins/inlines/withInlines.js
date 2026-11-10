@@ -16,9 +16,9 @@ function withInlines(editor) {
     const [node, path] = entry;
 
     if (Element.isElement(node) && node.type === 'link') {
-      // Check if link is empty (no text content)
-      const text = Node.string(node);
-      if (text === '') {
+      // Empty = no text and no void child (a linked image has no text but is content)
+      const hasVoid = Array.from(Node.elements(node)).some(([el]) => editor.isVoid(el));
+      if (Node.string(node) === '' && !hasVoid) {
         Transforms.removeNodes(editor, { at: path });
         return;
       }
