@@ -399,7 +399,7 @@ export function getI18nDataFiles(
   extension: string,
   path: string,
   slug: string,
-  diffFiles: { path: string; id: string; newFile: boolean; deletedFile: boolean }[],
+  diffFiles: { path: string; id: string; newFile: boolean; deletedFile?: boolean }[],
 ) {
   const { structure } = getI18nInfo(collection) as I18nInfo;
   if (structure === I18N_STRUCTURE.SINGLE_FILE) {
@@ -413,7 +413,7 @@ export function getI18nDataFiles(
     } else {
       return [...acc, { path, id: '', newFile: false, deletedFile: false }];
     }
-  }, [] as { path: string; id: string; newFile: boolean; deletedFile: boolean }[]);
+  }, [] as { path: string; id: string; newFile: boolean; deletedFile?: boolean }[]);
 
   return dataFiles;
 }

@@ -49,9 +49,10 @@ export function stackPublishSuccess() {
   } as const;
 }
 
-export function stackPublishFailure() {
+export function stackPublishFailure(error: Error) {
   return {
     type: PUBLISH_STACK_FAILURE,
+    payload: { error },
   } as const;
 }
 
@@ -67,9 +68,10 @@ export function stackCloseSuccess() {
   } as const;
 }
 
-export function stackCloseFailure() {
+export function stackCloseFailure(error: Error) {
   return {
     type: CLOSE_STACK_FAILURE,
+    payload: { error },
   } as const;
 }
 
