@@ -99,9 +99,9 @@ export default class CodeControl extends React.Component {
   }
 
   componentDidMount() {
-    this.setState({
-      lang: this.getInitialLang() || '',
-    });
+    const lang = this.getInitialLang() || '';
+    // No initial lang means no init write to ignore, so the next lang change is the user's
+    this.setState({ lang, isLangInitialized: !lang });
   }
 
   componentDidUpdate(prevProps, prevState) {
