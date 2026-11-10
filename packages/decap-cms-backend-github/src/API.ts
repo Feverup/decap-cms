@@ -681,6 +681,7 @@ export default class API {
     const { collection, slug } = this.parseContentKey(contentKey);
     const branch = branchFromContentKey(contentKey);
     const pullRequest = await this.getBranchPullRequest(branch);
+    await this.ensurePullRequestLabel(pullRequest);
     const [{ files }, pullRequestAuthor] = await Promise.all([
       this.getDifferences(this.getCurrentBranch(), pullRequest.head.sha),
       this.getPullRequestAuthor(pullRequest),
@@ -917,6 +918,16 @@ export default class API {
     return cmsBranches;
   }
 
+  async ensurePullRequestLabel(pullRequest: GitHubPull) {
+    const hasRefSuffix = withCmsRefSuffix(pullRequest);
+    if (hasRefSuffix) {
+      const prLabeled = withCmsLabel(pullRequest, this.cmsLabelPrefix);
+      if (!prLabeled) {
+        await this.setPullRequestStatus(pullRequest, this.initialWorkflowStatus);
+      }
+    }
+  }
+
   async getCmsRefs() {
     const cmsPullRequestsNoLabel: GitHubPull[] = [];
     const cmsPullRequests = await this.getPullRequests(undefined, PullRequestState.Open, pr => {
@@ -931,7 +942,7 @@ export default class API {
     });
 
     for (const pr of cmsPullRequestsNoLabel) {
-      await this.setPullRequestStatus(pr, this.initialWorkflowStatus);
+      await this.ensurePullRequestLabel(pr);
     }
 
     return cmsPullRequests.map(pr => pr.head.ref);
