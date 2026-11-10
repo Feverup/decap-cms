@@ -401,6 +401,55 @@ describe('Relation widget', () => {
     });
   });
 
+  describe('initial load does not rewrite the saved value (PNW-3165)', () => {
+    function renderWith(query, value = 'missing-post') {
+      const onChange = jest.fn();
+      render(
+        <RelationControl
+          field={fromJS(fieldConfig)}
+          value={value}
+          query={query}
+          queryHits={[]}
+          onChange={onChange}
+          forID="relation-field"
+          classNameWrapper=""
+          setActiveStyle={jest.fn()}
+          setInactiveStyle={jest.fn()}
+        />,
+      );
+      return onChange;
+    }
+
+    it.each([
+      [
+        'the saved id is not in the hits',
+        () => Promise.resolve({ payload: { hits: generateHits(5) } }),
+      ],
+      ['the query fails', () => Promise.reject(new Error('rate limited'))],
+      ['the query returns no hits', () => Promise.resolve({ payload: {} })],
+    ])('does not call onChange when %s', async (_, impl) => {
+      jest.spyOn(console, 'error').mockImplementation(() => {});
+      // Only the initial-load query fails; later search queries resolve.
+      const query = jest
+        .fn(() => Promise.resolve({ payload: { hits: [] } }))
+        .mockImplementationOnce(impl);
+      const onChange = renderWith(query);
+
+      await waitFor(() => expect(query).toHaveBeenCalled());
+      await new Promise(resolve => setTimeout(resolve, 0));
+      expect(onChange).not.toHaveBeenCalled();
+      console.error.mockRestore();
+    });
+
+    it('passes the original value when the saved id is found', async () => {
+      const query = jest.fn(() => Promise.resolve({ payload: { hits: generateHits(5) } }));
+      const onChange = renderWith(query, 'Post # 1');
+
+      await waitFor(() => expect(onChange).toHaveBeenCalledTimes(1));
+      expect(onChange.mock.calls[0][0]).toBe('Post # 1');
+    });
+  });
+
   it('should update option list based on nested search term', async () => {
     const field = fromJS(nestedFieldConfig);
     const { getAllByText, input } = setup({ field });

@@ -789,4 +789,84 @@ describe('ListControl', () => {
     listControl.validate();
     expect(props.onValidateObject).toHaveBeenCalledWith('forID', []);
   });
+
+  // PNW-3165 (upstream #7972): a late change must follow its item, not its old position.
+  describe('late changes after a remove', () => {
+    const typedField = fromJS({
+      name: 'list',
+      label: 'List',
+      types: [
+        {
+          name: 'type_one',
+          widget: 'object',
+          fields: [{ name: 'text', widget: 'markdown', label: 'Text' }],
+        },
+      ],
+    });
+
+    const { controlComponent } = require('decap-cms-widget-object');
+    function getWidget() {
+      return { control: controlComponent };
+    }
+
+    function renderAndRemove(value, removeIndex) {
+      let control;
+      const { getAllByText, rerender } = render(
+        <ListControl
+          ref={ref => (control = ref)}
+          {...props}
+          getWidget={getWidget}
+          field={typedField}
+          value={value}
+        />,
+      );
+      const handlers = {
+        field: [0, 1, 2].map(i => control.handleFieldChangeFor(i)),
+        item: [0, 1, 2].map(i => control.handleChangeFor(i)),
+      };
+      fireEvent.click(getAllByText('Remove')[removeIndex]);
+      rerender(
+        <ListControl
+          ref={ref => (control = ref)}
+          {...props}
+          getWidget={getWidget}
+          field={typedField}
+          value={props.onChange.mock.calls[0][0]}
+        />,
+      );
+      return handlers;
+    }
+
+    const three = fromJS([
+      { type: 'type_one', text: 'one' },
+      { type: 'type_one', text: 'two' },
+      { type: 'type_one', text: 'three' },
+    ]);
+
+    it('handleFieldChangeFor writes to the item it was created for', () => {
+      const { field } = renderAndRemove(three, 0);
+      field[2](fromJS({ name: 'text' }), 'three edited');
+
+      const written = props.onChange.mock.calls[1][0].toJS();
+      expect(written).toHaveLength(2);
+      expect(written[1]).toEqual({ type: 'type_one', text: 'three edited' });
+    });
+
+    it('handleChangeFor writes to the item it was created for', () => {
+      const { item } = renderAndRemove(three, 0);
+      item[2](fromJS({ type: 'type_one', text: 'three edited' }));
+
+      const written = props.onChange.mock.calls[1][0].toJS();
+      expect(written).toHaveLength(2);
+      expect(written[1]).toEqual({ type: 'type_one', text: 'three edited' });
+    });
+
+    it('drops changes for a removed item', () => {
+      const { field, item } = renderAndRemove(three, 1);
+      field[1](fromJS({ name: 'text' }), 'for a removed item');
+      item[1](fromJS({ type: 'type_one', text: 'for a removed item' }));
+
+      expect(props.onChange).toHaveBeenCalledTimes(1);
+    });
+  });
 });

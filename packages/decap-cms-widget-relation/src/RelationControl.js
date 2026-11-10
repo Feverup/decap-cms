@@ -237,47 +237,41 @@ export default class RelationControl extends React.Component {
     const collection = field.get('collection');
     const file = field.get('file');
     const initialSearchValues = value && (this.isMultiple() ? getSelectedOptions(value) : [value]);
-    if (initialSearchValues && initialSearchValues.length > 0) {
-      const metadata = {};
+    if (!initialSearchValues || initialSearchValues.length === 0) return;
+
+    let hits;
+    try {
       const searchFieldsArray = getFieldArray(field.get('search_fields'));
       const { payload } = await query(forID, collection, searchFieldsArray, '', file);
-      const hits = payload.hits || [];
-      const options = this.parseHitOptions(hits);
-      const initialOptions = initialSearchValues
-        .map(v => {
-          const selectedOption = options.find(o => o.value === v);
-          metadata[v] = selectedOption?.data;
-          return selectedOption;
-        })
-        .filter(Boolean);
-      const filteredValue = initialOptions.map(option => option.value);
+      hits = payload.hits;
+    } catch (error) {
+      console.error('Failed to load initial options:', error);
+      return;
+    }
+    if (!hits) return;
 
-      this.mounted && this.setState({ initialOptions });
+    const metadata = {};
+    const options = this.parseHitOptions(hits);
+    const initialOptions = initialSearchValues
+      .map(v => {
+        const selectedOption = options.find(o => o.value === v);
+        metadata[v] = selectedOption?.data;
+        return selectedOption;
+      })
+      .filter(Boolean);
 
-      //set metadata
-      this.mounted &&
-        onChange(
-          filteredValue.length === 1 && !this.isMultiple()
-            ? filteredValue[0]
-            : fromJS(filteredValue),
-          {
-            [field.get('name')]: {
-              [field.get('collection')]: metadata,
-            },
-          },
-        );
+    this.mounted && this.setState({ initialOptions });
+
+    // PNW-3165 (upstream #7497): only report metadata, never rewrite the saved value.
+    // A miss or a failed query used to overwrite it with [].
+    if (this.mounted && initialOptions.length > 0) {
+      onChange(value, { [field.get('name')]: { [collection]: metadata } });
     }
   }
 
   async componentDidMount() {
     this.mounted = true;
     await this.loadInitialOptions();
-  }
-
-  async componentDidUpdate(prevProps) {
-    if (this.props.field.get('collection') !== prevProps.field.get('collection')) {
-      await this.loadInitialOptions();
-    }
   }
 
   componentWillUnmount() {
