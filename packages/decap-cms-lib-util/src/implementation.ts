@@ -37,7 +37,7 @@ export interface UnpublishedEntryDiff {
   id: string;
   path: string;
   newFile: boolean;
-  deleteFile: boolean;
+  deletedFile?: boolean;
 }
 
 export interface UnpublishedEntry {
@@ -186,7 +186,8 @@ export interface Implementation {
     slug: string,
     newStatus: string,
   ) => Promise<void>;
-  publishUnpublishedEntryStack: (
+  // Stack methods are only implemented by backends that support `backend.stack` (GitHub).
+  publishUnpublishedEntryStack?: (
     collection: string,
     slug: string,
     options: { stackCommitMessage: string; publishStack?: boolean },
@@ -215,17 +216,17 @@ export interface Implementation {
     auth: { status: boolean };
     api: { status: boolean; statusPage: string };
   }>;
-  stackStatus: () => Promise<
+  stackStatus?: () => Promise<
     | {
         status?: string;
         updatedAt?: string;
       }
     | undefined
   >;
-  updateStackStatus: (newStatus: string) => Promise<void>;
-  publishStack: () => Promise<void>;
-  closeStack: () => Promise<void>;
-  createStackPR: (title?: string) => Promise<void>;
+  updateStackStatus?: (newStatus: string) => Promise<void>;
+  publishStack?: () => Promise<void>;
+  closeStack?: () => Promise<void>;
+  createStackPR?: (title?: string) => Promise<void>;
 }
 
 const MAX_CONCURRENT_DOWNLOADS = 10;

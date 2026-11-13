@@ -409,8 +409,23 @@ export default class ListControl extends React.Component {
    */
   getObjectValue = idx => this.props.value.get(idx) || Map();
 
-  handleFieldChangeFor(index) {
+  /**
+   * PNW-3165 (upstream #7972): handlers are created with the item's position, but a
+   * change can fire after an item was removed or moved. Resolve the position from the
+   * item's key at fire time; -1 means the item is gone and the change is dropped.
+   */
+  getCurrentIndexFor(index) {
+    const key = this.state.keys[index];
+    // No key means keys and value are out of sync; keep the old index-based behavior.
+    if (key === undefined) return () => index;
+    return () => this.state.keys.indexOf(key);
+  }
+
+  handleFieldChangeFor(initialIndex) {
+    const getIndex = this.getCurrentIndexFor(initialIndex);
     return (f, newValue, newMetadata) => {
+      const index = getIndex();
+      if (index === -1) return;
       const { value, metadata, onChange, field } = this.props;
       const collectionName = field.get('name');
       const listFieldObjectWidget = field.getIn(['field', 'widget']) === 'object';
@@ -430,8 +445,11 @@ export default class ListControl extends React.Component {
     };
   }
 
-  handleChangeFor(index) {
+  handleChangeFor(initialIndex) {
+    const getIndex = this.getCurrentIndexFor(initialIndex);
     return (newValue, newMetadata) => {
+      const index = getIndex();
+      if (index === -1) return;
       const { value, metadata, onChange, field } = this.props;
       const collectionName = field.get('name');
       const parsedMetadata = {

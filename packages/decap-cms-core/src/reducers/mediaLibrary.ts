@@ -92,7 +92,7 @@ function mediaLibrary(state = Map(defaultState), action: MediaLibraryAction) {
         replaceIndex,
       } = action.payload;
       const libConfig = config || Map();
-      const mediaLibraryValidation = state.get('validation');
+      const mediaLibraryValidation = state.get('validation') as Map<string, unknown> | undefined;
       const mediaValidation = mediaLibraryValidation
         ? mediaLibraryValidation.mergeDeep(validation)
         : validation;

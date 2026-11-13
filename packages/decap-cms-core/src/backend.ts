@@ -965,7 +965,7 @@ export class Backend {
         data,
         dataFile.path,
         dataFile.newFile,
-        dataFile.deleteFile,
+        !!dataFile.deletedFile,
       );
       return entryWithFormat;
     };
@@ -1435,23 +1435,23 @@ export class Backend {
   }
 
   stackStatus() {
-    return this.implementation.stackStatus();
+    return this.implementation.stackStatus!();
   }
 
   updateStackStatus(newStatus: string) {
-    return this.implementation.updateStackStatus(newStatus);
+    return this.implementation.updateStackStatus!(newStatus);
   }
 
   publishStack() {
-    return this.implementation.publishStack();
+    return this.implementation.publishStack!();
   }
 
   closeStack() {
-    return this.implementation.closeStack();
+    return this.implementation.closeStack!();
   }
 
   createStackPR() {
-    return this.implementation.createStackPR(this.config.backend.commit_messages?.stack);
+    return this.implementation.createStackPR!(this.config.backend.commit_messages?.stack);
   }
 }
 

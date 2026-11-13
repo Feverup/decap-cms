@@ -469,6 +469,26 @@ describe('Backend', () => {
         updatedOn: '',
       });
     });
+
+    it('should flag an entry whose diff deletes the file as a delete workflow', async () => {
+      const implementation = {
+        init: jest.fn(() => implementation),
+        unpublishedEntry: jest.fn().mockResolvedValue({
+          slug: 'index',
+          diffs: [{ path: 'src/posts/index.md', newFile: false, deletedFile: true }],
+        }),
+        unpublishedEntryDataFile: jest.fn().mockResolvedValueOnce('---\ntitle: "Bye"\n---\n'),
+        unpublishedEntryMediaFile: jest.fn(),
+      };
+      const config = { media_folder: 'static/images' };
+      const backend = new Backend(implementation, { config, backendName: 'github' });
+      const collection = fromJS({ name: 'posts', folder: 'src/posts', fields: [] });
+      const state = { config, integrations: Map({}), mediaLibrary: Map({}) };
+
+      const result = await backend.unpublishedEntry(state, collection, 'slug');
+
+      expect(result.isDeleteWorkflow).toBe(true);
+    });
   });
 
   describe('generateUniqueSlug', () => {
